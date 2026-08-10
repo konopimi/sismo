@@ -16,7 +16,6 @@
         -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: #0f1115;
       color: #eaeaea;
-      padding: 16px;
     }
 
     h1 {
@@ -46,8 +45,18 @@
       color: white;
     }
 
+    #addForm {
+      display: flex;
+      flex-wrap: wrap;
+    }
+
+    #addForm input {
+      min-width: 200px;
+    }
+
     .tab-panel {
       display: none;
+      padding: 5px;
     }
 
     .tab-panel.active {
@@ -209,29 +218,116 @@
       background: #e0a63c;
       color: #222;
     }
+
+    /* Modal */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+    .modal.open {
+      display: flex;
+    }
+    .modal-content {
+      background: #1a1d24;
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 480px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      position: relative;
+      border: 1px solid #333;
+    }
+    .modal-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: #333;
+      border: none;
+      color: #ccc;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-close:active {
+      background: #444;
+    }
+    .modal-content h2 {
+      margin: 0 0 12px;
+      font-size: 1.2rem;
+    }
+    .modal-body {
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .modal-actions button {
+      flex: 1;
+      min-width: 100px;
+    }
   </style>
 </head>
 
 <body>
-  <h1>🚨 Sismo API - ADMIN: +57 3153410282</h1>
-  <div class="tabs">
-    <button class="tab-btn active" id="tabPersonasBtn">🫂 Personas</button>
-    <button class="tab-btn" id="tabEdificiosBtn">🏢 Ubicaciones</button>
-    <!-- <button class="tab-btn" id="tabAnunciosBtn">📣 Anuncios</button> -->
+  <div style="padding: 5px">
+    <h1>🚨 Sismo API - ADMIN: +57 3153410282</h1>
+    <button style="margin-bottom: 5px; background: teal">
+      http://neokpm.xyz (COPIAR LINK)
+    </button>
+  </div>
+
+  <div id="driver" style="
+        padding: 5px;
+        position: sticky;
+        top: 0px;
+        background: rgba(20, 20, 20, 0.85);
+        backdrop-filter: blur(5px);
+        border-bottom: 2px solid gray;
+        margin-bottom: 5px;
+      ">
+    <div class="tabs" style>
+      <button class="tab-btn active" id="tabPersonasBtn">🫂 Personas</button>
+      <button class="tab-btn" id="tabEdificiosBtn">🏢 Ubicaciones</button>
+      <!-- <button class="tab-btn" id="tabAnunciosBtn">📣 Anuncios</button> -->
+    </div>
+    <div class="search-row">
+      <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
+    </div>
   </div>
 
   <div id="tabPersonas" class="tab-panel active">
-    <form id="addForm">
-      <input type="text" id="nameInput" placeholder="Nombre de la persona" required />
-      <input type="text" id="locationInput" placeholder="Ubicación (opcional)" />
-      <select id="cityInput">
-        <option value="">Ciudad</option>
-      </select>
-      <button type="button" id="gpsBtn" title="Usar mi ubicación">📍</button>
-      <button type="submit">Reportar</button>
-    </form>
-    <div class="search-row">
-      <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
+    <div style="
+          border: 1px solid gray;
+          padding: 5px;
+          border-radius: 10px;
+          margin-bottom: 5px;
+          background: teal;
+        ">
+      (+) CREAR
+      <form id="addForm" style="margin-top: 5px">
+        <input type="text" id="nameInput" placeholder="Nombre de la persona" required />
+        <input type="text" id="locationInput" placeholder="Ubicación (opcional)" />
+        <select id="cityInput">
+          <option value="">Ciudad</option>
+        </select>
+        <button type="button" id="gpsBtn" title="Usar mi ubicación">
+          📍
+        </button>
+        <button type="submit">Reportar</button>
+      </form>
     </div>
     <div id="list" class="list"></div>
   </div>
@@ -258,6 +354,16 @@
       <button type="submit">Publicar</button>
     </form>
     <div id="listA" class="list"></div>
+  </div>
+
+  <!-- Modal overlay -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-content">
+      <button class="modal-close" aria-label="Cerrar">✕</button>
+      <h2 id="modalTitle"></h2>
+      <div id="modalBody"></div>
+      <div id="modalActions" class="modal-actions"></div>
+    </div>
   </div>
 
   <script>
@@ -401,7 +507,7 @@
                 <div class="actions">
                   ${found
               ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido')">Marcar desaparecido</button>`
-              : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado')">Marcar encontrado</button>`
+              : `<button class="btn-small btn-found" onclick="confirmSetStatus('${item.id}','encontrado')">Marcar encontrado</button>`
             }
                   <button
                     class="btn-small btn-delete"
@@ -434,6 +540,11 @@
       cityInput.value = "";
       loadList();
     });
+
+    async function confirmSetStatus(id, status) {
+      if (!confirm("¿Confirmar que esta persona fue encontrada?")) return;
+      await setStatus(id, status);
+    }
 
     async function setStatus(id, status) {
       await fetch(`${API_BASE}/disappeared/${id}`, {
