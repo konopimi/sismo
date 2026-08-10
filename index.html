@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sismo API</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f1115;
+      color: #eaeaea;
+      padding: 16px;
+    }
+
+    h1 {
+      font-size: 1.3rem;
+      margin: 0 0 12px 0;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #1a1d24;
+      color: #888;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: #d64545;
+      color: white;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    form {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .search-row {
+      margin-bottom: 16px;
+    }
+
+    input[type="text"],
+    input[type="search"],
+    select {
+      flex: 1;
+      min-width: 100px;
+      padding: 12px;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #1a1d24;
+      color: #eaeaea;
+    }
+
+    input[type="search"] {
+      width: 100%;
+    }
+
+    button {
+      padding: 12px 16px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background: #d64545;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:active {
+      background: #b53838;
+    }
+
+    #gpsBtn,
+    #gpsBtnB {
+      flex: 0 0 auto;
+      background: #333;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card {
+      background: #1a1d24;
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      border-left: 4px solid #d64545;
+    }
+
+    .card-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card.encontrado,
+    .card.seguro {
+      border-left-color: #3fa34d;
+    }
+
+    .card.danado {
+      border-left-color: #e0a63c;
+    }
+
+    .card .info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .card .name {
+      font-weight: 600;
+      font-size: 1.05rem;
+    }
+
+    .card .meta {
+      font-size: 0.8rem;
+      color: #999;
+    }
+
+    .card .actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+
+    .btn-small {
+      padding: 8px 10px;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-found,
+    .btn-seguro {
+      background: #3fa34d;
+      color: white;
+    }
+
+    .btn-missing,
+    .btn-colapsado {
+      background: #d64545;
+      color: white;
+    }
+
+    .btn-danado {
+      background: #e0a63c;
+      color: #222;
+    }
+
+    .btn-delete {
+      background: #333;
+      color: #ccc;
+    }
+
+    .empty {
+      text-align: center;
+      color: #666;
+      padding: 40px 0;
+    }
+
+    .status-tag {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #d64545;
+    }
+
+    .status-tag.encontrado,
+    .status-tag.seguro {
+      background: #3fa34d;
+    }
+
+    .status-tag.danado {
+      background: #e0a63c;
+      color: #222;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>🚨 Sismo API - ADMIN: +57 3153410282</h1>
+  <div class="tabs">
+    <button class="tab-btn active" id="tabPersonasBtn">🫂 Personas</button>
+    <button class="tab-btn" id="tabEdificiosBtn">🏢 Ubicaciones</button>
+    <button class="tab-btn" id="tabAnunciosBtn">📣 Anuncios</button>
+  </div>
+
+  <div id="tabPersonas" class="tab-panel active">
+    <form id="addForm">
+      <input type="text" id="nameInput" placeholder="Nombre de la persona" required />
+      <input type="text" id="locationInput" placeholder="Ubicación (opcional)" />
+      <select id="cityInput">
+        <option value="">Ciudad</option>
+      </select>
+      <button type="button" id="gpsBtn" title="Usar mi ubicación">📍</button>
+      <button type="submit">Reportar</button>
+    </form>
+    <div class="search-row">
+      <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
+    </div>
+    <div id="list" class="list"></div>
+  </div>
+
+  <div id="tabEdificios" class="tab-panel">
+    <form id="addFormB">
+      <input type="text" id="nameInputB" placeholder="Nombre o dirección del edificio" required />
+      <input type="text" id="locationInputB" placeholder="Ubicación (opcional)" />
+      <select id="cityInputB">
+        <option value="">Ciudad</option>
+      </select>
+      <button type="button" id="gpsBtnB" title="Usar mi ubicación">📍</button>
+      <button type="submit">Reportar</button>
+    </form>
+    <div class="search-row">
+      <input type="search" id="searchInputB" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
+    </div>
+    <div id="listB" class="list"></div>
+  </div>
+
+  <div id="tabAnuncios" class="tab-panel">
+    <form id="addFormA">
+      <input type="text" id="anuncioInput" placeholder="Escribe un anuncio..." required />
+      <button type="submit">Publicar</button>
+    </form>
+    <div id="listA" class="list"></div>
+  </div>
+
+  <script>
+    const API_BASE =
+      location.hostname === "localhost" || location.hostname === "127.0.0.1"
+        ? "https://neokpm.xyz/api"
+        : "/api";
+
+    fetch("/cities.json")
+      .then((r) => r.json())
+      .then((cities) => {
+        const opts = cities
+          .map((c) => `<option value="${c}">${c}</option>`)
+          .join("");
+        document
+          .getElementById("cityInput")
+          .insertAdjacentHTML("beforeend", opts);
+        document
+          .getElementById("cityInputB")
+          .insertAdjacentHTML("beforeend", opts);
+      })
+      .catch(() => console.error("No se pudo cargar cities.json"));
+
+    const tabPersonasBtn = document.getElementById("tabPersonasBtn");
+    const tabEdificiosBtn = document.getElementById("tabEdificiosBtn");
+    const tabPersonas = document.getElementById("tabPersonas");
+    const tabEdificios = document.getElementById("tabEdificios");
+
+    tabPersonasBtn.addEventListener("click", () => {
+      tabPersonasBtn.classList.add("active");
+      tabEdificiosBtn.classList.remove("active");
+      tabPersonas.classList.add("active");
+      tabEdificios.classList.remove("active");
+    });
+    tabEdificiosBtn.addEventListener("click", () => {
+      tabEdificiosBtn.classList.add("active");
+      tabPersonasBtn.classList.remove("active");
+      tabEdificios.classList.add("active");
+      tabPersonas.classList.remove("active");
+    });
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function normalize(str) {
+      return (str || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function fuzzyMatch(query, target) {
+      query = normalize(query);
+      target = normalize(target);
+      if (!query) return true;
+      let qi = 0;
+      for (let ti = 0; ti < target.length && qi < query.length; ti++) {
+        if (target[ti] === query[qi]) qi++;
+      }
+      return qi === query.length;
+    }
+
+    function fuzzyFilter(query, items) {
+      if (!query.trim()) return items;
+      return items.filter(
+        (item) =>
+          fuzzyMatch(query, item.name) ||
+          fuzzyMatch(query, item.location || "") ||
+          fuzzyMatch(query, item.city || ""),
+      );
+    }
+
+    async function adminDelete(url) {
+      const key = prompt("Clave de administrador:");
+      if (!key) return false;
+      const r = await fetch(url, {
+        method: "DELETE",
+        headers: {"x-admin-key": key},
+      });
+      if (r.status === 403) {
+        alert("Clave incorrecta");
+        return false;
+      }
+      return true;
+    }
+
+    let personsData = [];
+    const listEl = document.getElementById("list");
+    const form = document.getElementById("addForm");
+    const nameInput = document.getElementById("nameInput");
+    const locationInput = document.getElementById("locationInput");
+    const cityInput = document.getElementById("cityInput");
+    const gpsBtn = document.getElementById("gpsBtn");
+    const searchInput = document.getElementById("searchInput");
+
+    async function loadList() {
+      try {
+        const res = await fetch(`${API_BASE}/disappeared`);
+        personsData = await res.json();
+        render();
+      } catch (err) {
+        listEl.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
+      }
+    }
+
+    function render() {
+      const items = fuzzyFilter(searchInput.value, personsData);
+      if (!items.length) {
+        listEl.innerHTML = `<div class="empty">${personsData.length ? "Sin resultados." : "No hay reportes todavía."}</div>`;
+        return;
+      }
+      listEl.innerHTML = items
+        .map((item) => {
+          const found = item.status === "encontrado";
+          const date = new Date(item.created_at).toLocaleString("es-CO", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          const metaParts = [];
+          if (item.city) metaParts.push(escapeHtml(item.city));
+          if (item.location) metaParts.push(escapeHtml(item.location));
+          metaParts.push(date);
+          return `
+        <div class="card ${found ? "encontrado" : ""}">
+<div class="card-inner">
+          <div class="info">
+            <span class="name">${escapeHtml(item.name)}</span>
+            <span class="meta">${metaParts.join(" · ")} · <span class="status-tag ${found ? "encontrado" : ""}">${item.status}</span></span>
+          </div>
+          </div>
+          <div class="actions">
+            ${found
+              ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido')">Marcar desaparecido</button>`
+              : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado')">Marcar encontrado</button>`
+            }
+            <button class="btn-small btn-delete" onclick="remove('${item.id}')">✕</button>
+          </div>
+        </div>
+      `;
+        })
+        .join("");
+    }
+
+    searchInput.addEventListener("input", render);
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = nameInput.value.trim();
+      const location = locationInput.value.trim();
+      const city = cityInput.value.trim();
+      if (!name) return;
+      await fetch(`${API_BASE}/disappeared`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name, location, city}),
+      });
+      nameInput.value = "";
+      locationInput.value = "";
+      cityInput.value = "";
+      loadList();
+    });
+
+    async function setStatus(id, status) {
+      await fetch(`${API_BASE}/disappeared/${id}`, {
+        method: "PATCH",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({status}),
+      });
+      loadList();
+    }
+
+    async function remove(id) {
+      if (!confirm("¿Eliminar este reporte?")) return;
+      const ok = await adminDelete(`${API_BASE}/disappeared/${id}`);
+      if (ok) loadList();
+    }
+
+    gpsBtn.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        alert("Geolocalización no disponible.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          locationInput.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+        },
+        () => alert("No se pudo obtener la ubicación."),
+      );
+    });
+
+    let buildingsData = [];
+    const listElB = document.getElementById("listB");
+    const formB = document.getElementById("addFormB");
+    const nameInputB = document.getElementById("nameInputB");
+    const locationInputB = document.getElementById("locationInputB");
+    const cityInputB = document.getElementById("cityInputB");
+    const gpsBtnB = document.getElementById("gpsBtnB");
+    const searchInputB = document.getElementById("searchInputB");
+
+    async function loadListB() {
+      try {
+        const res = await fetch(`${API_BASE}/buildings`);
+        buildingsData = await res.json();
+        renderB();
+      } catch (err) {
+        listElB.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
+      }
+    }
+
+    function renderB() {
+      const items = fuzzyFilter(searchInputB.value, buildingsData);
+      if (!items.length) {
+        listElB.innerHTML = `<div class="empty">${buildingsData.length ? "Sin resultados." : "No hay edificios reportados."}</div>`;
+        return;
+      }
+      listElB.innerHTML = items
+        .map((item) => {
+          const date = new Date(item.created_at).toLocaleString("es-CO", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          const metaParts = [];
+          if (item.city) metaParts.push(escapeHtml(item.city));
+          if (item.location) metaParts.push(escapeHtml(item.location));
+          metaParts.push(date);
+          return `
+        <div class="card ${item.status}">
+          <div class="info">
+            <span class="name">${escapeHtml(item.name)}</span>
+            <span class="meta">${metaParts.join(" · ")} · <span class="status-tag ${item.status}">${item.status}</span></span>
+          </div>
+          <div class="actions">
+            <button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro')">Seguro</button>
+            <button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado')">Dañado</button>
+            <button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado')">Colapsado</button>
+            <button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>
+          </div>
+        </div>
+      `;
+        })
+        .join("");
+    }
+
+    searchInputB.addEventListener("input", renderB);
+
+    formB.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = nameInputB.value.trim();
+      const location = locationInputB.value.trim();
+      const city = cityInputB.value.trim();
+      if (!name) return;
+      await fetch(`${API_BASE}/buildings`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name, location, city}),
+      });
+      nameInputB.value = "";
+      locationInputB.value = "";
+      cityInputB.value = "";
+      loadListB();
+    });
+
+    async function setStatusB(id, status) {
+      await fetch(`${API_BASE}/buildings/${id}`, {
+        method: "PATCH",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({status}),
+      });
+      loadListB();
+    }
+
+    async function removeB(id) {
+      if (!confirm("¿Eliminar este edificio?")) return;
+      const ok = await adminDelete(`${API_BASE}/buildings/${id}`);
+      if (ok) loadListB();
+    }
+
+    gpsBtnB.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        alert("Geolocalización no disponible.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          locationInputB.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+        },
+        () => alert("No se pudo obtener la ubicación."),
+      );
+    });
+
+    // --- Anuncios ---
+    let anunciosData = [];
+    const listElA = document.getElementById("listA");
+    const formA = document.getElementById("addFormA");
+    const anuncioInput = document.getElementById("anuncioInput");
+
+    async function loadListA() {
+      try {
+        const res = await fetch(`${API_BASE}/anuncios`);
+        anunciosData = await res.json();
+        renderA();
+      } catch (err) {
+        listElA.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
+      }
+    }
+
+    function renderA() {
+      if (!anunciosData.length) {
+        listElA.innerHTML = `<div class="empty">No hay anuncios todavía.</div>`;
+        return;
+      }
+      listElA.innerHTML = anunciosData
+        .map((item) => {
+          const date = new Date(item.created_at).toLocaleString("es-CO", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          return `
+        <div class="card">
+          <div class="info">
+            <span class="name">${escapeHtml(item.text)}</span>
+            <span class="meta">${date}</span>
+          </div>
+          <div class="actions">
+            <button class="btn-small btn-delete" onclick="removeA('${item.id}')">✕</button>
+          </div>
+        </div>`;
+        })
+        .join("");
+    }
+
+    formA.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = anuncioInput.value.trim();
+      if (!text) return;
+      await fetch(`${API_BASE}/anuncios`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      anuncioInput.value = "";
+      loadListA();
+    });
+
+    async function removeA(id) {
+      if (!confirm("¿Eliminar este anuncio?")) return;
+      const ok = await adminDelete(`${API_BASE}/anuncios/${id}`);
+      if (ok) loadListA();
+    }
+
+    loadList();
+    loadListB();
+    loadListA();
+    setInterval(() => {
+      loadList();
+      loadListB();
+      loadListA();
+    }, 10000);
+  </script>
+</body>
+
+</html>
