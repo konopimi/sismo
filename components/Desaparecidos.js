@@ -1,15 +1,73 @@
 import { html } from "https://esm.sh/uhtml@4.0";
 import { store, addDisappeared, markFound, removeDisappeared } from "../vStore/assets.js";
 
+const API_BASE = "http://YOUR_SERVER_IP:3000/api"; // <-- REPLACE with your Vultr IP
+
+// Sync local reports to server when online
+async function syncToServer() {
+  try {
+    const res = await fetch(`${API_BASE}/disappeared`);
+    if (res.ok) {
+      const serverReports = await res.json();
+      const localById = new Map(store.disappeared.map(d => [d.id, d]));
+      const merged = serverReports.map(sr => {
+        const local = localById.get(sr.id);
+        if (local && local.updatedAt > sr.created_at) return local;
+        return { ...sr, createdAt: sr.created_at };
+      });
+      for (const local of store.disappeared) {
+        if (!serverReports.some(sr => sr.id === local.id)) {
+          merged.push(local);
+        }
+      }
+      store.disappeared = merged;
+    }
+  } catch (e) {
+    console.log("Offline, using local data");
+  }
+}
+
+// Push a new report to server
+async function pushToServer(report) {
+  try {
+    await fetch(`${API_BASE}/disappeared`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(report),
+    });
+  } catch (e) {
+    console.log("Will sync later when online");
+  }
+}
+
 export default function Desaparecidos() {
   const list = store.disappeared;
+
+  syncToServer();
 
   function onSubmit(e) {
     e.preventDefault();
     const input = e.target.elements.name;
-    addDisappeared(input.value);
+    const name = input.value.trim();
+    if (!name) return;
+    const report = {
+      id: crypto.randomUUID(),
+      name,
+      status: "desaparecido",
+      createdAt: new Date().toISOString(),
+    };
+    addDisappeared(name);
+    pushToServer(report);
     input.value = "";
     input.focus();
+  }
+
+  function onMarkFound(id) {
+    markFound(id);
+  }
+
+  function onRemove(id) {
+    removeDisappeared(id);
   }
 
   return html`
@@ -58,12 +116,12 @@ export default function Desaparecidos() {
                 <span style="display:flex;gap:6px;">
                   ${p.status === "desaparecido"
                     ? html`<button
-                        onclick=${() => markFound(p.id)}
+                        onclick=${() => onMarkFound(p.id)}
                         style="padding:6px 10px;"
                       >Encontrado</button>`
                     : null}
                   <button
-                    onclick=${() => removeDisappeared(p.id)}
+                    onclick=${() => onRemove(p.id)}
                     style="padding:6px 10px;color:#c00;"
                   >Eliminar</button>
                 </span>
