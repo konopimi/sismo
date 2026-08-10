@@ -1,0 +1,16 @@
+[Unit]
+Description=Sismo API - Emergency disappeared persons backend
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/sismo-api
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=3
+Environment=PORT=3000
+Environment=DB_PATH=/opt/sismo-api/data.db
+
+[Install]
+WantedBy=multi-user.target
