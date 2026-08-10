@@ -12,8 +12,7 @@
 
     body {
       margin: 0;
-      font-family:
-        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: #0f1115;
       color: #eaeaea;
     }
@@ -99,16 +98,26 @@
       background: #d64545;
       color: white;
       cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button:hover {
+      background: #b53838;
     }
 
     button:active {
-      background: #b53838;
+      background: #9a2f2f;
     }
 
     #gpsBtn,
     #gpsBtnB {
       flex: 0 0 auto;
       background: #333;
+    }
+
+    #gpsBtn:hover,
+    #gpsBtnB:hover {
+      background: #444;
     }
 
     .list {
@@ -125,6 +134,16 @@
       display: flex;
       flex-direction: column;
       border-left: 4px solid #d64545;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .card:hover {
+      background: #22262e;
+    }
+
+    .card:active {
+      transform: scale(0.99);
     }
 
     .card-inner {
@@ -142,10 +161,15 @@
       border-left-color: #e0a63c;
     }
 
+    .card.colapsado {
+      border-left-color: #b53838;
+    }
+
     .card .info {
       display: flex;
       flex-direction: column;
       gap: 2px;
+      flex: 1;
     }
 
     .card .name {
@@ -162,7 +186,8 @@
       display: flex;
       gap: 6px;
       flex-wrap: wrap;
-      margin-left: auto;
+      margin-top: 6px;
+      pointer-events: auto;
     }
 
     .btn-small {
@@ -171,6 +196,11 @@
       border-radius: 6px;
       border: none;
       cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-small:hover {
+      filter: brightness(1.15);
     }
 
     .btn-found,
@@ -195,6 +225,10 @@
       color: #ccc;
     }
 
+    .btn-delete:hover {
+      background: #444;
+    }
+
     .empty {
       text-align: center;
       color: #666;
@@ -204,9 +238,12 @@
     .status-tag {
       font-size: 0.7rem;
       text-transform: uppercase;
-      padding: 2px 6px;
+      padding: 2px 8px;
       border-radius: 4px;
       background: #d64545;
+      display: inline-block;
+      font-weight: 600;
+      letter-spacing: 0.3px;
     }
 
     .status-tag.encontrado,
@@ -219,64 +256,181 @@
       color: #222;
     }
 
+    .status-tag.colapsado {
+      background: #b53838;
+    }
+
     /* Modal */
     .modal {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.75);
       display: none;
       align-items: center;
       justify-content: center;
       z-index: 1000;
       padding: 16px;
+      animation: modalFade 0.2s ease-out;
     }
+
     .modal.open {
       display: flex;
     }
+
+    @keyframes modalFade {
+      from {
+        opacity: 0;
+        transform: scale(0.96);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
     .modal-content {
       background: #1a1d24;
-      border-radius: 12px;
-      padding: 20px;
-      max-width: 480px;
+      border-radius: 14px;
+      padding: 24px 28px 28px;
+      max-width: 500px;
       width: 100%;
-      max-height: 80vh;
+      max-height: 85vh;
       overflow-y: auto;
       position: relative;
-      border: 1px solid #333;
+      border: 1px solid #2a2e36;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
     }
+
+    .modal-content::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .modal-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .modal-content::-webkit-scrollbar-thumb {
+      background: #444;
+      border-radius: 4px;
+    }
+
     .modal-close {
       position: absolute;
       top: 12px;
       right: 12px;
-      background: #333;
+      background: #2a2e36;
       border: none;
-      color: #ccc;
-      width: 32px;
-      height: 32px;
+      color: #aaa;
+      width: 34px;
+      height: 34px;
       border-radius: 50%;
       font-size: 18px;
       cursor: pointer;
       line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
     }
+
+    .modal-close:hover {
+      background: #3a3e46;
+      color: #eee;
+    }
+
     .modal-close:active {
-      background: #444;
+      background: #4a4e56;
     }
+
     .modal-content h2 {
-      margin: 0 0 12px;
-      font-size: 1.2rem;
+      margin: 0 0 6px 0;
+      font-size: 1.4rem;
+      padding-right: 30px;
+      word-break: break-word;
     }
-    .modal-body {
-      margin-bottom: 16px;
+
+    .modal-status {
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+
+    .modal-meta {
+      font-size: 0.9rem;
+      color: #aaa;
+      margin-bottom: 4px;
       line-height: 1.6;
     }
+
+    .modal-meta span {
+      display: inline-block;
+      margin-right: 12px;
+    }
+
+    .modal-divider {
+      height: 1px;
+      background: #2a2e36;
+      margin: 16px 0;
+    }
+
+    .modal-placeholder {
+      background: #12151c;
+      border-radius: 10px;
+      padding: 20px 18px;
+      text-align: center;
+      border: 1px dashed #2a2e36;
+      color: #666;
+      font-size: 0.95rem;
+      letter-spacing: 0.5px;
+    }
+
+    .modal-placeholder strong {
+      color: #888;
+      font-weight: 600;
+    }
+
+    .modal-placeholder .icon {
+      font-size: 1.6rem;
+      display: block;
+      margin-bottom: 6px;
+    }
+
     .modal-actions {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid #2a2e36;
     }
+
     .modal-actions button {
       flex: 1;
-      min-width: 100px;
+      min-width: 80px;
+    }
+
+    .modal-actions .btn-small {
+      flex: 1;
+      min-width: 80px;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .modal-content {
+        padding: 18px 16px 20px;
+      }
+
+      .modal-content h2 {
+        font-size: 1.2rem;
+      }
+
+      .modal-actions button {
+        min-width: 60px;
+        font-size: 0.8rem;
+        padding: 8px 10px;
+      }
     }
   </style>
 </head>
@@ -284,11 +438,10 @@
 <body>
   <div style="padding: 5px">
     <h1>🚨 Sismo API - ADMIN: +57 3153410282</h1>
-    <button style="margin-bottom: 5px; background: teal">
+    <button style="margin-bottom: 5px; background: teal" onclick="navigator.clipboard?.writeText('http://neokpm.xyz')">
       http://neokpm.xyz (COPIAR LINK)
     </button>
   </div>
-
   <div id="driver" style="
         padding: 5px;
         position: sticky;
@@ -297,17 +450,18 @@
         backdrop-filter: blur(5px);
         border-bottom: 2px solid gray;
         margin-bottom: 5px;
+        z-index: 100;
       ">
-    <div class="tabs" style>
+    <div class="tabs">
       <button class="tab-btn active" id="tabPersonasBtn">🫂 Personas</button>
       <button class="tab-btn" id="tabEdificiosBtn">🏢 Ubicaciones</button>
-      <!-- <button class="tab-btn" id="tabAnunciosBtn">📣 Anuncios</button> -->
     </div>
     <div class="search-row">
       <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
     </div>
   </div>
 
+  <!-- Panel Personas -->
   <div id="tabPersonas" class="tab-panel active">
     <div style="
           border: 1px solid gray;
@@ -332,6 +486,7 @@
     <div id="list" class="list"></div>
   </div>
 
+  <!-- Panel Edificios -->
   <div id="tabEdificios" class="tab-panel">
     <form id="addFormB">
       <input type="text" id="nameInputB" placeholder="Nombre o dirección del edificio" required />
@@ -348,45 +503,43 @@
     <div id="listB" class="list"></div>
   </div>
 
-  <div id="tabAnuncios" class="tab-panel">
-    <form id="addFormA">
-      <input type="text" id="anuncioInput" placeholder="Escribe un anuncio..." required />
-      <button type="submit">Publicar</button>
-    </form>
-    <div id="listA" class="list"></div>
-  </div>
-
   <!-- Modal overlay -->
   <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal-content">
       <button class="modal-close" aria-label="Cerrar">✕</button>
+      <div class="modal-status" id="modalStatus"></div>
       <h2 id="modalTitle"></h2>
+      <div id="modalMeta" class="modal-meta"></div>
+      <div class="modal-divider"></div>
       <div id="modalBody"></div>
+      <div class="modal-divider"></div>
+      <div class="modal-placeholder">
+        <span class="icon">📋</span>
+        <strong>MAS INFO PRONTO</strong>
+        <div style="font-size:0.8rem; margin-top:4px; color:#555;">Estamos trabajando en más detalles para este reporte.
+        </div>
+      </div>
       <div id="modalActions" class="modal-actions"></div>
     </div>
   </div>
 
   <script>
     const API_BASE =
-      location.hostname === "localhost" || location.hostname === "127.0.0.1"
-        ? "https://neokpm.xyz/api"
-        : "/api";
+      location.hostname === "localhost" || location.hostname === "127.0.0.1" ?
+        "https://neokpm.xyz/api" :
+        "/api";
 
+    // Cargar ciudades
     fetch("/cities.json")
       .then((r) => r.json())
       .then((cities) => {
-        const opts = cities
-          .map((c) => `<option value="${c}">${c}</option>`)
-          .join("");
-        document
-          .getElementById("cityInput")
-          .insertAdjacentHTML("beforeend", opts);
-        document
-          .getElementById("cityInputB")
-          .insertAdjacentHTML("beforeend", opts);
+        const opts = cities.map((c) => `<option value="${c}">${c}</option>`).join("");
+        document.getElementById("cityInput").insertAdjacentHTML("beforeend", opts);
+        document.getElementById("cityInputB").insertAdjacentHTML("beforeend", opts);
       })
       .catch(() => console.error("No se pudo cargar cities.json"));
 
+    // Tabs
     const tabPersonasBtn = document.getElementById("tabPersonasBtn");
     const tabEdificiosBtn = document.getElementById("tabEdificiosBtn");
     const tabPersonas = document.getElementById("tabPersonas");
@@ -397,14 +550,19 @@
       tabEdificiosBtn.classList.remove("active");
       tabPersonas.classList.add("active");
       tabEdificios.classList.remove("active");
+      document.getElementById("searchInput").value = "";
+      render();
     });
     tabEdificiosBtn.addEventListener("click", () => {
       tabEdificiosBtn.classList.add("active");
       tabPersonasBtn.classList.remove("active");
       tabEdificios.classList.add("active");
       tabPersonas.classList.remove("active");
+      document.getElementById("searchInputB").value = "";
+      renderB();
     });
 
+    // Utilities
     function escapeHtml(str) {
       const div = document.createElement("div");
       div.textContent = str;
@@ -412,10 +570,7 @@
     }
 
     function normalize(str) {
-      return (str || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
+      return (str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
 
     function fuzzyMatch(query, target) {
@@ -456,6 +611,8 @@
     // Modal logic
     const modal = document.getElementById("modal");
     const modalTitle = document.getElementById("modalTitle");
+    const modalStatus = document.getElementById("modalStatus");
+    const modalMeta = document.getElementById("modalMeta");
     const modalBody = document.getElementById("modalBody");
     const modalActions = document.getElementById("modalActions");
     const modalClose = document.querySelector(".modal-close");
@@ -463,6 +620,8 @@
     function closeModal() {
       modal.classList.remove("open");
       modalTitle.textContent = "";
+      modalStatus.innerHTML = "";
+      modalMeta.innerHTML = "";
       modalBody.innerHTML = "";
       modalActions.innerHTML = "";
     }
@@ -475,10 +634,58 @@
       if (e.key === "Escape" && modal.classList.contains("open")) closeModal();
     });
 
-    function openModal(title, bodyHtml, actionsHtml) {
-      modalTitle.textContent = title;
-      modalBody.innerHTML = bodyHtml;
+    function openModalForItem(item, type) {
+      // type: 'person' or 'building'
+      const statusClass = item.status || "desaparecido";
+      const statusLabel = item.status || "desaparecido";
+
+      // Status tag
+      modalStatus.innerHTML = `<span class="status-tag ${statusClass}">${statusLabel}</span>`;
+
+      // Title
+      modalTitle.textContent = item.name || "Sin nombre";
+
+      // Meta: location, city, date
+      const dateStr = item.created_at ? new Date(item.created_at).toLocaleString("es-CO", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      }) : "";
+      let metaParts = [];
+      if (item.city) metaParts.push(`📍 ${escapeHtml(item.city)}`);
+      if (item.location) metaParts.push(`🗺️ ${escapeHtml(item.location)}`);
+      metaParts.push(`🕒 ${dateStr}`);
+      modalMeta.innerHTML = metaParts.map(p => `<span>${p}</span>`).join("");
+
+      // Body: extra info (placeholder for now)
+      modalBody.innerHTML = `<div style="color:#888; font-size:0.95rem;">Detalles del reporte</div>`;
+
+      // Actions: same as card buttons
+      let actionsHtml = "";
+      if (type === "person") {
+        if (item.status === "encontrado") {
+          actionsHtml +=
+            `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido'); closeModal();">Marcar desaparecido</button>`;
+        } else {
+          actionsHtml +=
+            `<button class="btn-small btn-found" onclick="confirmSetStatus('${item.id}','encontrado'); closeModal();">Marcar encontrado</button>`;
+        }
+        actionsHtml +=
+          `<button class="btn-small btn-delete" onclick="remove('${item.id}'); closeModal();">✕ Eliminar</button>`;
+      } else if (type === "building") {
+        actionsHtml +=
+          `<button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro'); closeModal();">Seguro</button>`;
+        actionsHtml +=
+          `<button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado'); closeModal();">Dañado</button>`;
+        actionsHtml +=
+          `<button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado'); closeModal();">Colapsado</button>`;
+        actionsHtml +=
+          `<button class="btn-small btn-delete" onclick="removeB('${item.id}'); closeModal();">✕ Eliminar</button>`;
+      }
       modalActions.innerHTML = actionsHtml;
+
       modal.classList.add("open");
     }
 
@@ -492,6 +699,7 @@
       });
     }
 
+    // --- Personas ---
     let personsData = [];
     const listEl = document.getElementById("list");
     const form = document.getElementById("addForm");
@@ -514,52 +722,55 @@
     function render() {
       const items = fuzzyFilter(searchInput.value, personsData);
       if (!items.length) {
-        listEl.innerHTML = `<div class="empty">${personsData.length ? "Sin resultados." : "No hay reportes todavía."}</div>`;
+        listEl.innerHTML =
+          `<div class="empty">${personsData.length ? "Sin resultados." : "No hay reportes todavía."}</div>`;
         return;
       }
-      listEl.innerHTML = items
-        .map((item) => {
-          const found = item.status === "encontrado";
-          const date = new Date(item.created_at).toLocaleString("es-CO", {
-            day: "2-digit",
-            month: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-          const metaParts = [];
-          if (item.city) metaParts.push(escapeHtml(item.city));
-          if (item.location) metaParts.push(escapeHtml(item.location));
-          metaParts.push(date);
-          return `
-              <div class="card ${found ? "encontrado" : ""}">
+      listEl.innerHTML = items.map((item) => {
+        const found = item.status === "encontrado";
+        const date = new Date(item.created_at).toLocaleString("es-CO", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const metaParts = [];
+        if (item.city) metaParts.push(escapeHtml(item.city));
+        if (item.location) metaParts.push(escapeHtml(item.location));
+        metaParts.push(date);
+        return `
+              <div class="card ${found ? "encontrado" : ""}" data-id="${item.id}" data-type="person">
                 <div>
-                  <span class="status-tag ${found ? "encontrado" : ""}"
-                    >${item.status}</span
-                  >
+                  <span class="status-tag ${found ? "encontrado" : ""}">${item.status}</span>
                 </div>
                 <div class="card-inner">
                   <div class="info">
                     <span class="name">${escapeHtml(item.name)}</span>
-                    <span class="meta">${metaParts.join(" · ")} · </span>
+                    <span class="meta">${metaParts.join(" · ")}</span>
                   </div>
                 </div>
                 <div class="actions">
                   ${found
-              ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido')">Marcar desaparecido</button>`
-              : `<button class="btn-small btn-found" onclick="confirmSetStatus('${item.id}','encontrado')">Marcar encontrado</button>`
-            }
-                  <button
-                    class="btn-small btn-delete"
-                    onclick="remove('${item.id}')"
-                  >
-                    ✕
-                  </button>
+            ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido')">Marcar desaparecido</button>`
+            : `<button class="btn-small btn-found" onclick="confirmSetStatus('${item.id}','encontrado')">Marcar encontrado</button>`
+          }
+                  <button class="btn-small btn-delete" onclick="remove('${item.id}')">✕</button>
                 </div>
               </div>
             `;
-        })
-        .join("");
+      }).join("");
     }
+
+    // Click on person card → open modal
+    listEl.addEventListener("click", (e) => {
+      if (e.target.closest("button")) return;
+      const card = e.target.closest(".card");
+      if (!card) return;
+      const id = card.dataset.id;
+      if (!id) return;
+      const item = personsData.find(p => p.id === id);
+      if (item) openModalForItem(item, "person");
+    });
 
     searchInput.addEventListener("input", render);
 
@@ -607,12 +818,14 @@
       }
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          locationInput.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+          locationInput.value =
+            `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
         },
         () => alert("No se pudo obtener la ubicación."),
       );
     });
 
+    // --- Edificios ---
     let buildingsData = [];
     const listElB = document.getElementById("listB");
     const formB = document.getElementById("addFormB");
@@ -635,41 +848,54 @@
     function renderB() {
       const items = fuzzyFilter(searchInputB.value, buildingsData);
       if (!items.length) {
-        listElB.innerHTML = `<div class="empty">${buildingsData.length ? "Sin resultados." : "No hay edificios reportados."}</div>`;
+        listElB.innerHTML =
+          `<div class="empty">${buildingsData.length ? "Sin resultados." : "No hay edificios reportados."}</div>`;
         return;
       }
-      listElB.innerHTML = items
-        .map((item) => {
-          const date = new Date(item.created_at).toLocaleString("es-CO", {
-            day: "2-digit",
-            month: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-          const metaParts = [];
-          if (item.city) metaParts.push(escapeHtml(item.city));
-          if (item.location) metaParts.push(escapeHtml(item.location));
-          metaParts.push(date);
-          return `
-        <div class="card ${item.status}">
-<div>
-<span class="status-tag ${item.status}">${item.status}</span>
-</div>
-          <div class="info">
-            <span class="name">${escapeHtml(item.name)}</span>
-            <span class="meta">${metaParts.join(" · ")} · </span>
-          </div>
-          <div class="actions">
-            <button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro')">Seguro</button>
-            <button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado')">Dañado</button>
-            <button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado')">Colapsado</button>
-            <button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>
-          </div>
-        </div>
-      `;
-        })
-        .join("");
+      listElB.innerHTML = items.map((item) => {
+        const date = new Date(item.created_at).toLocaleString("es-CO", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const metaParts = [];
+        if (item.city) metaParts.push(escapeHtml(item.city));
+        if (item.location) metaParts.push(escapeHtml(item.location));
+        metaParts.push(date);
+        const statusClass = item.status || "seguro";
+        return `
+              <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
+                <div>
+                  <span class="status-tag ${statusClass}">${item.status || "seguro"}</span>
+                </div>
+                <div class="card-inner">
+                  <div class="info">
+                    <span class="name">${escapeHtml(item.name)}</span>
+                    <span class="meta">${metaParts.join(" · ")}</span>
+                  </div>
+                </div>
+                <div class="actions">
+                  <button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro')">Seguro</button>
+                  <button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado')">Dañado</button>
+                  <button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado')">Colapsado</button>
+                  <button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>
+                </div>
+              </div>
+            `;
+      }).join("");
     }
+
+    // Click on building card → open modal
+    listElB.addEventListener("click", (e) => {
+      if (e.target.closest("button")) return;
+      const card = e.target.closest(".card");
+      if (!card) return;
+      const id = card.dataset.id;
+      if (!id) return;
+      const item = buildingsData.find(b => b.id === id);
+      if (item) openModalForItem(item, "building");
+    });
 
     searchInputB.addEventListener("input", renderB);
 
@@ -712,81 +938,21 @@
       }
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          locationInputB.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+          locationInputB.value =
+            `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
         },
         () => alert("No se pudo obtener la ubicación."),
       );
     });
 
-    // --- Anuncios ---
-    let anunciosData = [];
-    const listElA = document.getElementById("listA");
-    const formA = document.getElementById("addFormA");
-    const anuncioInput = document.getElementById("anuncioInput");
-
-    async function loadListA() {
-      try {
-        const res = await fetch(`${API_BASE}/anuncios`);
-        anunciosData = await res.json();
-        renderA();
-      } catch (err) {
-        listElA.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
-      }
-    }
-
-    function renderA() {
-      if (!anunciosData.length) {
-        listElA.innerHTML = `<div class="empty">No hay anuncios todavía.</div>`;
-        return;
-      }
-      listElA.innerHTML = anunciosData
-        .map((item) => {
-          const date = new Date(item.created_at).toLocaleString("es-CO", {
-            day: "2-digit",
-            month: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-          return `
-        <div class="card">
-          <div class="info">
-            <span class="name">${escapeHtml(item.text)}</span>
-            <span class="meta">${date}</span>
-          </div>
-          <div class="actions">
-            <button class="btn-small btn-delete" onclick="removeA('${item.id}')">✕</button>
-          </div>
-        </div>`;
-        })
-        .join("");
-    }
-
-    formA.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const text = anuncioInput.value.trim();
-      if (!text) return;
-      await fetch(`${API_BASE}/anuncios`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({text}),
-      });
-      anuncioInput.value = "";
-      loadListA();
-    });
-
-    async function removeA(id) {
-      if (!confirm("¿Eliminar este anuncio?")) return;
-      const ok = await adminDelete(`${API_BASE}/anuncios/${id}`);
-      if (ok) loadListA();
-    }
-
+    // --- Inicio ---
     loadList();
     loadListB();
-    loadListA();
+
+    // Auto-refresh cada 10s
     setInterval(() => {
       loadList();
       loadListB();
-      loadListA();
     }, 10000);
   </script>
 </body>
