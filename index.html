@@ -112,6 +112,7 @@
       background: #1a1d24;
       border-radius: 10px;
       padding: 12px 14px;
+      gap: 5px;
       display: flex;
       flex-direction: column;
       border-left: 4px solid #d64545;
@@ -216,7 +217,7 @@
   <div class="tabs">
     <button class="tab-btn active" id="tabPersonasBtn">🫂 Personas</button>
     <button class="tab-btn" id="tabEdificiosBtn">🏢 Ubicaciones</button>
-    <button class="tab-btn" id="tabAnunciosBtn">📣 Anuncios</button>
+    <!-- <button class="tab-btn" id="tabAnunciosBtn">📣 Anuncios</button> -->
   </div>
 
   <div id="tabPersonas" class="tab-panel active">
@@ -385,22 +386,32 @@
           if (item.location) metaParts.push(escapeHtml(item.location));
           metaParts.push(date);
           return `
-        <div class="card ${found ? "encontrado" : ""}">
-<div class="card-inner">
-          <div class="info">
-            <span class="name">${escapeHtml(item.name)}</span>
-            <span class="meta">${metaParts.join(" · ")} · <span class="status-tag ${found ? "encontrado" : ""}">${item.status}</span></span>
-          </div>
-          </div>
-          <div class="actions">
-            ${found
+              <div class="card ${found ? "encontrado" : ""}">
+                <div>
+                  <span class="status-tag ${found ? "encontrado" : ""}"
+                    >${item.status}</span
+                  >
+                </div>
+                <div class="card-inner">
+                  <div class="info">
+                    <span class="name">${escapeHtml(item.name)}</span>
+                    <span class="meta">${metaParts.join(" · ")} · </span>
+                  </div>
+                </div>
+                <div class="actions">
+                  ${found
               ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido')">Marcar desaparecido</button>`
               : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado')">Marcar encontrado</button>`
             }
-            <button class="btn-small btn-delete" onclick="remove('${item.id}')">✕</button>
-          </div>
-        </div>
-      `;
+                  <button
+                    class="btn-small btn-delete"
+                    onclick="remove('${item.id}')"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            `;
         })
         .join("");
     }
@@ -491,9 +502,12 @@
           metaParts.push(date);
           return `
         <div class="card ${item.status}">
+<div>
+<span class="status-tag ${item.status}">${item.status}</span>
+</div>
           <div class="info">
             <span class="name">${escapeHtml(item.name)}</span>
-            <span class="meta">${metaParts.join(" · ")} · <span class="status-tag ${item.status}">${item.status}</span></span>
+            <span class="meta">${metaParts.join(" · ")} · </span>
           </div>
           <div class="actions">
             <button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro')">Seguro</button>
@@ -603,8 +617,8 @@
       if (!text) return;
       await fetch(`${API_BASE}/anuncios`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({text}),
       });
       anuncioInput.value = "";
       loadListA();
