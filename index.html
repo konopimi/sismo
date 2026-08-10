@@ -26,10 +26,12 @@
       display: flex;
       gap: 8px;
       margin-bottom: 16px;
+      flex-wrap: wrap;
     }
 
     .tab-btn {
       flex: 1;
+      min-width: 80px;
       padding: 10px;
       border: none;
       border-radius: 8px;
@@ -37,20 +39,12 @@
       color: #888;
       font-size: 0.95rem;
       cursor: pointer;
+      transition: background 0.15s;
     }
 
     .tab-btn.active {
       background: #d64545;
       color: white;
-    }
-
-    #addForm {
-      display: flex;
-      flex-wrap: wrap;
-    }
-
-    #addForm input {
-      min-width: 200px;
     }
 
     .tab-panel {
@@ -110,13 +104,15 @@
     }
 
     #gpsBtn,
-    #gpsBtnB {
+    #gpsBtnB,
+    #gpsBtnP {
       flex: 0 0 auto;
       background: #333;
     }
 
     #gpsBtn:hover,
-    #gpsBtnB:hover {
+    #gpsBtnB:hover,
+    #gpsBtnP:hover {
       background: #444;
     }
 
@@ -416,7 +412,6 @@
       font-size: 0.9rem;
     }
 
-    /* Responsive */
     @media (max-width: 480px) {
       .modal-content {
         padding: 18px 16px 20px;
@@ -454,36 +449,50 @@
       ">
     <div class="tabs">
       <button class="tab-btn active" id="tabPersonasBtn">🫂 Personas</button>
+      <button class="tab-btn" id="tabPetsBtn">🐕 Mascotas</button>
       <button class="tab-btn" id="tabEdificiosBtn">🏢 Ubicaciones</button>
     </div>
-    <div class="search-row">
-      <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
-    </div>
+    <!-- The search input is duplicated per panel; each panel has its own -->
   </div>
 
   <!-- Panel Personas -->
   <div id="tabPersonas" class="tab-panel active">
-    <div style="
-          border: 1px solid gray;
-          padding: 5px;
-          border-radius: 10px;
-          margin-bottom: 5px;
-          background: teal;
-        ">
+    <div style="border:1px solid gray; padding:5px; border-radius:10px; margin-bottom:5px; background:teal;">
       (+) CREAR
-      <form id="addForm" style="margin-top: 5px">
+      <form id="addForm" style="margin-top:5px">
         <input type="text" id="nameInput" placeholder="Nombre de la persona" required />
         <input type="text" id="locationInput" placeholder="Ubicación (opcional)" />
         <select id="cityInput">
           <option value="">Ciudad</option>
         </select>
-        <button type="button" id="gpsBtn" title="Usar mi ubicación">
-          📍
-        </button>
+        <button type="button" id="gpsBtn" title="Usar mi ubicación">📍</button>
         <button type="submit">Reportar</button>
       </form>
     </div>
+    <div class="search-row">
+      <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
+    </div>
     <div id="list" class="list"></div>
+  </div>
+
+  <!-- Panel Mascotas -->
+  <div id="tabPets" class="tab-panel">
+    <div style="border:1px solid gray; padding:5px; border-radius:10px; margin-bottom:5px; background:teal;">
+      (+) CREAR MASCOTA
+      <form id="addFormP" style="margin-top:5px">
+        <input type="text" id="nameInputP" placeholder="Nombre de la mascota" required />
+        <input type="text" id="locationInputP" placeholder="Ubicación (opcional)" />
+        <select id="cityInputP">
+          <option value="">Ciudad</option>
+        </select>
+        <button type="button" id="gpsBtnP" title="Usar mi ubicación">📍</button>
+        <button type="submit">Reportar</button>
+      </form>
+    </div>
+    <div class="search-row">
+      <input type="search" id="searchInputP" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
+    </div>
+    <div id="listP" class="list"></div>
   </div>
 
   <!-- Panel Edificios -->
@@ -535,29 +544,38 @@
       .then((cities) => {
         const opts = cities.map((c) => `<option value="${c}">${c}</option>`).join("");
         document.getElementById("cityInput").insertAdjacentHTML("beforeend", opts);
+        document.getElementById("cityInputP").insertAdjacentHTML("beforeend", opts);
         document.getElementById("cityInputB").insertAdjacentHTML("beforeend", opts);
       })
       .catch(() => console.error("No se pudo cargar cities.json"));
 
     // Tabs
     const tabPersonasBtn = document.getElementById("tabPersonasBtn");
+    const tabPetsBtn = document.getElementById("tabPetsBtn");
     const tabEdificiosBtn = document.getElementById("tabEdificiosBtn");
     const tabPersonas = document.getElementById("tabPersonas");
+    const tabPets = document.getElementById("tabPets");
     const tabEdificios = document.getElementById("tabEdificios");
 
+    function switchTab(activeBtn, activePanel) {
+      [tabPersonasBtn, tabPetsBtn, tabEdificiosBtn].forEach(b => b.classList.remove("active"));
+      activeBtn.classList.add("active");
+      [tabPersonas, tabPets, tabEdificios].forEach(p => p.classList.remove("active"));
+      activePanel.classList.add("active");
+    }
+
     tabPersonasBtn.addEventListener("click", () => {
-      tabPersonasBtn.classList.add("active");
-      tabEdificiosBtn.classList.remove("active");
-      tabPersonas.classList.add("active");
-      tabEdificios.classList.remove("active");
+      switchTab(tabPersonasBtn, tabPersonas);
       document.getElementById("searchInput").value = "";
       render();
     });
+    tabPetsBtn.addEventListener("click", () => {
+      switchTab(tabPetsBtn, tabPets);
+      document.getElementById("searchInputP").value = "";
+      renderP();
+    });
     tabEdificiosBtn.addEventListener("click", () => {
-      tabEdificiosBtn.classList.add("active");
-      tabPersonasBtn.classList.remove("active");
-      tabEdificios.classList.add("active");
-      tabPersonas.classList.remove("active");
+      switchTab(tabEdificiosBtn, tabEdificios);
       document.getElementById("searchInputB").value = "";
       renderB();
     });
@@ -635,17 +653,13 @@
     });
 
     function openModalForItem(item, type) {
-      // type: 'person' or 'building'
+      // type: 'person', 'pet', 'building'
       const statusClass = item.status || "desaparecido";
       const statusLabel = item.status || "desaparecido";
 
-      // Status tag
       modalStatus.innerHTML = `<span class="status-tag ${statusClass}">${statusLabel}</span>`;
-
-      // Title
       modalTitle.textContent = item.name || "Sin nombre";
 
-      // Meta: location, city, date
       const dateStr = item.created_at ? new Date(item.created_at).toLocaleString("es-CO", {
         day: "2-digit",
         month: "2-digit",
@@ -659,21 +673,19 @@
       metaParts.push(`🕒 ${dateStr}`);
       modalMeta.innerHTML = metaParts.map(p => `<span>${p}</span>`).join("");
 
-      // Body: extra info (placeholder for now)
       modalBody.innerHTML = `<div style="color:#888; font-size:0.95rem;">Detalles del reporte</div>`;
 
-      // Actions: same as card buttons
       let actionsHtml = "";
-      if (type === "person") {
+      if (type === "person" || type === "pet") {
         if (item.status === "encontrado") {
           actionsHtml +=
-            `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido'); closeModal();">Marcar desaparecido</button>`;
+            `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido', '${type}'); closeModal();">Marcar desaparecido</button>`;
         } else {
           actionsHtml +=
-            `<button class="btn-small btn-found" onclick="confirmSetStatus('${item.id}','encontrado'); closeModal();">Marcar encontrado</button>`;
+            `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado', '${type}'); closeModal();">Marcar encontrado</button>`;
         }
         actionsHtml +=
-          `<button class="btn-small btn-delete" onclick="remove('${item.id}'); closeModal();">✕ Eliminar</button>`;
+          `<button class="btn-small btn-delete" onclick="removeItem('${item.id}', '${type}'); closeModal();">✕ Eliminar</button>`;
       } else if (type === "building") {
         actionsHtml +=
           `<button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro'); closeModal();">Seguro</button>`;
@@ -685,21 +697,10 @@
           `<button class="btn-small btn-delete" onclick="removeB('${item.id}'); closeModal();">✕ Eliminar</button>`;
       }
       modalActions.innerHTML = actionsHtml;
-
       modal.classList.add("open");
     }
 
-    function formatDate(iso) {
-      return new Date(iso).toLocaleString("es-CO", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    }
-
-    // --- Personas ---
+    // ----- Personas -----
     let personsData = [];
     const listEl = document.getElementById("list");
     const form = document.getElementById("addForm");
@@ -739,29 +740,26 @@
         if (item.location) metaParts.push(escapeHtml(item.location));
         metaParts.push(date);
         return `
-              <div class="card ${found ? "encontrado" : ""}" data-id="${item.id}" data-type="person">
-                <div>
-                  <span class="status-tag ${found ? "encontrado" : ""}">${item.status}</span>
-                </div>
-                <div class="card-inner">
-                  <div class="info">
-                    <span class="name">${escapeHtml(item.name)}</span>
-                    <span class="meta">${metaParts.join(" · ")}</span>
-                  </div>
-                </div>
-                <div class="actions">
-                  ${found
-            ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido')">Marcar desaparecido</button>`
-            : `<button class="btn-small btn-found" onclick="confirmSetStatus('${item.id}','encontrado')">Marcar encontrado</button>`
-          }
-                  <button class="btn-small btn-delete" onclick="remove('${item.id}')">✕</button>
-                </div>
+          <div class="card ${found ? "encontrado" : ""}" data-id="${item.id}" data-type="person">
+            <div><span class="status-tag ${found ? "encontrado" : ""}">${item.status}</span></div>
+            <div class="card-inner">
+              <div class="info">
+                <span class="name">${escapeHtml(item.name)}</span>
+                <span class="meta">${metaParts.join(" · ")}</span>
               </div>
-            `;
+            </div>
+            <div class="actions">
+              ${found
+            ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','person')">Marcar desaparecido</button>`
+            : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','person')">Marcar encontrado</button>`
+          }
+              <button class="btn-small btn-delete" onclick="removeItem('${item.id}','person')">✕</button>
+            </div>
+          </div>
+        `;
       }).join("");
     }
 
-    // Click on person card → open modal
     listEl.addEventListener("click", (e) => {
       if (e.target.closest("button")) return;
       const card = e.target.closest(".card");
@@ -791,26 +789,6 @@
       loadList();
     });
 
-    async function confirmSetStatus(id, status) {
-      if (!confirm("¿Confirmar que esta persona fue encontrada?")) return;
-      await setStatus(id, status);
-    }
-
-    async function setStatus(id, status) {
-      await fetch(`${API_BASE}/disappeared/${id}`, {
-        method: "PATCH",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({status}),
-      });
-      loadList();
-    }
-
-    async function remove(id) {
-      if (!confirm("¿Eliminar este reporte?")) return;
-      const ok = await adminDelete(`${API_BASE}/disappeared/${id}`);
-      if (ok) loadList();
-    }
-
     gpsBtn.addEventListener("click", () => {
       if (!navigator.geolocation) {
         alert("Geolocalización no disponible.");
@@ -825,7 +803,110 @@
       );
     });
 
-    // --- Edificios ---
+    // ----- Mascotas (Pets) -----
+    let petsData = [];
+    const listElP = document.getElementById("listP");
+    const formP = document.getElementById("addFormP");
+    const nameInputP = document.getElementById("nameInputP");
+    const locationInputP = document.getElementById("locationInputP");
+    const cityInputP = document.getElementById("cityInputP");
+    const gpsBtnP = document.getElementById("gpsBtnP");
+    const searchInputP = document.getElementById("searchInputP");
+
+    async function loadListP() {
+      try {
+        const res = await fetch(`${API_BASE}/pets`);
+        petsData = await res.json();
+        renderP();
+      } catch (err) {
+        listElP.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
+      }
+    }
+
+    function renderP() {
+      const items = fuzzyFilter(searchInputP.value, petsData);
+      if (!items.length) {
+        listElP.innerHTML =
+          `<div class="empty">${petsData.length ? "Sin resultados." : "No hay mascotas reportadas."}</div>`;
+        return;
+      }
+      listElP.innerHTML = items.map((item) => {
+        const found = item.status === "encontrado";
+        const date = new Date(item.created_at).toLocaleString("es-CO", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const metaParts = [];
+        if (item.city) metaParts.push(escapeHtml(item.city));
+        if (item.location) metaParts.push(escapeHtml(item.location));
+        metaParts.push(date);
+        return `
+          <div class="card ${found ? "encontrado" : ""}" data-id="${item.id}" data-type="pet">
+            <div><span class="status-tag ${found ? "encontrado" : ""}">${item.status}</span></div>
+            <div class="card-inner">
+              <div class="info">
+                <span class="name">${escapeHtml(item.name)}</span>
+                <span class="meta">${metaParts.join(" · ")}</span>
+              </div>
+            </div>
+            <div class="actions">
+              ${found
+            ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','pet')">Marcar desaparecido</button>`
+            : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','pet')">Marcar encontrado</button>`
+          }
+              <button class="btn-small btn-delete" onclick="removeItem('${item.id}','pet')">✕</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    listElP.addEventListener("click", (e) => {
+      if (e.target.closest("button")) return;
+      const card = e.target.closest(".card");
+      if (!card) return;
+      const id = card.dataset.id;
+      if (!id) return;
+      const item = petsData.find(p => p.id === id);
+      if (item) openModalForItem(item, "pet");
+    });
+
+    searchInputP.addEventListener("input", renderP);
+
+    formP.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = nameInputP.value.trim();
+      const location = locationInputP.value.trim();
+      const city = cityInputP.value.trim();
+      if (!name) return;
+      await fetch(`${API_BASE}/pets`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name, location, city}),
+      });
+      nameInputP.value = "";
+      locationInputP.value = "";
+      cityInputP.value = "";
+      loadListP();
+    });
+
+    gpsBtnP.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        alert("Geolocalización no disponible.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          locationInputP.value =
+            `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+        },
+        () => alert("No se pudo obtener la ubicación."),
+      );
+    });
+
+    // ----- Edificios -----
     let buildingsData = [];
     const listElB = document.getElementById("listB");
     const formB = document.getElementById("addFormB");
@@ -865,28 +946,25 @@
         metaParts.push(date);
         const statusClass = item.status || "seguro";
         return `
-              <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
-                <div>
-                  <span class="status-tag ${statusClass}">${item.status || "seguro"}</span>
-                </div>
-                <div class="card-inner">
-                  <div class="info">
-                    <span class="name">${escapeHtml(item.name)}</span>
-                    <span class="meta">${metaParts.join(" · ")}</span>
-                  </div>
-                </div>
-                <div class="actions">
-                  <button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro')">Seguro</button>
-                  <button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado')">Dañado</button>
-                  <button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado')">Colapsado</button>
-                  <button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>
-                </div>
+          <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
+            <div><span class="status-tag ${statusClass}">${item.status || "seguro"}</span></div>
+            <div class="card-inner">
+              <div class="info">
+                <span class="name">${escapeHtml(item.name)}</span>
+                <span class="meta">${metaParts.join(" · ")}</span>
               </div>
-            `;
+            </div>
+            <div class="actions">
+              <button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro')">Seguro</button>
+              <button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado')">Dañado</button>
+              <button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado')">Colapsado</button>
+              <button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>
+            </div>
+          </div>
+        `;
       }).join("");
     }
 
-    // Click on building card → open modal
     listElB.addEventListener("click", (e) => {
       if (e.target.closest("button")) return;
       const card = e.target.closest(".card");
@@ -916,6 +994,45 @@
       loadListB();
     });
 
+    gpsBtnB.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        alert("Geolocalización no disponible.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          locationInputB.value =
+            `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+        },
+        () => alert("No se pudo obtener la ubicación."),
+      );
+    });
+
+    // ----- Shared actions -----
+    async function setStatus(id, status, type) {
+      const endpoint = type === 'person' ? 'disappeared' : type === 'pet' ? 'pets' : '';
+      if (!endpoint) return;
+      await fetch(`${API_BASE}/${endpoint}/${id}`, {
+        method: "PATCH",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({status}),
+      });
+      // Refresh corresponding list
+      if (type === 'person') loadList();
+      else if (type === 'pet') loadListP();
+    }
+
+    async function removeItem(id, type) {
+      if (!confirm("¿Eliminar este reporte?")) return;
+      const endpoint = type === 'person' ? 'disappeared' : type === 'pet' ? 'pets' : '';
+      if (!endpoint) return;
+      const ok = await adminDelete(`${API_BASE}/${endpoint}/${id}`);
+      if (ok) {
+        if (type === 'person') loadList();
+        else if (type === 'pet') loadListP();
+      }
+    }
+
     async function setStatusB(id, status) {
       await fetch(`${API_BASE}/buildings/${id}`, {
         method: "PATCH",
@@ -931,27 +1048,15 @@
       if (ok) loadListB();
     }
 
-    gpsBtnB.addEventListener("click", () => {
-      if (!navigator.geolocation) {
-        alert("Geolocalización no disponible.");
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          locationInputB.value =
-            `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
-        },
-        () => alert("No se pudo obtener la ubicación."),
-      );
-    });
-
-    // --- Inicio ---
+    // ----- Initial load -----
     loadList();
+    loadListP();
     loadListB();
 
     // Auto-refresh cada 10s
     setInterval(() => {
       loadList();
+      loadListP();
       loadListB();
     }, 10000);
   </script>
