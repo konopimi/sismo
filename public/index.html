@@ -649,6 +649,7 @@
           <option value="">Ciudad</option>
         </select>
         <button type="button" id="gpsBtn" class="gps-btn" title="Usar mi ubicación">📍</button>
+        <span id="locationDisplay" style="font-size:0.8rem; color:#666; min-width:120px;"></span>
         <div style="min-width: 100%;">
           🖼️ Dos opciones (URL o Subir imagen)
           <br />
@@ -682,6 +683,7 @@
           <option value="">Ciudad</option>
         </select>
         <button type="button" id="gpsBtnP" class="gps-btn" title="Usar mi ubicación">📍</button>
+        <span id="locationDisplayP" style="font-size:0.8rem; color:#666; min-width:120px;"></span>
         <div style="min-width: 100%;">
           🖼️ Dos opciones (URL o Subir imagen)
           <br />
@@ -1183,7 +1185,11 @@
         btn.title = `Ubicación guardada: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
       }
       // Update location display in the corresponding form
-      const displayByContext = {person: null, pet: null, building: document.getElementById("locationDisplayB")};
+      const displayByContext = {
+        person: document.getElementById("locationDisplay"),
+        pet: document.getElementById("locationDisplayP"),
+        building: document.getElementById("locationDisplayB"),
+      };
       const display = displayByContext[mapPickerContext];
       if (display) display.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
       closeMapPicker();
@@ -1559,6 +1565,7 @@
       mapPickerLng.person = null;
       gpsBtn.classList.remove("has-location");
       gpsBtn.title = "Usar mi ubicación";
+      document.getElementById("locationDisplay").textContent = "";
       loadList();
     });
 
@@ -1758,6 +1765,7 @@
       mapPickerLng.pet = null;
       gpsBtnP.classList.remove("has-location");
       gpsBtnP.title = "Usar mi ubicación";
+      document.getElementById("locationDisplayP").textContent = "";
       loadListP();
     });
 
