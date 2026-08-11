@@ -690,11 +690,25 @@
 
   <!-- ===== PANEL MAPA ===== -->
   <div id="tabMapPanel" class="tab-panel">
+    <div style="margin-bottom:10px;">
+      <label for="citySelectorMap" style="color:#ccc; margin-right:8px;">📍 Ir a ciudad:</label>
+      <select id="citySelectorMap" style="
+          padding: 8px 12px;
+          border-radius: 8px;
+          border: 1px solid #333;
+          background: #1a1d24;
+          color: #eaeaea;
+          font-size: 0.95rem;
+          min-width: 150px;
+        ">
+        <option value="">-- Seleccionar --</option>
+      </select>
+    </div>
     <div id="map" style="height:500px; width:100%; border-radius:10px; border:1px solid #333;"></div>
   </div>
 
   <!-- ===== MODAL ===== -->
-  <div id=" modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal-content">
       <button class="modal-close" aria-label="Cerrar">✕</button>
       <div class="modal-status" id="modalStatus"></div>
@@ -715,6 +729,26 @@
   </div>
 
   <script>
+    // Coordenadas de ciudades principales de Colombia
+    // (Agrega más ciudades según necesites)
+    const cityCoordinates = {
+      "Bogotá": [4.7110, -74.0721],
+      "Medellín": [6.2442, -75.5812],
+      "Cali": [3.4516, -76.5320],
+      "Barranquilla": [10.9639, -74.7968],
+      "Cartagena": [10.3910, -75.4794],
+      "Cúcuta": [7.8939, -72.5078],
+      "Bucaramanga": [7.1193, -73.1227],
+      "Pereira": [4.8133, -75.6961],
+      "Santa Marta": [11.2408, -74.1990],
+      "Ibagué": [4.4389, -75.2322],
+      "Villavicencio": [4.1531, -73.6350],
+      "Manizales": [5.0673, -75.5204],
+      "Neiva": [2.9274, -75.2819],
+      "Armenia": [4.5343, -75.6813],
+      "Sincelejo": [9.3047, -75.3978],
+      "Montería": [8.7499, -75.8759]
+    };
     // ================================================================
     //  CONFIGURACIÓN
     // ================================================================
@@ -776,6 +810,23 @@
         document.getElementById("cityInput").insertAdjacentHTML("beforeend", opts);
         document.getElementById("cityInputP").insertAdjacentHTML("beforeend", opts);
         document.getElementById("cityInputB").insertAdjacentHTML("beforeend", opts);
+        // Llenar el selector de ciudades del mapa y agregar evento
+        const citySelectorMap = document.getElementById("citySelectorMap");
+        if (citySelectorMap) {
+          cities.forEach(c => {
+            const option = document.createElement("option");
+            option.value = c;
+            option.textContent = c;
+            citySelectorMap.appendChild(option);
+          });
+          citySelectorMap.addEventListener("change", function () {
+            const city = this.value;
+            if (city && window.map && cityCoordinates[city]) {
+              const coords = cityCoordinates[city];
+              window.map.flyTo(coords, 13, {duration: 0.3});
+            }
+          });
+        }
       })
       .catch(() => console.error("No se pudo cargar cities.json"));
 
@@ -1713,10 +1764,20 @@
   </script>
 
   <script>
+
     function initMap() {
       // Centro aproximado de Colombia
       const colombiaCenter = [4.5709, -74.2973];
-      const map = L.map('map').setView(colombiaCenter, 6);
+      const map = L.map('map', {
+        center: colombiaCenter,
+        zoom: 6,
+        minZoom: 5,
+        maxBounds: [
+          [-5.0, -82.0], // Suroeste (lat mín, lon mín)
+          [13.0, -66.0]  // Noreste (lat máx, lon máx)
+        ],
+        maxBoundsViscosity: 1.0 // Evita que el usuario pueda arrastrar fuera de los límites
+      });
 
       // Capa de OpenStreetMap
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
