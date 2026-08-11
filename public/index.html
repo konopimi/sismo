@@ -1153,6 +1153,10 @@
       document.getElementById("commentInput").value = "";
       currentItemId = null;
       currentItemType = null;
+      if (modalMiniMap) {
+        modalMiniMap.remove();
+        modalMiniMap = null;
+      }
       const url = new URL(window.location);
       url.searchParams.delete("id");
       url.searchParams.delete("type");
@@ -1175,6 +1179,7 @@
     let modalLocationTarget = null; // {id, type} cuando se edita ubicación desde el modal
     let leafletMap = null;
     let leafletMarker = null;
+    let modalMiniMap = null;
 
     const mapModal = document.getElementById("mapModal");
     const mapModalClose = document.getElementById("mapModalClose");
@@ -1377,6 +1382,28 @@
       closeMapPicker();
     });
 
+    function initModalMiniMap(lat, lng) {
+      if (modalMiniMap) {
+        modalMiniMap.remove();
+        modalMiniMap = null;
+      }
+      setTimeout(() => {
+        const container = document.getElementById("modalMiniMapContainer");
+        if (!container) return; // el modal pudo haberse cerrado ya
+        modalMiniMap = L.map("modalMiniMapContainer", {
+          zoomControl: false,
+          dragging: false,
+          scrollWheelZoom: false,
+          doubleClickZoom: false,
+        }).setView([lat, lng], 16);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "&copy; OpenStreetMap",
+        }).addTo(modalMiniMap);
+        L.marker([lat, lng]).addTo(modalMiniMap);
+        modalMiniMap.invalidateSize();
+      }, 50);
+    }
+
     function openModalForItem(item, type) {
       const commentsContainer = document.getElementById("commentsContainer");
 
@@ -1434,6 +1461,7 @@
 
       // --- Cuerpo del modal: imágenes y subida de foto (para personas y mascotas) ---
       if (type === "person" || type === "pet") {
+        const hasLoc = item.lat != null && item.lng != null;
         let imagesHtml = "";
         if (item.photo_url) {
           imagesHtml = `<img class="modal-photo" src="${escapeHtml(item.photo_url)}" alt="Foto subida" />`;
@@ -1442,6 +1470,7 @@
         }
         modalBody.innerHTML = `
       ${imagesHtml}
+      ${hasLoc ? `<div id="modalMiniMapContainer" style="height:200px; border-radius:10px; margin-bottom:10px; overflow:hidden;"></div>` : ""}
       <label style="display:block; font-size:0.8rem; color:#999; margin-bottom:4px;">${item.photo_url ? "Cambiar foto" : "Agregar foto"}</label>
       <input type="file" accept="image/*" capture="environment" id="modalPhotoInput"
         style="width:100%; padding:8px; border-radius:8px; border:1px solid #333; background:#1a1d24; color:#eaeaea;" />
@@ -1462,9 +1491,11 @@
           }
           closeModal();
         });
+        if (hasLoc) initModalMiniMap(item.lat, item.lng);
       } else if (type === "building") {
         const hasLoc = item.lat != null && item.lng != null;
         modalBody.innerHTML = `
+          ${hasLoc ? `<div id="modalMiniMapContainer" style="height:200px; border-radius:10px; margin-bottom:10px; overflow:hidden;"></div>` : ""}
           <div style="color:#888; font-size:0.95rem; margin-bottom:8px;">
             ${hasLoc
             ? `📐 <a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank" style="color:#4ea1ff;">${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</a>`
@@ -1476,6 +1507,7 @@
           modalLocationTarget = {id: item.id, type: "building"};
           openMapPicker("modalItem");
         });
+        if (hasLoc) initModalMiniMap(item.lat, item.lng);
       } else {
         modalBody.innerHTML = `<div style="color:#888; font-size:0.95rem;">Detalles del reporte</div>`;
       }
