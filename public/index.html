@@ -24,6 +24,13 @@
       margin: 0 0 12px 0;
     }
 
+    #map {
+      height: 500px;
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #333;
+    }
+
     .crear {
       border: 1px solid gray;
       padding: 8px 10px;
@@ -560,7 +567,7 @@
       <button class="tab-btn" id="tabPetsBtn">🐕 Mascotas</button>
       <button class="tab-btn" id="tabEdificiosBtn">🏢 Lugar</button>
       <button class="tab-btn" id="tabAnunciosBtn">📣 Anuncios</button>
-      <button class="tab-btn" id="tabMap">🗺️ Mapa</button>
+      <button class="tab-btn" id="tabMapBtn">🗺️ Mapa</button>
     </div>
 
     <div id="searchPerson" class="search-row">
@@ -681,8 +688,13 @@
     <div id="listA" class="list"></div>
   </div>
 
+  <!-- ===== PANEL MAPA ===== -->
+  <div id="tabMapPanel" class="tab-panel">
+    <div id="map" style="height:500px; width:100%; border-radius:10px; border:1px solid #333;"></div>
+  </div>
+
   <!-- ===== MODAL ===== -->
-  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div id=" modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal-content">
       <button class="modal-close" aria-label="Cerrar">✕</button>
       <div class="modal-status" id="modalStatus"></div>
@@ -819,42 +831,64 @@
     const tabPetsBtn = document.getElementById("tabPetsBtn");
     const tabEdificiosBtn = document.getElementById("tabEdificiosBtn");
     const tabAnunciosBtn = document.getElementById("tabAnunciosBtn");
+
+    const tabMapBtn = document.getElementById("tabMapBtn");
     const tabPersonas = document.getElementById("tabPersonas");
     const tabPets = document.getElementById("tabPets");
     const tabEdificios = document.getElementById("tabEdificios");
     const tabAnuncios = document.getElementById("tabAnuncios");
+    const tabMapPanel = document.getElementById("tabMapPanel");
 
     function switchTab(activeBtn, activePanel, tabType) {
-      [tabPersonasBtn, tabPetsBtn, tabEdificiosBtn, tabAnunciosBtn].forEach(b => b.classList.remove("active"));
+      // Desactivar todos los botones
+      [tabPersonasBtn, tabPetsBtn, tabEdificiosBtn, tabAnunciosBtn, tabMapBtn].forEach(b => b && b.classList.remove("active"));
+      // Activar el botón seleccionado
       activeBtn.classList.add("active");
-      [tabPersonas, tabPets, tabEdificios, tabAnuncios].forEach(p => p.classList.remove("active"));
+
+      // Ocultar todos los paneles
+      [tabPersonas, tabPets, tabEdificios, tabAnuncios, tabMapPanel].forEach(p => p && p.classList.remove("active"));
+      // Mostrar el panel seleccionado
       activePanel.classList.add("active");
 
+      // Ocultar todas las barras de búsqueda
       document.getElementById("searchPerson").style.display = "none";
       document.getElementById("searchPet").style.display = "none";
       document.getElementById("searchBuilding").style.display = "none";
 
+      // Lógica específica según el tipo de tab
       if (tabType === "person") {
         document.getElementById("searchPerson").style.display = "block";
         document.getElementById("searchInput").value = "";
-        render();
+        render();  // Renderizar lista de personas
       } else if (tabType === "pet") {
         document.getElementById("searchPet").style.display = "block";
         document.getElementById("searchInputP").value = "";
-        renderP();
+        renderP(); // Renderizar lista de mascotas
       } else if (tabType === "building") {
         document.getElementById("searchBuilding").style.display = "block";
         document.getElementById("searchInputB").value = "";
-        renderB();
+        renderB(); // Renderizar lista de edificios
       } else if (tabType === "anuncio") {
-        renderA();
+        renderA(); // Renderizar anuncios (sin búsqueda)
+      } else if (tabType === "map") {
+        // Inicializar el mapa si no está creado
+        if (!window.mapInitialized) {
+          initMap(); // Esta función debe estar definida en el script posterior
+          window.mapInitialized = true;
+        }
+        // Redimensionar el mapa después de que el panel se muestre
+        setTimeout(() => {
+          if (window.map) {
+            window.map.invalidateSize();
+          }
+        }, 200);
       }
     }
-
     tabPersonasBtn.addEventListener("click", () => switchTab(tabPersonasBtn, tabPersonas, "person"));
     tabPetsBtn.addEventListener("click", () => switchTab(tabPetsBtn, tabPets, "pet"));
     tabEdificiosBtn.addEventListener("click", () => switchTab(tabEdificiosBtn, tabEdificios, "building"));
     tabAnunciosBtn.addEventListener("click", () => switchTab(tabAnunciosBtn, tabAnuncios, "anuncio"));
+    tabMapBtn.addEventListener("click", () => switchTab(tabMapBtn, tabMapPanel, "map"));
 
     // ================================================================
     //  MODAL
@@ -1672,6 +1706,40 @@
     setTimeout(attemptUrlModal, 300);
 
   </script>
+
+  <!-- Leaflet CSS y JS para el mapa -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+  </script>
+
+  <script>
+    function initMap() {
+      // Centro aproximado de Colombia
+      const colombiaCenter = [4.5709, -74.2973];
+      const map = L.map('map').setView(colombiaCenter, 6);
+
+      // Capa de OpenStreetMap
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+
+      // Guardar referencia global para poder redimensionar
+      window.map = map;
+
+      // Opcional: marcador de ejemplo en Bogotá
+      L.marker([4.7110, -74.0721])
+        .addTo(map)
+        .bindPopup('📍 Bogotá, Colombia');
+
+      // Marcador en Medellín
+      L.marker([6.2442, -75.5812])
+        .addTo(map)
+        .bindPopup('📍 Medellín, Colombia');
+
+      console.log('Mapa de Colombia inicializado');
+    }
+  </script>
+
 </body>
 
 </html>
