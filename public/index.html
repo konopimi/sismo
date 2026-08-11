@@ -503,7 +503,6 @@
   <!-- Panel Anuncios -->
   <div id="tabAnuncios" class="tab-panel">
     <div class="crear">
-
       (+) CREAR ANUNCIO
       <form id="addFormA" style="margin-top: 5px; flex-direction: column; align-items: stretch">
         <textarea id="anuncioInput" rows="3" placeholder="Escribe un anuncio..." required style="
@@ -536,12 +535,13 @@
       <div class="modal-divider"></div>
       <div id="modalBody"></div>
       <div class="modal-divider"></div>
-      <div class="modal-placeholder">
-        <span class="icon">📋</span>
-        <strong>MAS INFO PRONTO</strong>
-        <div style="font-size: 0.8rem; margin-top: 4px; color: #555">
-          Estamos trabajando en más detalles para este reporte.
-        </div>
+      <div id="commentsContainer">
+        <div id="commentsList" style="margin-bottom:12px;"></div>
+        <form id="commentForm" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <input type="text" id="commentInput" placeholder="Escribe un comentario..." required
+            style="flex:1; padding:10px; border-radius:8px; border:1px solid #333; background:#1a1d24; color:#eaeaea;" />
+          <button type="submit" style="flex:0 0 auto;">Comentar</button>
+        </form>
       </div>
       <div id="modalActions" class="modal-actions"></div>
     </div>
@@ -584,11 +584,11 @@
 
     function switchTab(activeBtn, activePanel, tabType) {
       [tabPersonasBtn, tabPetsBtn, tabEdificiosBtn, tabAnunciosBtn].forEach(
-        (b) => b.classList.remove("active")
+        (b) => b.classList.remove("active"),
       );
       activeBtn.classList.add("active");
       [tabPersonas, tabPets, tabEdificios, tabAnuncios].forEach((p) =>
-        p.classList.remove("active")
+        p.classList.remove("active"),
       );
       activePanel.classList.add("active");
 
@@ -711,6 +711,10 @@
       modalMeta.innerHTML = "";
       modalBody.innerHTML = "";
       modalActions.innerHTML = "";
+      document.getElementById("commentsList").innerHTML = "";
+      document.getElementById("commentInput").value = "";
+      currentItemId = null;
+      currentItemType = null;
     }
 
     modalClose.addEventListener("click", closeModal);
@@ -760,7 +764,67 @@
       }
       modalActions.innerHTML = actionsHtml;
       modal.classList.add("open");
+      loadComments(item.id, type === "person" ? "disappeared" : type === "pet" ? "pets" : "buildings");
     }
+    // ----- Comments -----
+    let currentComments = [];
+    let currentItemId = null;
+    let currentItemType = null;
+
+    async function loadComments(itemId, itemType) {
+      if (!itemId || !itemType) return;
+      currentItemId = itemId;
+      currentItemType = itemType;
+      try {
+        const res = await fetch(`${API_BASE}/comments?itemId=${itemId}&itemType=${itemType}`);
+        currentComments = await res.json();
+        renderComments();
+      } catch (err) {
+        document.getElementById("commentsList").innerHTML = `<div style="color:#666;">Error al cargar comentarios.</div>`;
+      }
+    }
+
+    function renderComments() {
+      const list = document.getElementById("commentsList");
+      if (!currentComments.length) {
+        list.innerHTML = `<div style="color:#666; text-align:center; padding:12px;">Sin comentarios aún.</div>`;
+        return;
+      }
+      list.innerHTML = currentComments.map(c => {
+        const date = new Date(c.created_at).toLocaleString("es-CO", {
+          day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+        });
+        return `
+      <div style="background:#12151c; border-radius:8px; padding:8px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; border-left:2px solid #d64545;">
+        <div>
+          <div style="color:#eaeaea; word-break:break-word;">${escapeHtml(c.text)}</div>
+          <div style="font-size:0.7rem; color:#888;">${date}</div>
+        </div>
+        <button class="btn-small btn-delete" onclick="deleteComment('${c.id}')" style="flex-shrink:0;">✕</button>
+      </div>
+    `;
+      }).join("");
+    }
+
+    async function deleteComment(id) {
+      if (!confirm("¿Eliminar este comentario?")) return;
+      const ok = await adminDelete(`${API_BASE}/comments/${id}`);
+      if (ok) loadComments(currentItemId, currentItemType);
+    }
+
+    document.getElementById("commentForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("commentInput");
+      const text = input.value.trim();
+      if (!text || !currentItemId || !currentItemType) return;
+      await fetch(`${API_BASE}/comments`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({itemId: currentItemId, itemType: currentItemType, text}),
+      });
+      input.value = "";
+      loadComments(currentItemId, currentItemType);
+    });
 
     // ----- Personas (unchanged) -----
     let personsData = [];

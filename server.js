@@ -53,6 +53,56 @@ db.exec(`
     created_at TEXT NOT NULL
   )
 `);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS comments (
+    id TEXT PRIMARY KEY,
+    item_id TEXT NOT NULL,
+    item_type TEXT NOT NULL,  -- 'disappeared', 'pets', 'buildings'
+    text TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )
+`);
+// ========== Comentarios ==========
+app.get("/api/comments", (req, res) => {
+  const { itemId, itemType } = req.query;
+  if (!itemId || !itemType) {
+    return res.status(400).json({ error: "itemId and itemType are required" });
+  }
+  const rows = db
+    .prepare(
+      "SELECT id, text, created_at FROM comments WHERE item_id = ? AND item_type = ? ORDER BY created_at DESC",
+    )
+    .all(itemId, itemType);
+  res.json(rows);
+});
+
+app.post("/api/comments", (req, res) => {
+  const { itemId, itemType, text } = req.body || {};
+  if (!itemId || !itemType || !text || !text.trim()) {
+    return res
+      .status(400)
+      .json({ error: "itemId, itemType and text are required" });
+  }
+  const finalId = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  db.prepare(
+    "INSERT INTO comments (id, item_id, item_type, text, created_at) VALUES (?, ?, ?, ?, ?)",
+  ).run(finalId, itemId, itemType, text.trim(), createdAt);
+  res
+    .status(201)
+    .json({ id: finalId, text: text.trim(), created_at: createdAt });
+});
+
+app.delete("/api/comments/:id", (req, res) => {
+  if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
+    return res.status(403).json({ error: "forbidden" });
+  }
+  const result = db
+    .prepare("DELETE FROM comments WHERE id = ?")
+    .run(req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.status(204).end();
+});
 
 // --- Migrate existing tables (add city column if missing) ---
 try {
@@ -69,7 +119,11 @@ try {
 app.get("/api/disappeared", (req, res) => {
   const rows = db
     .prepare(
-      "SELECT id, name, status, location, city, created_at FROM disappeared ORDER BY created_at DESC",
+      `
+      SELECT id, name, status, location, city, created_at,
+        (SELECT text FROM comments WHERE item_id = disappeared.id AND item_type = 'disappeared' ORDER BY created_at DESC LIMIT 1) AS last_comment
+      FROM disappeared ORDER BY created_at DESC
+    `,
     )
     .all();
   res.json(rows);
