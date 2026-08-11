@@ -88,7 +88,10 @@ try {
 try {
   db.exec("ALTER TABLE disappeared ADD COLUMN photo_url TEXT");
 } catch (e) { }
-
+// Add photo_url to pets (for file uploads)
+try {
+  db.exec("ALTER TABLE pets ADD COLUMN photo_url TEXT");
+} catch (e) { }
 // ========== Comentarios ==========
 app.get("/api/comments", (req, res) => {
   const { itemId, itemType } = req.query;
@@ -228,10 +231,26 @@ app.delete("/api/disappeared/:id", (req, res) => {
 app.get("/api/pets", (req, res) => {
   const rows = db
     .prepare(
-      "SELECT id, name, status, location, city, image, created_at FROM pets ORDER BY created_at DESC",
+      "SELECT id, name, status, location, city, image, photo_url, created_at FROM pets ORDER BY created_at DESC",
     )
     .all();
   res.json(rows);
+});
+// Endpoint para actualizar photo_url de mascotas (similar a personas)
+app.patch("/api/pets/:id/photo", (req, res) => {
+  const { photo_url } = req.body || {};
+  if (
+    !photo_url ||
+    typeof photo_url !== "string" ||
+    !/^https:\/\/res\.cloudinary\.com\//.test(photo_url)
+  ) {
+    return res.status(400).json({ error: "invalid photo_url" });
+  }
+  const result = db
+    .prepare("UPDATE pets SET photo_url = ? WHERE id = ?")
+    .run(photo_url, req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.json({ id: req.params.id, photo_url });
 });
 
 app.post("/api/pets", (req, res) => {
