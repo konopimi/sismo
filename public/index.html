@@ -233,6 +233,17 @@
       pointer-events: auto;
     }
 
+    .anuncio-text {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      font-family: inherit;
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #eaeaea;
+    }
+
     .btn-small {
       padding: 8px 12px;
       font-size: 0.85rem;
@@ -1626,19 +1637,18 @@
           hour: "2-digit", minute: "2-digit"
         });
         return `
-          <div class="card" data-id="${item.id}">
-            <div class="info">
-              <span class="name">${escapeHtml(item.text)}</span>
-              <span class="meta">${date}</span>
-            </div>
-            <div class="actions">
-              <button class="btn-small btn-delete" onclick="removeA('${item.id}')">✕</button>
-            </div>
-          </div>
-        `;
+      <div class="card" data-id="${item.id}">
+        <div class="info">
+          <pre class="anuncio-text">${escapeHtml(item.text)}</pre>
+          <span class="meta">${date}</span>
+        </div>
+        <div class="actions">
+          <button class="btn-small btn-delete" onclick="removeA('${item.id}')">✕</button>
+        </div>
+      </div>
+    `;
       }).join("");
     }
-
     formA.addEventListener("submit", async (e) => {
       e.preventDefault();
       const text = anuncioInput.value.trim();
