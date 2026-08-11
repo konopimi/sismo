@@ -591,7 +591,7 @@
 
   <!-- ===== HEADER ===== -->
   <div style="padding: 5px">
-    <h1>🚨 SISMOINFO.CO - ADMIN: +57 3153410282</h1>
+    <h1>🚨 SISMOINFO.CO - ADMIN: +57 3153410282 IG:@neokpm</h1>
     <button id="copyLinkBtn"
       style="margin-bottom: 5px; background: teal; border: none; padding: 10px 16px; border-radius: 8px; color: white; cursor: pointer;">
       http://sismoinfo.co (COPIAR LINK)
@@ -715,6 +715,7 @@
           <option value="">Ciudad</option>
         </select>
         <button type="button" id="gpsBtnB" class="gps-btn" title="Usar mi ubicación">📍</button>
+        <span id="locationDisplayB" style="font-size:0.8rem; color:#666; min-width:120px;"></span>
         <button type="submit">Reportar</button>
       </form>
     </div>
@@ -1152,7 +1153,7 @@
             leafletMarker.setLatLng(ll);
             leafletMap.setView(ll, 15);
           },
-          () => {},
+          () => { },
         );
       }
 
@@ -1181,6 +1182,10 @@
         btn.classList.add("has-location");
         btn.title = `Ubicación guardada: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
       }
+      // Update location display in the corresponding form
+      const displayByContext = {person: null, pet: null, building: document.getElementById("locationDisplayB")};
+      const display = displayByContext[mapPickerContext];
+      if (display) display.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
       closeMapPicker();
     });
 
@@ -1235,6 +1240,7 @@
       const metaParts = [];
       if (item.city) metaParts.push(`📍 ${escapeHtml(item.city)}`);
       if (item.location) metaParts.push(`🗺️ ${escapeHtml(item.location)}`);
+      if (item.lat != null && item.lng != null) metaParts.push(`📐 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}`);
       metaParts.push(`🕒 ${dateStr}`);
       modalMeta.innerHTML = metaParts.map(p => `<span>${p}</span>`).join("");
 
@@ -1459,6 +1465,7 @@
         const metaParts = [];
         if (item.city) metaParts.push(escapeHtml(item.city));
         if (item.location) metaParts.push(escapeHtml(item.location));
+        if (item.lat != null && item.lng != null) metaParts.push(`📐 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}`);
         metaParts.push(date);
         let imgHtml = "";
         if (item.photo_url) {
@@ -1660,6 +1667,7 @@
         const metaParts = [];
         if (item.city) metaParts.push(escapeHtml(item.city));
         if (item.location) metaParts.push(escapeHtml(item.location));
+        if (item.lat != null && item.lng != null) metaParts.push(`📐 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}`);
         metaParts.push(date);
         let imgHtml = "";
         if (item.photo_url) {
@@ -1793,6 +1801,7 @@
         const metaParts = [];
         if (item.city) metaParts.push(escapeHtml(item.city));
         if (item.location) metaParts.push(escapeHtml(item.location));
+        if (item.lat != null && item.lng != null) metaParts.push(`📐 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}`);
         metaParts.push(date);
         const statusClass = item.status || "seguro";
         return `
@@ -1833,25 +1842,26 @@
       const name = nameInputB.value.trim();
       const location = locationInputB.value.trim();
       const city = cityInputB.value.trim();
+      const lat = mapPickerLat.building;
+      const lng = mapPickerLng.building;
       if (!name) return;
       await fetch(`${API_BASE}/buildings`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({name, location, city}),
+        body: JSON.stringify({name, location, city, lat, lng}),
       });
       nameInputB.value = "";
       locationInputB.value = "";
       cityInputB.value = "";
+      mapPickerLat.building = null;
+      mapPickerLng.building = null;
+      gpsBtnB.classList.remove("has-location");
+      gpsBtnB.title = "Usar mi ubicación";
+      document.getElementById("locationDisplayB").textContent = "";
       loadListB();
     });
 
-    gpsBtnB.addEventListener("click", () => {
-      if (!navigator.geolocation) {alert("Geolocalización no disponible."); return;}
-      navigator.geolocation.getCurrentPosition(
-        pos => {locationInputB.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;},
-        () => alert("No se pudo obtener la ubicación.")
-      );
-    });
+    gpsBtnB.addEventListener("click", () => openMapPicker("building"));
 
     // ================================================================
     //  MODAL: ya muestra imágenes para cualquier tipo
