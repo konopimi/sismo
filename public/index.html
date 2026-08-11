@@ -1066,6 +1066,7 @@
         setTimeout(() => {
           if (window.map) {
             window.map.invalidateSize();
+            renderMapMarkers();
           }
         }, 200);
       }
@@ -2121,18 +2122,51 @@
       // Guardar referencia global para poder redimensionar
       window.map = map;
 
-      // Opcional: marcador de ejemplo en Bogotá
-      L.marker([4.7110, -74.0721])
-        .addTo(map)
-        .bindPopup('📍 Bogotá, Colombia');
-
-      // Marcador en Medellín
-      L.marker([6.2442, -75.5812])
-        .addTo(map)
-        .bindPopup('📍 Medellín, Colombia');
-
-      console.log('Mapa de Colombia inicializado');
+      renderMapMarkers();
     }
+
+    let mapMarkersLayer = null;
+
+    const MAP_MARKER_META = {
+      person: {emoji: "🫂", color: "#d64545", data: () => personsData, tabArgs: () => [tabPersonasBtn, tabPersonas, "person"]},
+      pet: {emoji: "🐕", color: "#3fa34d", data: () => petsData, tabArgs: () => [tabPetsBtn, tabPets, "pet"]},
+      building: {emoji: "🏢", color: "#e0a63c", data: () => buildingsData, tabArgs: () => [tabEdificiosBtn, tabEdificios, "building"]},
+    };
+
+    function renderMapMarkers() {
+      if (!window.map) return;
+      if (mapMarkersLayer) window.map.removeLayer(mapMarkersLayer);
+      mapMarkersLayer = L.layerGroup().addTo(window.map);
+
+      Object.keys(MAP_MARKER_META).forEach(type => {
+        const {emoji, color, data} = MAP_MARKER_META[type];
+        data().forEach(item => {
+          if (item.lat == null || item.lng == null) return;
+          L.circleMarker([item.lat, item.lng], {
+            radius: 9,
+            color,
+            fillColor: color,
+            fillOpacity: 0.85,
+            weight: 2,
+          })
+            .addTo(mapMarkersLayer)
+            .bindPopup(`
+              ${emoji} <strong>${escapeHtml(item.name)}</strong><br>
+              ${item.status ? `<span class="status-tag ${item.status}">${item.status}</span><br>` : ""}
+              <a href="#" onclick="window.__mapPopupOpen('${item.id}','${type}'); return false;">Ver detalle</a>
+            `);
+        });
+      });
+    }
+
+    window.__mapPopupOpen = function (id, type) {
+      const meta = MAP_MARKER_META[type];
+      if (!meta) return;
+      const item = meta.data().find(i => i.id === id);
+      if (!item) return;
+      switchTab(...meta.tabArgs());
+      openModalForItem(item, type);
+    };
   </script>
 
 </body>
