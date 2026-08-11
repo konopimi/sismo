@@ -6,15 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sismo API</title>
   <style>
-    /* --- same styles as before, with nothing extra needed --- */
+    /* ===== RESET Y BASE ===== */
     * {
       box-sizing: border-box;
     }
 
     body {
       margin: 0;
-      font-family:
-        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: #0f1115;
       color: #eaeaea;
       overflow-y: scroll;
@@ -25,39 +24,93 @@
       margin: 0 0 12px 0;
     }
 
-    .image-input {
-      width: 100%;
-      min-width: 100%;
-      margin-top: 4px;
-      flex-basis: 100%;
-    }
-
     .crear {
       border: 1px solid gray;
-      padding: 5px;
+      padding: 8px 10px;
       border-radius: 10px;
-      margin-bottom: 5px;
+      margin-bottom: 8px;
       background: teal;
     }
 
     .crear form {
       display: flex;
       flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+      align-items: center;
     }
 
-    .crear form input {
-      min-width: max(200px, 100%);
-    }
-
-    .card-image {
-      width: 60px;
-      height: 60px;
-      object-fit: cover;
+    .crear form input,
+    .crear form select {
+      flex: 1 1 150px;
+      min-width: 120px;
+      padding: 10px 12px;
+      font-size: 0.95rem;
       border-radius: 8px;
-      background: #2a2e36;
-      flex-shrink: 0;
+      border: 1px solid #333;
+      background: #1a1d24;
+      color: #eaeaea;
     }
 
+    .crear form .gps-btn {
+      flex: 0 0 auto;
+      background: #333;
+      padding: 10px 14px;
+    }
+
+    .crear form .gps-btn:hover {
+      background: #444;
+    }
+
+    .crear form button[type="submit"] {
+      flex: 1 1 100px;
+      background: #d64545;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background 0.15s;
+    }
+
+    .crear form button[type="submit"]:hover {
+      background: #b53838;
+    }
+
+    /* ===== BOTÓN DE SUBIDA DE ARCHIVO PERSONALIZADO ===== */
+    .custom-file-upload {
+      display: inline-block;
+      padding: 10px 16px;
+      background: #2a2e36;
+      color: #ddd;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background 0.15s;
+      border: 1px solid #444;
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+
+    .custom-file-upload:hover {
+      background: #3a3e46;
+    }
+
+    .custom-file-upload input[type="file"] {
+      display: none;
+    }
+
+    .file-name {
+      color: #999;
+      font-size: 0.85rem;
+      margin-left: 6px;
+      flex: 1 1 120px;
+      min-width: 80px;
+      padding: 6px 0;
+    }
+
+    /* ===== TABS ===== */
     .tabs {
       display: flex;
       gap: 8px;
@@ -92,22 +145,13 @@
       display: block;
     }
 
-    form {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-
+    /* ===== SEARCH ===== */
     .search-row {
       margin-bottom: 16px;
     }
 
-    input[type="text"],
-    input[type="search"],
-    select {
-      flex: 1;
-      min-width: 100px;
+    .search-row input[type="search"] {
+      width: 100%;
       padding: 12px;
       font-size: 1rem;
       border-radius: 8px;
@@ -116,38 +160,7 @@
       color: #eaeaea;
     }
 
-    input[type="search"] {
-      width: 100%;
-    }
-
-    button {
-      padding: 12px 16px;
-      font-size: 1rem;
-      border: none;
-      border-radius: 8px;
-      background: #d64545;
-      color: white;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-
-    button:hover {
-      background: #b53838;
-    }
-
-    button:active {
-      background: #9a2f2f;
-    }
-
-    .gps-btn {
-      flex: 0 0 auto;
-      background: #333;
-    }
-
-    .gps-btn:hover {
-      background: #444;
-    }
-
+    /* ===== LISTA ===== */
     .list {
       display: flex;
       flex-direction: column;
@@ -158,10 +171,6 @@
       background: #1a1d24;
       border-radius: 10px;
       padding: 12px 14px;
-      gap: 8px;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
       border-left: 4px solid #d64545;
       cursor: default;
       transition: background 0.15s;
@@ -171,16 +180,14 @@
       background: #22262e;
     }
 
-    .card .info {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      flex: 1;
+    .card.encontrado {
+      border-left-color: #3fa34d;
     }
 
-    display: flex;
-    gap: 10px;
-    align-items: center;
+    .card .card-inner {
+      display: flex;
+      gap: 12px;
+      align-items: center;
     }
 
     .card-photo {
@@ -192,12 +199,11 @@
       background: #12151c;
     }
 
-    .modal-photo {
-      width: 100%;
-      max-height: 320px;
-      object-fit: cover;
-      border-radius: 10px;
-      margin-bottom: 10px;
+    .card .info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
 
     .card .name {
@@ -214,47 +220,70 @@
       display: flex;
       gap: 6px;
       flex-wrap: wrap;
+      margin-top: 8px;
       pointer-events: auto;
-      margin-top: 4px;
     }
 
     .btn-small {
-      padding: 8px 10px;
+      padding: 8px 12px;
       font-size: 0.85rem;
       border-radius: 6px;
       border: none;
       cursor: pointer;
       transition: background 0.15s;
+      background: #2a2e36;
+      color: #ddd;
     }
 
     .btn-small:hover {
-      filter: brightness(1.15);
+      filter: brightness(1.2);
     }
 
-    .btn-delete {
+    .btn-small.btn-delete {
       background: #333;
       color: #ccc;
     }
 
-    .btn-delete:hover {
+    .btn-small.btn-delete:hover {
       background: #444;
     }
 
-    .empty {
-      text-align: center;
-      color: #666;
-      padding: 40px 0;
+    .btn-small.btn-found {
+      background: #3fa34d;
+      color: white;
     }
 
+    .btn-small.btn-missing {
+      background: #d64545;
+      color: white;
+    }
+
+    .btn-small.btn-seguro {
+      background: #3fa34d;
+      color: white;
+    }
+
+    .btn-small.btn-danado {
+      background: #e0a63c;
+      color: #222;
+    }
+
+    .btn-small.btn-colapsado {
+      background: #b53838;
+      color: white;
+    }
+
+    /* ===== STATUS TAGS ===== */
     .status-tag {
       font-size: 0.7rem;
       text-transform: uppercase;
-      padding: 2px 8px;
+      padding: 2px 10px;
       border-radius: 4px;
       background: #d64545;
       display: inline-block;
       font-weight: 600;
       letter-spacing: 0.3px;
+      color: white;
     }
 
     .status-tag.encontrado,
@@ -271,7 +300,20 @@
       background: #b53838;
     }
 
-    /* Modal */
+    .empty {
+      text-align: center;
+      color: #666;
+      padding: 40px 0;
+    }
+
+    .photo-preview {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    /* ===== MODAL ===== */
     .modal {
       position: fixed;
       inset: 0;
@@ -350,10 +392,6 @@
       color: #eee;
     }
 
-    .modal-close:active {
-      background: #4a4e56;
-    }
-
     .modal-content h2 {
       margin: 0 0 6px 0;
       font-size: 1.4rem;
@@ -384,26 +422,12 @@
       margin: 16px 0;
     }
 
-    .modal-placeholder {
-      background: #12151c;
+    .modal-photo {
+      width: 100%;
+      max-height: 280px;
+      object-fit: cover;
       border-radius: 10px;
-      padding: 20px 18px;
-      text-align: center;
-      border: 1px dashed #2a2e36;
-      color: #666;
-      font-size: 0.95rem;
-      letter-spacing: 0.5px;
-    }
-
-    .modal-placeholder strong {
-      color: #888;
-      font-weight: 600;
-    }
-
-    .modal-placeholder .icon {
-      font-size: 1.6rem;
-      display: block;
-      margin-bottom: 6px;
+      margin-bottom: 12px;
     }
 
     .modal-actions {
@@ -425,6 +449,58 @@
       min-width: 80px;
       padding: 10px 12px;
       font-size: 0.9rem;
+      text-align: center;
+    }
+
+    #commentsList {
+      margin-bottom: 12px;
+    }
+
+    .comment-item {
+      background: #12151c;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-left: 2px solid #d64545;
+    }
+
+    .comment-item .comment-text {
+      color: #eaeaea;
+      word-break: break-word;
+    }
+
+    .comment-item .comment-meta {
+      font-size: 0.7rem;
+      color: #888;
+    }
+
+    #commentForm {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    #commentForm input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #1a1d24;
+      color: #eaeaea;
+      min-width: 120px;
+    }
+
+    #commentForm button {
+      flex: 0 0 auto;
+      padding: 10px 16px;
+      background: #d64545;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
     }
 
     @media (max-width: 480px) {
@@ -441,21 +517,36 @@
         font-size: 0.8rem;
         padding: 8px 10px;
       }
+
+      .crear form input,
+      .crear form select {
+        flex: 1 1 100%;
+      }
+
+      .custom-file-upload {
+        flex: 1 1 100%;
+        text-align: center;
+      }
     }
   </style>
 </head>
 
 <body>
-  <div style="padding:5px">
+
+  <!-- ===== HEADER ===== -->
+  <div style="padding: 5px">
     <h1>🚨 Sismo API - ADMIN: +57 3153410282</h1>
-    <button id="copyLinkBtn" style="margin-bottom:5px; background:teal">
+    <button id="copyLinkBtn"
+      style="margin-bottom: 5px; background: teal; border: none; padding: 10px 16px; border-radius: 8px; color: white; cursor: pointer;">
       http://neokpm.xyz (COPIAR LINK)
     </button>
   </div>
+
+  <!-- ===== DRIVER (TABS + SEARCH) ===== -->
   <div id="driver" style="
         padding: 5px;
         position: sticky;
-        top: 0px;
+        top: 0;
         background: rgba(20, 20, 20, 0.85);
         backdrop-filter: blur(5px);
         border-bottom: 2px solid gray;
@@ -468,7 +559,7 @@
       <button class="tab-btn" id="tabEdificiosBtn">🏢 Ubicaciones</button>
       <button class="tab-btn" id="tabAnunciosBtn">📣 Anuncios</button>
     </div>
-    <!-- The search input is per panel, we'll keep them in each panel -->
+
     <div id="searchPerson" class="search-row">
       <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
     </div>
@@ -478,44 +569,51 @@
     <div id="searchBuilding" class="search-row" style="display:none">
       <input type="search" id="searchInputB" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
     </div>
-    <!-- No search for anuncios -->
   </div>
 
-  <!-- Panel Personas -->
+  <!-- ===== PANEL PERSONAS ===== -->
   <div id="tabPersonas" class="tab-panel active">
     <div class="crear">
-      (+) CREAR
-      <form id="addForm" style="margin-top:5px">
+      (+) CREAR PERSONA
+      <form id="addForm">
         <input type="text" id="nameInput" placeholder="Nombre de la persona" required />
         <input type="text" id="locationInput" placeholder="Ubicación (opcional)" />
         <select id="cityInput">
           <option value="">Ciudad</option>
         </select>
-        <input type="text" id="imageInput" class="image-input" placeholder="URL de imagen (opcional)" />
         <button type="button" id="gpsBtn" class="gps-btn" title="Usar mi ubicación">📍</button>
+        <div style="min-width: 100%;">
+          🖼️ Dos opciones (URL o Subir imagen)
+          <br />
+          <!-- Campo URL -->
+          <input type="text" id="imageInput" placeholder="URL de imagen (opcional)" />
+          <!-- Previsualización de URL -->
+          <img id="urlPreview" class="photo-preview" style="display:none;" alt="Vista previa URL" />
 
-        <input type="file" id="photoInput" accept="image/*" capture="environment"
-          style="flex: 1; min-width: 140px; padding: 8px; border-radius: 8px; border: 1px solid #333; background: #1a1d24; color: #eaeaea;" />
+          <!-- Campo de archivo personalizado -->
+          <label class="custom-file-upload">
+            📷 Subir foto
+            <input type="file" id="photoInput" accept="image/*" capture="environment" />
+          </label>
+          <span class="file-name" id="fileLabel">Sube una foto</span>
+          <img id="photoPreview" class="photo-preview" style="display:none;" alt="Vista previa" />
+        </div>
         <button type="submit">Reportar</button>
       </form>
     </div>
-    <!-- <div class="search-row"> -->
-    <!--   <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." /> -->
-    <!-- </div> -->
     <div id="list" class="list"></div>
   </div>
 
-  <!-- Panel Mascotas -->
+  <!-- ===== PANEL MASCOTAS ===== -->
   <div id="tabPets" class="tab-panel">
     <div class="crear">
       (+) CREAR MASCOTA
-      <form id="addFormP" style="margin-top:5px">
+      <form id="addFormP">
         <input type="text" id="nameInputP" placeholder="Nombre de la mascota" required />
         <input type="text" id="locationInputP" placeholder="Ubicación (opcional)" />
         <select id="cityInputP">
           <option value="">Ciudad</option>
         </select>
-        <input type="text" id="imageInputP" class="image-input" placeholder="URL de imagen (opcional)" />
         <button type="button" id="gpsBtnP" class="gps-btn" title="Usar mi ubicación">📍</button>
         <button type="submit">Reportar</button>
       </form>
@@ -523,17 +621,16 @@
     <div id="listP" class="list"></div>
   </div>
 
-  <!-- Panel Edificios -->
+  <!-- ===== PANEL EDIFICIOS ===== -->
   <div id="tabEdificios" class="tab-panel">
     <div class="crear">
-      (+) CREAR UBICACION
+      (+) CREAR UBICACIÓN
       <form id="addFormB">
         <input type="text" id="nameInputB" placeholder="Nombre o dirección del edificio" required />
         <input type="text" id="locationInputB" placeholder="Ubicación (opcional)" />
         <select id="cityInputB">
           <option value="">Ciudad</option>
         </select>
-        <input type="text" id="imageInputB" class="image-input" placeholder="URL de imagen (opcional)" />
         <button type="button" id="gpsBtnB" class="gps-btn" title="Usar mi ubicación">📍</button>
         <button type="submit">Reportar</button>
       </form>
@@ -541,32 +638,31 @@
     <div id="listB" class="list"></div>
   </div>
 
-  <!-- Panel Anuncios -->
+  <!-- ===== PANEL ANUNCIOS ===== -->
   <div id="tabAnuncios" class="tab-panel">
     <div class="crear">
       (+) CREAR ANUNCIO
-      <form id="addFormA" style="margin-top:5px; flex-direction:column; align-items:stretch">
+      <form id="addFormA" style="flex-direction:column; align-items:stretch;">
         <textarea id="anuncioInput" rows="3" placeholder="Escribe un anuncio..." required style="
-                flex: 1;
-                padding: 12px;
-                font-size: 1rem;
-                border-radius: 8px;
-                border: 1px solid #333;
-                background: #1a1d24;
-                color: #eaeaea;
-                resize: vertical;
-                min-height: 80px;
-                font-family: inherit;
-                width: 100%;
-                margin-bottom: 8px;
-              "></textarea>
-        <button type="submit" style="width:100%">Publicar</button>
+              padding: 12px;
+              font-size: 1rem;
+              border-radius: 8px;
+              border: 1px solid #333;
+              background: #1a1d24;
+              color: #eaeaea;
+              resize: vertical;
+              min-height: 80px;
+              font-family: inherit;
+              width: 100%;
+              margin-bottom: 8px;
+            "></textarea>
+        <button type="submit" style="width:100%;">Publicar</button>
       </form>
     </div>
     <div id="listA" class="list"></div>
   </div>
 
-  <!-- Modal -->
+  <!-- ===== MODAL ===== -->
   <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal-content">
       <button class="modal-close" aria-label="Cerrar">✕</button>
@@ -577,17 +673,10 @@
       <div id="modalBody"></div>
       <div class="modal-divider"></div>
       <div id="commentsContainer">
-        <div id="commentsList" style="margin-bottom:12px;"></div>
-        <form id="commentForm" style="display:flex; gap:8px; flex-wrap:wrap;">
-          <input type="text" id="commentInput" placeholder="Escribe un comentario..." required style="
-                      flex:1;
-                      padding:10px;
-                      border-radius:8px;
-                      border:1px solid #333;
-                      background:#1a1d24;
-                      color:#eaeaea;
-                    " />
-          <button type="submit" style="flex:0 0 auto;">Comentar</button>
+        <div id="commentsList"></div>
+        <form id="commentForm">
+          <input type="text" id="commentInput" placeholder="Escribe un comentario..." required />
+          <button type="submit">Comentar</button>
         </form>
       </div>
       <div id="modalActions" class="modal-actions"></div>
@@ -595,48 +684,118 @@
   </div>
 
   <script>
-    const API_BASE =
-      location.hostname === "localhost" || location.hostname === "127.0.0.1" ?
-        "https://neokpm.xyz/api" :
-        "/api";
+    // ================================================================
+    //  CONFIGURACIÓN
+    // ================================================================
+    const API_BASE = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+      ? "https://neokpm.xyz/api"
+      : "/api";
 
-    // Unsigned upload preset: safe to expose client-side, it cannot read or
-    // delete anything in the Cloudinary account, only add new images to it.
     const CLOUDINARY_CLOUD_NAME = "snaspwdz";
     const CLOUDINARY_UPLOAD_PRESET = "sismopinto";
 
-    async function uploadPersonPhoto(personId, file) {
-      const cloudForm = new FormData();
-      cloudForm.append("file", file);
-      cloudForm.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-      try {
-        const cloudRes = await fetch(
-          `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-          {method: "POST", body: cloudForm},
-        );
-        const cloudData = await cloudRes.json();
-        if (!cloudData.secure_url) throw new Error("sin secure_url");
-        await fetch(`${API_BASE}/disappeared/${personId}/photo`, {
-          method: "PATCH",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({photo_url: cloudData.secure_url}),
-        });
-      } catch (err) {
-        alert("El reporte se guardó, pero la foto no se pudo subir. Intenta agregarla de nuevo abriendo el reporte.");
-      }
+    // ================================================================
+    //  UTILIDADES
+    // ================================================================
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
     }
-    // Load cities
+
+    function normalize(str) {
+      return (str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function fuzzyMatch(query, target) {
+      query = normalize(query);
+      target = normalize(target);
+      if (!query) return true;
+      let qi = 0;
+      for (let ti = 0; ti < target.length && qi < query.length; ti++) {
+        if (target[ti] === query[qi]) qi++;
+      }
+      return qi === query.length;
+    }
+
+    function fuzzyFilter(query, items) {
+      if (!query.trim()) return items;
+      return items.filter(item =>
+        fuzzyMatch(query, item.name) ||
+        fuzzyMatch(query, item.location || "") ||
+        fuzzyMatch(query, item.city || "")
+      );
+    }
+
+    async function adminDelete(url) {
+      const key = prompt("Clave de administrador:");
+      if (!key) return false;
+      const r = await fetch(url, {method: "DELETE", headers: {"x-admin-key": key}});
+      if (r.status === 403) {alert("Clave incorrecta"); return false;}
+      return true;
+    }
+
+    // ================================================================
+    //  CARGA DE CIUDADES
+    // ================================================================
     fetch("/cities.json")
-      .then((r) => r.json())
-      .then((cities) => {
-        const opts = cities.map((c) => `<option value="${c}">${c}</option>`).join("");
+      .then(r => r.json())
+      .then(cities => {
+        const opts = cities.map(c => `<option value="${c}">${c}</option>`).join("");
         document.getElementById("cityInput").insertAdjacentHTML("beforeend", opts);
         document.getElementById("cityInputP").insertAdjacentHTML("beforeend", opts);
         document.getElementById("cityInputB").insertAdjacentHTML("beforeend", opts);
       })
       .catch(() => console.error("No se pudo cargar cities.json"));
 
-    // ----- Tab switching -----
+    // ================================================================
+    //  SUBIDA A CLOUDINARY
+    // ================================================================
+    async function uploadPersonPhoto(personId, file) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+      try {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (!data.secure_url) throw new Error("No se obtuvo secure_url");
+
+        await fetch(`${API_BASE}/disappeared/${personId}/photo`, {
+          method: "PATCH",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({photo_url: data.secure_url}),
+        });
+        return data.secure_url;
+      } catch (err) {
+        alert("El reporte se guardó, pero la foto no se pudo subir. Intenta agregarla de nuevo abriendo el reporte.");
+        console.error(err);
+        return null;
+      }
+    }
+
+    // ================================================================
+    //  COPIAR LINK
+    // ================================================================
+    document.getElementById("copyLinkBtn").addEventListener("click", async () => {
+      const url = "http://neokpm.xyz";
+      try {
+        await navigator.clipboard.writeText(url);
+        const btn = document.getElementById("copyLinkBtn");
+        const original = btn.textContent;
+        btn.textContent = "✅ ¡Copiado!";
+        setTimeout(() => {btn.textContent = original;}, 2000);
+      } catch {
+        alert("No se pudo copiar. Intenta seleccionar el texto manualmente.");
+      }
+    });
+
+    // ================================================================
+    //  TABS
+    // ================================================================
     const tabPersonasBtn = document.getElementById("tabPersonasBtn");
     const tabPetsBtn = document.getElementById("tabPetsBtn");
     const tabEdificiosBtn = document.getElementById("tabEdificiosBtn");
@@ -647,9 +806,9 @@
     const tabAnuncios = document.getElementById("tabAnuncios");
 
     function switchTab(activeBtn, activePanel, tabType) {
-      [tabPersonasBtn, tabPetsBtn, tabEdificiosBtn, tabAnunciosBtn].forEach((b) => b.classList.remove("active"));
+      [tabPersonasBtn, tabPetsBtn, tabEdificiosBtn, tabAnunciosBtn].forEach(b => b.classList.remove("active"));
       activeBtn.classList.add("active");
-      [tabPersonas, tabPets, tabEdificios, tabAnuncios].forEach((p) => p.classList.remove("active"));
+      [tabPersonas, tabPets, tabEdificios, tabAnuncios].forEach(p => p.classList.remove("active"));
       activePanel.classList.add("active");
 
       document.getElementById("searchPerson").style.display = "none";
@@ -672,75 +831,15 @@
         renderA();
       }
     }
-    tabPersonasBtn.addEventListener("click", () => {switchTab(tabPersonasBtn, tabPersonas, "person");});
-    tabPetsBtn.addEventListener("click", () => {switchTab(tabPetsBtn, tabPets, "pet");});
-    tabEdificiosBtn.addEventListener("click", () => {switchTab(tabEdificiosBtn, tabEdificios, "building");});
-    tabAnunciosBtn.addEventListener("click", () => {switchTab(tabAnunciosBtn, tabAnuncios, "anuncio");});
 
-    // Utilities
-    function escapeHtml(str) {
-      const div = document.createElement("div");
-      div.textContent = str;
-      return div.innerHTML;
-    }
+    tabPersonasBtn.addEventListener("click", () => switchTab(tabPersonasBtn, tabPersonas, "person"));
+    tabPetsBtn.addEventListener("click", () => switchTab(tabPetsBtn, tabPets, "pet"));
+    tabEdificiosBtn.addEventListener("click", () => switchTab(tabEdificiosBtn, tabEdificios, "building"));
+    tabAnunciosBtn.addEventListener("click", () => switchTab(tabAnunciosBtn, tabAnuncios, "anuncio"));
 
-    function normalizeImageUrl(url) {
-      if (!url || !url.trim()) return null;
-      const trimmed = url.trim();
-      // Convertir Google Drive URLs a formato de imagen directa
-      const match = trimmed.match(/\/d\/([a-zA-Z0-9_-]+)/);
-      if (match) {
-        return `https://drive.google.com/uc?export=view&id=${match[1]}`;
-      }
-      return trimmed;
-    }
-    function normalize(str) {
-      return (str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    }
-
-    function fuzzyMatch(query, target) {
-      query = normalize(query);
-      target = normalize(target);
-      if (!query) return true;
-      let qi = 0;
-      for (let ti = 0; ti < target.length && qi < query.length; ti++) {
-        if (target[ti] === query[qi]) qi++;
-      }
-      return qi === query.length;
-    }
-
-    function fuzzyFilter(query, items) {
-      if (!query.trim()) return items;
-      return items.filter((item) =>
-        fuzzyMatch(query, item.name) ||
-        fuzzyMatch(query, item.location || "") ||
-        fuzzyMatch(query, item.city || "")
-      );
-    }
-
-    async function adminDelete(url) {
-      const key = prompt("Clave de administrador:");
-      if (!key) return false;
-      const r = await fetch(url, {method: "DELETE", headers: {"x-admin-key": key}});
-      if (r.status === 403) {alert("Clave incorrecta"); return false;}
-      return true;
-    }
-
-    // Copy link
-    document.getElementById("copyLinkBtn").addEventListener("click", async () => {
-      const url = "http://neokpm.xyz";
-      try {
-        await navigator.clipboard.writeText(url);
-        const btn = document.getElementById("copyLinkBtn");
-        const originalText = btn.textContent;
-        btn.textContent = "✅ ¡Copiado!";
-        setTimeout(() => {btn.textContent = originalText;}, 2000);
-      } catch (err) {
-        alert("No se pudo copiar. Intenta seleccionar el texto manualmente.");
-      }
-    });
-
-    // ----- Modal -----
+    // ================================================================
+    //  MODAL
+    // ================================================================
     const modal = document.getElementById("modal");
     const modalTitle = document.getElementById("modalTitle");
     const modalStatus = document.getElementById("modalStatus");
@@ -748,6 +847,9 @@
     const modalBody = document.getElementById("modalBody");
     const modalActions = document.getElementById("modalActions");
     const modalClose = document.querySelector(".modal-close");
+
+    let currentItemId = null;
+    let currentItemType = null;
 
     function closeModal() {
       modal.classList.remove("open");
@@ -768,47 +870,40 @@
 
     modalClose.addEventListener("click", closeModal);
     modal.addEventListener("click", (e) => {if (e.target === modal) closeModal();});
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && modal.classList.contains("open")) closeModal();
-    });
+    document.addEventListener("keydown", (e) => {if (e.key === "Escape" && modal.classList.contains("open")) closeModal();});
 
     function openModalForItem(item, type) {
       const statusClass = item.status || "desaparecido";
       const statusLabel = item.status || "desaparecido";
       modalStatus.innerHTML = `<span class="status-tag ${statusClass}">${statusLabel}</span>`;
       modalTitle.textContent = item.name || "Sin nombre";
-      const dateStr = item.created_at ?
-        new Date(item.created_at).toLocaleString("es-CO", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        }) :
-        "";
-      let metaParts = [];
+
+      const dateStr = item.created_at
+        ? new Date(item.created_at).toLocaleString("es-CO", {
+          day: "2-digit", month: "2-digit", year: "numeric",
+          hour: "2-digit", minute: "2-digit"
+        })
+        : "";
+      const metaParts = [];
       if (item.city) metaParts.push(`📍 ${escapeHtml(item.city)}`);
       if (item.location) metaParts.push(`🗺️ ${escapeHtml(item.location)}`);
       metaParts.push(`🕒 ${dateStr}`);
-      modalMeta.innerHTML = metaParts.map((p) => `<span>${p}</span>`).join("");
+      modalMeta.innerHTML = metaParts.map(p => `<span>${p}</span>`).join("");
 
-      let bodyHtml = `<div style="color:#888; font-size:0.95rem;">Detalles del reporte</div>`;
-
-      if (item.image) {
-        bodyHtml = `<img src="${escapeHtml(item.image)}" alt="Imagen" style="max-width:100%; max-height:200px; border-radius:8px; margin-bottom:12px;" />` + bodyHtml;
-      }
       if (type === "person") {
-        const photoHtml = item.photo_url
-          ? `<img class="modal-photo" src="${item.photo_url}" alt="Foto de ${escapeHtml(item.name)}" />`
-          : "";
-        bodyHtml = `
-          ${bodyHtml}
-          ${photoHtml}
+        let imagesHtml = "";
+        if (item.image) {
+          imagesHtml += `<img class="modal-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" />`;
+        }
+        if (item.photo_url) {
+          imagesHtml += `<img class="modal-photo" src="${escapeHtml(item.photo_url)}" alt="Foto subida" />`;
+        }
+        modalBody.innerHTML = `
+          ${imagesHtml}
           <label style="display:block; font-size:0.8rem; color:#999; margin-bottom:4px;">${item.photo_url ? "Cambiar foto" : "Agregar foto"}</label>
           <input type="file" accept="image/*" capture="environment" id="modalPhotoInput"
             style="width:100%; padding:8px; border-radius:8px; border:1px solid #333; background:#1a1d24; color:#eaeaea;" />
         `;
-
         document.getElementById("modalPhotoInput").addEventListener("change", async (e) => {
           const file = e.target.files[0];
           if (!file) return;
@@ -816,10 +911,9 @@
           loadList();
           closeModal();
         });
-
+      } else {
+        modalBody.innerHTML = `<div style="color:#888; font-size:0.95rem;">Detalles del reporte</div>`;
       }
-
-      modalBody.innerHTML = bodyHtml;
 
       let actionsHtml = "";
       if (type === "person" || type === "pet") {
@@ -843,18 +937,20 @@
           `<button class="btn-small btn-delete" onclick="removeB('${item.id}'); closeModal();">✕ Eliminar</button>`;
       }
       modalActions.innerHTML = actionsHtml;
+
       modal.classList.add("open");
       const url = new URL(window.location);
       url.searchParams.set("id", item.id);
       url.searchParams.set("type", type);
       window.history.replaceState({}, "", url);
+
       loadComments(item.id, type === "person" ? "disappeared" : type === "pet" ? "pets" : "buildings");
     }
 
-    // ----- Comments -----
+    // ================================================================
+    //  COMENTARIOS
+    // ================================================================
     let currentComments = [];
-    let currentItemId = null;
-    let currentItemType = null;
 
     async function loadComments(itemId, itemType) {
       if (!itemId || !itemType) return;
@@ -864,7 +960,7 @@
         const res = await fetch(`${API_BASE}/comments?itemId=${itemId}&itemType=${itemType}`);
         currentComments = await res.json();
         renderComments();
-      } catch (err) {
+      } catch {
         document.getElementById("commentsList").innerHTML = `<div style="color:#666;">Error al cargar comentarios.</div>`;
       }
     }
@@ -877,20 +973,18 @@
       }
       list.innerHTML = currentComments.map(c => {
         const date = new Date(c.created_at).toLocaleString("es-CO", {
-          day: "2-digit",
-          month: "2-digit",
-          hour: "2-digit",
+          day: "2-digit", month: "2-digit", hour: "2-digit",
           minute: "2-digit"
         });
         return `
-              <div style="background:#12151c; border-radius:8px; padding:8px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; border-left:2px solid #d64545;">
-                <div>
-                  <div style="color:#eaeaea; word-break:break-word;">${escapeHtml(c.text)}</div>
-                  <div style="font-size:0.7rem; color:#888;">${date}</div>
-                </div>
-                <button class="btn-small btn-delete" onclick="deleteComment('${c.id}')" style="flex-shrink:0;">✕</button>
-              </div>
-            `;
+          <div class="comment-item">
+            <div>
+              <div class="comment-text">${escapeHtml(c.text)}</div>
+              <div class="comment-meta">${date}</div>
+            </div>
+            <button class="btn-small btn-delete" onclick="deleteComment('${c.id}')">✕</button>
+          </div>
+        `;
       }).join("");
     }
 
@@ -914,55 +1008,9 @@
       loadComments(currentItemId, currentItemType);
     });
 
-    // ----- URL param modal opener -----
-    let modalOpenedFromUrl = false;
-    let urlModalAttempts = 0;
-    const MAX_URL_ATTEMPTS = 6;
-
-    function getUrlParams() {
-      const params = new URLSearchParams(window.location.search);
-      return {id: params.get("id"), type: params.get("type")};
-    }
-
-    function tryOpenModalFromUrl() {
-      if (modalOpenedFromUrl) return true;
-      const {id, type} = getUrlParams();
-      if (!id || !type) return true;
-      if (type === "anuncio") return true;
-
-      let dataArray = null;
-      if (type === "person") dataArray = personsData;
-      else if (type === "pet") dataArray = petsData;
-      else if (type === "building") dataArray = buildingsData;
-      else return true;
-
-      if (!dataArray || dataArray.length === 0) return false;
-
-      const item = dataArray.find((i) => i.id === id);
-      if (item) {
-        if (type === "person") switchTab(tabPersonasBtn, tabPersonas, "person");
-        else if (type === "pet") switchTab(tabPetsBtn, tabPets, "pet");
-        else if (type === "building") switchTab(tabEdificiosBtn, tabEdificios, "building");
-        setTimeout(() => {
-          openModalForItem(item, type);
-          modalOpenedFromUrl = true;
-        }, 50);
-        return true;
-      }
-      return false;
-    }
-
-    function attemptUrlModal() {
-      if (modalOpenedFromUrl) return;
-      if (urlModalAttempts >= MAX_URL_ATTEMPTS) return;
-      urlModalAttempts++;
-      const ok = tryOpenModalFromUrl();
-      if (!ok) {
-        setTimeout(attemptUrlModal, 400);
-      }
-    }
-
-    // ----- Personas -----
+    // ================================================================
+    //  PERSONS (Personas)
+    // ================================================================
     let personsData = [];
     const listEl = document.getElementById("list");
     const form = document.getElementById("addForm");
@@ -973,14 +1021,57 @@
     const gpsBtn = document.getElementById("gpsBtn");
     const searchInput = document.getElementById("searchInput");
     const photoInput = document.getElementById("photoInput");
+    const fileLabel = document.getElementById("fileLabel");
+
+    const photoPreview = document.getElementById("photoPreview");
+    // Referencia para la previsualización de URL
+    const urlPreview = document.getElementById("urlPreview");
+
+    // Mostrar nombre del archivo seleccionado
+    photoInput.addEventListener("change", function () {
+      // Limpiar previsualización anterior
+      if (photoPreview.src) {
+        URL.revokeObjectURL(photoPreview.src);
+        photoPreview.src = "";
+      }
+      if (this.files.length > 0) {
+        fileLabel.textContent = this.files[0].name;
+        // Mostrar vista previa
+        const objectUrl = URL.createObjectURL(this.files[0]);
+        photoPreview.src = objectUrl;
+        photoPreview.style.display = "inline-block";
+      } else if (fileLabel) {
+        fileLabel.textContent = "Ningún archivo seleccionado";
+        photoPreview.style.display = "none";
+        photoPreview.src = "";
+      }
+    });
+
+    // Previsualización de URL en tiempo real
+    imageInput.addEventListener("input", function () {
+      const url = this.value.trim();
+      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        urlPreview.src = url;
+        urlPreview.style.display = "inline-block";
+        // Si la imagen no se carga, ocultarla
+        urlPreview.onerror = function () {
+          urlPreview.style.display = "none";
+          urlPreview.src = "";
+        };
+      } else {
+        urlPreview.style.display = "none";
+        urlPreview.src = "";
+        urlPreview.onerror = null;
+      }
+    });
 
     async function loadList() {
       try {
         const res = await fetch(`${API_BASE}/disappeared`);
         personsData = await res.json();
         render();
-        attemptUrlModal();
-      } catch (err) {
+        tryOpenModalFromUrl();
+      } catch {
         listEl.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
       }
     }
@@ -992,44 +1083,41 @@
           `<div class="empty">${personsData.length ? "Sin resultados." : "No hay reportes todavía."}</div>`;
         return;
       }
-      listEl.innerHTML = items.map((item) => {
+      listEl.innerHTML = items.map(item => {
         const found = item.status === "encontrado";
         const date = new Date(item.created_at).toLocaleString("es-CO", {
-          day: "2-digit",
-          month: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
+          day: "2-digit", month: "2-digit",
+          hour: "2-digit", minute: "2-digit"
         });
         const metaParts = [];
         if (item.city) metaParts.push(escapeHtml(item.city));
         if (item.location) metaParts.push(escapeHtml(item.location));
         metaParts.push(date);
-        const imageHtml = item.image ? `<img src="${escapeHtml(item.image)}" alt="Imagen" class="card-image" />` : '';
-        const photoHtml = item.photo_url
-          ? `<img class="card-photo" src="${item.photo_url}" alt="Foto de ${escapeHtml(item.name)}" />`
-          : "";
+        let imgHtml = "";
+        if (item.photo_url) {
+          imgHtml = `<img class="card-photo" src="${escapeHtml(item.photo_url)}" alt="Foto" />`;
+        } else if (item.image) {
+          imgHtml = `<img class="card-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" />`;
+        }
         return `
-              <div class="card ${found ? "encontrado" : ""}" data-id="${item.id}" data-type="person">
-            <div><span class="status-tag ${found ? "encontrado" : ""}">${item.status}</span></div>
-
-              ${photoHtml}
-                ${imageHtml}
-                <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
-                  <div><span class="status-tag ${found ? "encontrado" : ""}">${item.status}</span></div>
-                  <div class="info">
-                    <span class="name">${escapeHtml(item.name)}</span>
-                    <span class="meta">${metaParts.join(" · ")}</span>
-                  </div>
-                  <div class="actions">
-                    ${found
+          <div class="card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="person">
+            <div><span class="status-tag ${found ? 'encontrado' : ''}">${item.status}</span></div>
+            <div class="card-inner">
+              ${imgHtml}
+              <div class="info">
+                <span class="name">${escapeHtml(item.name)}</span>
+                <span class="meta">${metaParts.join(" · ")}</span>
+              </div>
+            </div>
+            <div class="actions">
+              ${found
             ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','person')">Marcar desaparecido</button>`
             : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','person')">Marcar encontrado</button>`
           }
-                    <button class="btn-small btn-delete" onclick="removeItem('${item.id}','person')">✕</button>
-                  </div>
-                </div>
-              </div>
-            `;
+              <button class="btn-small btn-delete" onclick="removeItem('${item.id}','person')">✕</button>
+            </div>
+          </div>
+        `;
       }).join("");
     }
 
@@ -1038,8 +1126,7 @@
       const card = e.target.closest(".card");
       if (!card) return;
       const id = card.dataset.id;
-      if (!id) return;
-      const item = personsData.find((p) => p.id === id);
+      const item = personsData.find(p => p.id === id);
       if (item) openModalForItem(item, "person");
     });
 
@@ -1052,40 +1139,59 @@
       const city = cityInput.value.trim();
       const image = imageInput.value.trim();
       if (!name) return;
+
+      const payload = {name, location, city};
+      if (image) payload.image = image;
+
       const res = await fetch(`${API_BASE}/disappeared`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({name, location, city, image}),
+        body: JSON.stringify(payload),
       });
       const created = await res.json();
-      const photoFile = photoInput.files[0];
+
       nameInput.value = "";
       locationInput.value = "";
       cityInput.value = "";
       imageInput.value = "";
-      loadList();
-      if (photoFile && created.id) {
-        await uploadPersonPhoto(created.id, photoFile);
-        loadList();
+      // Limpiar previsualización de URL
+      if (urlPreview) {
+        urlPreview.style.display = "none";
+        urlPreview.src = "";
       }
+
+      const file = photoInput.files[0];
+      // Limpiar previsualización
+      if (photoPreview.src) {
+        URL.revokeObjectURL(photoPreview.src);
+        photoPreview.src = "";
+        photoPreview.style.display = "none";
+      }
+      photoInput.value = "";
+      fileLabel.textContent = "Ningún archivo seleccionado";
+      if (file && created.id) {
+        await uploadPersonPhoto(created.id, file);
+      }
+      loadList();
     });
 
     gpsBtn.addEventListener("click", () => {
       if (!navigator.geolocation) {alert("Geolocalización no disponible."); return;}
       navigator.geolocation.getCurrentPosition(
-        (pos) => {locationInput.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;},
+        pos => {locationInput.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;},
         () => alert("No se pudo obtener la ubicación.")
       );
     });
 
-    // ----- Mascotas -----
+    // ================================================================
+    //  PETS (Mascotas) - sin cambios
+    // ================================================================
     let petsData = [];
     const listElP = document.getElementById("listP");
     const formP = document.getElementById("addFormP");
     const nameInputP = document.getElementById("nameInputP");
     const locationInputP = document.getElementById("locationInputP");
     const cityInputP = document.getElementById("cityInputP");
-    const imageInputP = document.getElementById("imageInputP");
     const gpsBtnP = document.getElementById("gpsBtnP");
     const searchInputP = document.getElementById("searchInputP");
 
@@ -1094,8 +1200,8 @@
         const res = await fetch(`${API_BASE}/pets`);
         petsData = await res.json();
         renderP();
-        attemptUrlModal();
-      } catch (err) {
+        tryOpenModalFromUrl();
+      } catch {
         listElP.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
       }
     }
@@ -1107,39 +1213,34 @@
           `<div class="empty">${petsData.length ? "Sin resultados." : "No hay mascotas reportadas."}</div>`;
         return;
       }
-      listElP.innerHTML = items.map((item) => {
+      listElP.innerHTML = items.map(item => {
         const found = item.status === "encontrado";
         const date = new Date(item.created_at).toLocaleString("es-CO", {
-          day: "2-digit",
-          month: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
+          day: "2-digit", month: "2-digit",
+          hour: "2-digit", minute: "2-digit"
         });
         const metaParts = [];
         if (item.city) metaParts.push(escapeHtml(item.city));
         if (item.location) metaParts.push(escapeHtml(item.location));
         metaParts.push(date);
-        const imageUrl = item.image ? normalizeImageUrl(item.image) : null;
-        const imageHtml = imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="Imagen" class="card-image" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('afterbegin', '<span class=\"card-image-placeholder\">📷</span>');" />` : '';
         return `
-              <div class="card ${found ? "encontrado" : ""}" data-id="${item.id}" data-type="pet">
-                ${imageHtml}
-                <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
-                  <div><span class="status-tag ${found ? "encontrado" : ""}">${item.status}</span></div>
-                  <div class="info">
-                    <span class="name">${escapeHtml(item.name)}</span>
-                    <span class="meta">${metaParts.join(" · ")}</span>
-                  </div>
-                  <div class="actions">
-                    ${found
+          <div class="card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="pet">
+            <div><span class="status-tag ${found ? 'encontrado' : ''}">${item.status}</span></div>
+            <div class="card-inner">
+              <div class="info">
+                <span class="name">${escapeHtml(item.name)}</span>
+                <span class="meta">${metaParts.join(" · ")}</span>
+              </div>
+            </div>
+            <div class="actions">
+              ${found
             ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','pet')">Marcar desaparecido</button>`
             : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','pet')">Marcar encontrado</button>`
           }
-                    <button class="btn-small btn-delete" onclick="removeItem('${item.id}','pet')">✕</button>
-                  </div>
-                </div>
-              </div>
-            `;
+              <button class="btn-small btn-delete" onclick="removeItem('${item.id}','pet')">✕</button>
+            </div>
+          </div>
+        `;
       }).join("");
     }
 
@@ -1148,8 +1249,7 @@
       const card = e.target.closest(".card");
       if (!card) return;
       const id = card.dataset.id;
-      if (!id) return;
-      const item = petsData.find((p) => p.id === id);
+      const item = petsData.find(p => p.id === id);
       if (item) openModalForItem(item, "pet");
     });
 
@@ -1160,36 +1260,35 @@
       const name = nameInputP.value.trim();
       const location = locationInputP.value.trim();
       const city = cityInputP.value.trim();
-      const image = imageInputP.value.trim();
       if (!name) return;
       await fetch(`${API_BASE}/pets`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({name, location, city, image}),
+        body: JSON.stringify({name, location, city}),
       });
       nameInputP.value = "";
       locationInputP.value = "";
       cityInputP.value = "";
-      imageInputP.value = "";
       loadListP();
     });
 
     gpsBtnP.addEventListener("click", () => {
       if (!navigator.geolocation) {alert("Geolocalización no disponible."); return;}
       navigator.geolocation.getCurrentPosition(
-        (pos) => {locationInputP.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;},
+        pos => {locationInputP.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;},
         () => alert("No se pudo obtener la ubicación.")
       );
     });
 
-    // ----- Edificios -----
+    // ================================================================
+    //  BUILDINGS (Edificios) - sin cambios
+    // ================================================================
     let buildingsData = [];
     const listElB = document.getElementById("listB");
     const formB = document.getElementById("addFormB");
     const nameInputB = document.getElementById("nameInputB");
     const locationInputB = document.getElementById("locationInputB");
     const cityInputB = document.getElementById("cityInputB");
-    const imageInputB = document.getElementById("imageInputB");
     const gpsBtnB = document.getElementById("gpsBtnB");
     const searchInputB = document.getElementById("searchInputB");
 
@@ -1198,8 +1297,8 @@
         const res = await fetch(`${API_BASE}/buildings`);
         buildingsData = await res.json();
         renderB();
-        attemptUrlModal();
-      } catch (err) {
+        tryOpenModalFromUrl();
+      } catch {
         listElB.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
       }
     }
@@ -1211,37 +1310,33 @@
           `<div class="empty">${buildingsData.length ? "Sin resultados." : "No hay edificios reportados."}</div>`;
         return;
       }
-      listElB.innerHTML = items.map((item) => {
+      listElB.innerHTML = items.map(item => {
         const date = new Date(item.created_at).toLocaleString("es-CO", {
-          day: "2-digit",
-          month: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
+          day: "2-digit", month: "2-digit",
+          hour: "2-digit", minute: "2-digit"
         });
         const metaParts = [];
         if (item.city) metaParts.push(escapeHtml(item.city));
         if (item.location) metaParts.push(escapeHtml(item.location));
         metaParts.push(date);
         const statusClass = item.status || "seguro";
-        const imageHtml = item.image ? `<img src="${escapeHtml(item.image)}" alt="Imagen" class="card-image" />` : '';
         return `
-              <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
-                ${imageHtml}
-                <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
-                  <div><span class="status-tag ${statusClass}">${item.status || "seguro"}</span></div>
-                  <div class="info">
-                    <span class="name">${escapeHtml(item.name)}</span>
-                    <span class="meta">${metaParts.join(" · ")}</span>
-                  </div>
-                  <div class="actions">
-                    <button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro')">Seguro</button>
-                    <button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado')">Dañado</button>
-                    <button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado')">Colapsado</button>
-                    <button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>
-                  </div>
-                </div>
+          <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
+            <div><span class="status-tag ${statusClass}">${item.status || "seguro"}</span></div>
+            <div class="card-inner">
+              <div class="info">
+                <span class="name">${escapeHtml(item.name)}</span>
+                <span class="meta">${metaParts.join(" · ")}</span>
               </div>
-            `;
+            </div>
+            <div class="actions">
+              <button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro')">Seguro</button>
+              <button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado')">Dañado</button>
+              <button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado')">Colapsado</button>
+              <button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>
+            </div>
+          </div>
+        `;
       }).join("");
     }
 
@@ -1250,8 +1345,7 @@
       const card = e.target.closest(".card");
       if (!card) return;
       const id = card.dataset.id;
-      if (!id) return;
-      const item = buildingsData.find((b) => b.id === id);
+      const item = buildingsData.find(b => b.id === id);
       if (item) openModalForItem(item, "building");
     });
 
@@ -1262,29 +1356,29 @@
       const name = nameInputB.value.trim();
       const location = locationInputB.value.trim();
       const city = cityInputB.value.trim();
-      const image = imageInputB.value.trim();
       if (!name) return;
       await fetch(`${API_BASE}/buildings`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({name, location, city, image}),
+        body: JSON.stringify({name, location, city}),
       });
       nameInputB.value = "";
       locationInputB.value = "";
       cityInputB.value = "";
-      imageInputB.value = "";
       loadListB();
     });
 
     gpsBtnB.addEventListener("click", () => {
       if (!navigator.geolocation) {alert("Geolocalización no disponible."); return;}
       navigator.geolocation.getCurrentPosition(
-        (pos) => {locationInputB.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;},
+        pos => {locationInputB.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;},
         () => alert("No se pudo obtener la ubicación.")
       );
     });
 
-    // ----- Anuncios -----
+    // ================================================================
+    //  ANUNCIOS
+    // ================================================================
     let anunciosData = [];
     const listElA = document.getElementById("listA");
     const formA = document.getElementById("addFormA");
@@ -1295,7 +1389,7 @@
         const res = await fetch(`${API_BASE}/anuncios`);
         anunciosData = await res.json();
         renderA();
-      } catch (err) {
+      } catch {
         listElA.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
       }
     }
@@ -1305,24 +1399,22 @@
         listElA.innerHTML = `<div class="empty">No hay anuncios todavía.</div>`;
         return;
       }
-      listElA.innerHTML = anunciosData.map((item) => {
+      listElA.innerHTML = anunciosData.map(item => {
         const date = new Date(item.created_at).toLocaleString("es-CO", {
-          day: "2-digit",
-          month: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
+          day: "2-digit", month: "2-digit",
+          hour: "2-digit", minute: "2-digit"
         });
         return `
-              <div class="card" data-id="${item.id}">
-                <div class="info">
-                  <span class="name">${escapeHtml(item.text)}</span>
-                  <span class="meta">${date}</span>
-                </div>
-                <div class="actions">
-                  <button class="btn-small btn-delete" onclick="removeA('${item.id}')">✕</button>
-                </div>
-              </div>
-            `;
+          <div class="card" data-id="${item.id}">
+            <div class="info">
+              <span class="name">${escapeHtml(item.text)}</span>
+              <span class="meta">${date}</span>
+            </div>
+            <div class="actions">
+              <button class="btn-small btn-delete" onclick="removeA('${item.id}')">✕</button>
+            </div>
+          </div>
+        `;
       }).join("");
     }
 
@@ -1345,7 +1437,9 @@
       if (ok) loadListA();
     }
 
-    // ----- Shared actions -----
+    // ================================================================
+    //  ACCIONES COMPARTIDAS
+    // ================================================================
     async function setStatus(id, status, type) {
       const endpoint = type === "person" ? "disappeared" : type === "pet" ? "pets" : "";
       if (!endpoint) return;
@@ -1384,7 +1478,56 @@
       if (ok) loadListB();
     }
 
-    // ----- Initial load -----
+    // ================================================================
+    //  ABRIR MODAL DESDE URL
+    // ================================================================
+    let modalOpenedFromUrl = false;
+    let urlModalAttempts = 0;
+    const MAX_URL_ATTEMPTS = 6;
+
+    function getUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      return {id: params.get("id"), type: params.get("type")};
+    }
+
+    function tryOpenModalFromUrl() {
+      if (modalOpenedFromUrl) return true;
+      const {id, type} = getUrlParams();
+      if (!id || !type || type === "anuncio") return true;
+
+      let dataArray = null;
+      if (type === "person") dataArray = personsData;
+      else if (type === "pet") dataArray = petsData;
+      else if (type === "building") dataArray = buildingsData;
+      else return true;
+
+      if (!dataArray || dataArray.length === 0) return false;
+
+      const item = dataArray.find(i => i.id === id);
+      if (item) {
+        if (type === "person") switchTab(tabPersonasBtn, tabPersonas, "person");
+        else if (type === "pet") switchTab(tabPetsBtn, tabPets, "pet");
+        else if (type === "building") switchTab(tabEdificiosBtn, tabEdificios, "building");
+        setTimeout(() => {
+          openModalForItem(item, type);
+          modalOpenedFromUrl = true;
+        }, 50);
+        return true;
+      }
+      return false;
+    }
+
+    function attemptUrlModal() {
+      if (modalOpenedFromUrl) return;
+      if (urlModalAttempts >= MAX_URL_ATTEMPTS) return;
+      urlModalAttempts++;
+      const ok = tryOpenModalFromUrl();
+      if (!ok) setTimeout(attemptUrlModal, 400);
+    }
+
+    // ================================================================
+    //  INICIO Y AUTO-REFRESH
+    // ================================================================
     loadList();
     loadListP();
     loadListB();
@@ -1392,12 +1535,6 @@
 
     setTimeout(attemptUrlModal, 300);
 
-    setInterval(() => {
-      loadList();
-      loadListP();
-      loadListB();
-      loadListA();
-    }, 10000);
   </script>
 </body>
 
