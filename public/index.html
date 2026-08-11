@@ -243,6 +243,7 @@
     }
 
     .anuncio-text {
+      padding: 5px;
       white-space: pre-wrap;
       word-wrap: break-word;
       overflow-wrap: break-word;
@@ -573,6 +574,10 @@
       style="margin-bottom: 5px; background: teal; border: none; padding: 10px 16px; border-radius: 8px; color: white; cursor: pointer;">
       http://sismoinfo.co (COPIAR LINK)
     </button>
+    <div id="apiTargetToggle" style="display: none; margin-bottom: 5px;">
+      <button type="button" id="apiTargetRemote" class="btn-small" style="border-radius: 6px 0 0 6px;">Remoto</button>
+      <button type="button" id="apiTargetLocal" class="btn-small" style="border-radius: 0 6px 6px 0;">Local</button>
+    </div>
   </div>
 
   <!-- ===== DRIVER (TABS + SEARCH) ===== -->
@@ -784,13 +789,37 @@
     // ================================================================
     //  CONFIGURACIÓN
     // ================================================================
-    const API_BASE = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
-      ? "https://sismoinfo.co/api"
-      : "/api";
+    const isLocalhost =
+      location.hostname === "localhost" || location.hostname === "127.0.0.1";
+
+    function resolveApiBase() {
+      if (!isLocalhost) return "/api";
+      const target = localStorage.getItem("sismo_api_target") || "remote";
+      return target === "local" ? "http://localhost:3000/api" : "https://sismoinfo.co/api";
+    }
+
+    const API_BASE = resolveApiBase();
 
     const CLOUDINARY_CLOUD_NAME = "snaspwdz";
     const CLOUDINARY_UPLOAD_PRESET = "sismopinto";
-    const isLocalhost = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+
+    if (isLocalhost) {
+      const toggle = document.getElementById("apiTargetToggle");
+      const btnRemote = document.getElementById("apiTargetRemote");
+      const btnLocal = document.getElementById("apiTargetLocal");
+      const activeTarget = localStorage.getItem("sismo_api_target") || "remote";
+      toggle.style.display = "flex";
+      btnRemote.style.background = activeTarget === "remote" ? "#d64545" : "#333";
+      btnLocal.style.background = activeTarget === "local" ? "#d64545" : "#333";
+      btnRemote.addEventListener("click", () => {
+        localStorage.setItem("sismo_api_target", "remote");
+        location.reload();
+      });
+      btnLocal.addEventListener("click", () => {
+        localStorage.setItem("sismo_api_target", "local");
+        location.reload();
+      });
+    }
 
 
     // ================================================================
@@ -1721,7 +1750,7 @@
         });
         return `
       <div class="card" data-id="${item.id}">
-        <div class="info">
+        <div class="info" style="padding:5px;">
           <pre class="anuncio-text">${escapeHtml(item.text)}</pre>
           <span class="meta">${date}</span>
         </div>
