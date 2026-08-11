@@ -1136,9 +1136,10 @@
 
     // ----- Selector de ubicación en mapa -----
     const CALI_CENTER = [3.4516, -76.532];
-    let mapPickerContext = null; // "person" | "pet" | "building"
+    let mapPickerContext = null; // "person" | "pet" | "building" | "modalItem"
     const mapPickerLat = {person: null, pet: null, building: null};
     const mapPickerLng = {person: null, pet: null, building: null};
+    let modalLocationTarget = null; // {id, type} cuando se edita ubicación desde el modal
     let leafletMap = null;
     let leafletMarker = null;
 
@@ -1159,8 +1160,17 @@
         leafletMap.on("click", (e) => leafletMarker.setLatLng(e.latlng));
       }
 
-      const existingLat = mapPickerLat[context];
-      const existingLng = mapPickerLng[context];
+      let existingLat = mapPickerLat[context];
+      let existingLng = mapPickerLng[context];
+      if (context === "modalItem" && modalLocationTarget) {
+        const dataArr = modalLocationTarget.type === "building" ? buildingsData
+          : modalLocationTarget.type === "person" ? personsData : petsData;
+        const target = dataArr.find(i => i.id === modalLocationTarget.id);
+        if (target && target.lat != null && target.lng != null) {
+          existingLat = target.lat;
+          existingLng = target.lng;
+        }
+      }
       if (existingLat != null && existingLng != null) {
         leafletMarker.setLatLng([existingLat, existingLng]);
         leafletMap.setView([existingLat, existingLng], 15);
@@ -1189,9 +1199,30 @@
       if (e.target === mapModal) closeMapPicker();
     });
 
-    mapPickerConfirm.addEventListener("click", () => {
+    mapPickerConfirm.addEventListener("click", async () => {
       if (!mapPickerContext || !leafletMarker) return;
       const {lat, lng} = leafletMarker.getLatLng();
+
+
+      if (mapPickerContext === "modalItem" && modalLocationTarget) {
+        const {id, type} = modalLocationTarget;
+        const endpoint = type === "building" ? "buildings" : type === "person" ? "disappeared" : "pets";
+        await fetch(`${API_BASE}/${endpoint}/${id}`, {
+          method: "PATCH",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({lat, lng}),
+        });
+        modalLocationTarget = null;
+        closeMapPicker();
+        if (type === "building") await loadListB();
+        else if (type === "person") await loadList();
+        else await loadListP();
+        const dataArr = type === "building" ? buildingsData : type === "person" ? personsData : petsData;
+        const updated = dataArr.find(i => i.id === id);
+        if (updated) openModalForItem(updated, type);
+        return;
+      }
+
       mapPickerLat[mapPickerContext] = lat;
       mapPickerLng[mapPickerContext] = lng;
       const btnByContext = {person: gpsBtn, pet: gpsBtnP, building: gpsBtnB};
@@ -1296,8 +1327,21 @@
           }
           closeModal();
         });
+      } else if (type === "building") {
+        const hasLoc = item.lat != null && item.lng != null;
+        modalBody.innerHTML = `
+          <div style="color:#888; font-size:0.95rem; margin-bottom:8px;">
+            ${hasLoc
+            ? `📐 <a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank" style="color:#4ea1ff;">${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</a>`
+            : "Este lugar no tiene ubicación en el mapa todavía."}
+          </div>
+          <button type="button" class="btn-small" id="modalSetLocationBtn">📍 ${hasLoc ? "Cambiar ubicación" : "Agregar ubicación"}</button>
+        `;
+        document.getElementById("modalSetLocationBtn").addEventListener("click", () => {
+          modalLocationTarget = {id: item.id, type: "building"};
+          openMapPicker("modalItem");
+        });
       } else {
-        // Para edificios u otros tipos, solo mostrar detalles
         modalBody.innerHTML = `<div style="color:#888; font-size:0.95rem;">Detalles del reporte</div>`;
       }
 

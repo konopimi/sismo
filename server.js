@@ -364,7 +364,7 @@ app.post("/api/buildings", (req, res) => {
 });
 
 app.patch("/api/buildings/:id", (req, res) => {
-  const { status, image } = req.body || {};
+  const { status, image, lat, lng } = req.body || {};
   if (status && !["seguro", "danado", "colapsado"].includes(status)) {
     return res.status(400).json({ error: "invalid status" });
   }
@@ -378,6 +378,14 @@ app.patch("/api/buildings/:id", (req, res) => {
     fields.push("image = ?");
     values.push(image && image.trim() ? image.trim() : null);
   }
+  if (lat !== undefined) {
+    fields.push("lat = ?");
+    values.push(Number.isFinite(lat) ? lat : null);
+  }
+  if (lng !== undefined) {
+    fields.push("lng = ?");
+    values.push(Number.isFinite(lng) ? lng : null);
+  }
   if (fields.length === 0) {
     return res.status(400).json({ error: "no fields to update" });
   }
@@ -386,7 +394,7 @@ app.patch("/api/buildings/:id", (req, res) => {
     .prepare(`UPDATE buildings SET ${fields.join(", ")} WHERE id = ?`)
     .run(...values);
   if (result.changes === 0) return res.status(404).json({ error: "not found" });
-  res.json({ id: req.params.id, status, image });
+  res.json({ id: req.params.id, status, image, lat, lng });
 });
 
 app.delete("/api/buildings/:id", (req, res) => {
