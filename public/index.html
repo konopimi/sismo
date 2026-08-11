@@ -816,6 +816,12 @@
     <div class="modal-content">
       <button class="modal-close" id="mapModalClose" aria-label="Cerrar">✕</button>
       <h2 id="mapModalTitle">Marca la ubicación</h2>
+      <div style="position:relative; margin-bottom:10px;">
+        <input type="text" id="mapSearchInput" placeholder="🔍 Buscar dirección o lugar..."
+          style="width:100%; padding:10px; border-radius:8px; border:1px solid #333; background:#1a1d24; color:#eaeaea;" />
+        <div id="mapSearchResults" style="display:none; position:absolute; top:100%; left:0; right:0;
+          background:#1a1d24; border:1px solid #333; border-radius:8px; margin-top:4px; z-index:2000; max-height:220px; overflow-y:auto;"></div>
+      </div>
       <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
         <input type="number" id="mapPickerLatInput" step="any" placeholder="Latitud"
           style="flex:1 1 120px; padding:10px; border-radius:8px; border:1px solid #333; background:#1a1d24; color:#eaeaea;" />
@@ -1224,6 +1230,9 @@
     function closeMapPicker() {
       mapModal.classList.remove("open");
       mapPickerContext = null;
+      mapSearchInput.value = "";
+      mapSearchResults.style.display = "none";
+      mapSearchResults.innerHTML = "";
     }
 
     mapModalClose.addEventListener("click", closeMapPicker);
@@ -1245,6 +1254,69 @@
       }
       leafletMarker.setLatLng([lat, lng]);
       leafletMap.setView([lat, lng], 15);
+    });
+
+    const mapSearchInput = document.getElementById("mapSearchInput");
+    const mapSearchResults = document.getElementById("mapSearchResults");
+    let mapSearchDebounce = null;
+    let mapSearchAbort = null;
+
+    mapSearchInput.addEventListener("input", () => {
+      clearTimeout(mapSearchDebounce);
+      const q = mapSearchInput.value.trim();
+      if (q.length < 3) {
+        mapSearchResults.style.display = "none";
+        mapSearchResults.innerHTML = "";
+        return;
+      }
+      mapSearchDebounce = setTimeout(() => runMapSearch(q), 500);
+    });
+
+    async function runMapSearch(query) {
+      if (mapSearchAbort) mapSearchAbort.abort();
+      mapSearchAbort = new AbortController();
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=0&limit=6&countrycodes=co&q=${encodeURIComponent(query)}`;
+        const res = await fetch(url, {
+          signal: mapSearchAbort.signal,
+          headers: {"Accept-Language": "es"},
+        });
+        const results = await res.json();
+        renderMapSearchResults(results);
+      } catch (err) {
+        if (err.name !== "AbortError") console.error(err);
+      }
+    }
+
+    function renderMapSearchResults(results) {
+      if (!results.length) {
+        mapSearchResults.innerHTML = `<div class="map-search-result" style="color:#666; cursor:default;">Sin resultados</div>`;
+        mapSearchResults.style.display = "block";
+        return;
+      }
+      mapSearchResults.innerHTML = results.map((r, i) =>
+        `<div class="map-search-result" data-index="${i}">${escapeHtml(r.display_name)}</div>`
+      ).join("");
+      mapSearchResults.style.display = "block";
+
+      mapSearchResults.querySelectorAll(".map-search-result[data-index]").forEach(el => {
+        el.addEventListener("click", () => {
+          const r = results[el.dataset.index];
+          const lat = parseFloat(r.lat);
+          const lng = parseFloat(r.lon);
+          leafletMarker.setLatLng([lat, lng]);
+          leafletMap.setView([lat, lng], 16);
+          syncPickerInputs(lat, lng);
+          mapSearchResults.style.display = "none";
+          mapSearchInput.value = r.display_name;
+        });
+      });
+    }
+
+    document.addEventListener("click", (e) => {
+      if (!mapSearchResults.contains(e.target) && e.target !== mapSearchInput) {
+        mapSearchResults.style.display = "none";
+      }
     });
 
     mapPickerConfirm.addEventListener("click", async () => {
