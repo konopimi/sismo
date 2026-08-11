@@ -1111,8 +1111,9 @@
           : `
             <button class="btn-small btn-share" onclick="shareAnuncio('${item.id}'); closeModal();">📤 Compartir</button>
           `;
-        commentsContainer.style.display = "none";
+        commentsContainer.style.display = "";
         modal.classList.add("open");
+        loadComments(item.id, "anuncios");
         return;
       } else {
         commentsContainer.style.display = "";
@@ -1799,6 +1800,7 @@
           ${isLocalhost
             ? `<button class="btn-small btn-delete" onclick="removeA('${item.id}')">✕</button>`
             : ''}
+          <button class="btn-small btn-share" onclick="shareAnuncio('${item.id}')">📤</button>
         </div>
       </div>
     `;
