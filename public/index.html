@@ -776,12 +776,11 @@
       }
       modalActions.innerHTML = actionsHtml;
       modal.classList.add("open");
-      if (type === "anuncio") {
-        commentsContainer.style.display = "none";
-      } else {
-        commentsContainer.style.display = "";
-        loadComments(item.id, type === "person" ? "disappeared" : type === "pet" ? "pets" : "buildings");
-      }
+      commentsContainer.style.display = "";
+      loadComments(
+        item.id,
+        type === "person" ? "disappeared" : type === "pet" ? "pets" : type === "anuncio" ? "anuncios" : "buildings",
+      );
     }
     // ----- Comments -----
     let currentComments = [];
