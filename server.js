@@ -114,19 +114,40 @@ try {
 try {
   db.exec("ALTER TABLE pets ADD COLUMN city TEXT");
 } catch (e) {}
+try {
+  db.exec("ALTER TABLE disappeared ADD COLUMN photo_url TEXT");
+} catch (e) {}
 
 // ========== Personas ==========
 app.get("/api/disappeared", (req, res) => {
   const rows = db
     .prepare(
       `
-      SELECT id, name, status, location, city, created_at,
+      SELECT id, name, status, location, city, created_at, photo_url,
         (SELECT text FROM comments WHERE item_id = disappeared.id AND item_type = 'disappeared' ORDER BY created_at DESC LIMIT 1) AS last_comment
       FROM disappeared ORDER BY created_at DESC
     `,
     )
     .all();
   res.json(rows);
+});
+
+// The photo itself is uploaded straight from the browser to Cloudinary
+// (unsigned preset); this just records the resulting URL against the report.
+app.patch("/api/disappeared/:id/photo", (req, res) => {
+  const { photo_url } = req.body || {};
+  if (
+    !photo_url ||
+    typeof photo_url !== "string" ||
+    !/^https:\/\/res\.cloudinary\.com\//.test(photo_url)
+  ) {
+    return res.status(400).json({ error: "invalid photo_url" });
+  }
+  const result = db
+    .prepare("UPDATE disappeared SET photo_url = ? WHERE id = ?")
+    .run(photo_url, req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.json({ id: req.params.id, photo_url });
 });
 
 app.post("/api/disappeared", (req, res) => {
