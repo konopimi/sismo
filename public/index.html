@@ -1475,6 +1475,7 @@
       <label style="display:block; font-size:0.8rem; color:#999; margin-bottom:4px;">${item.photo_url ? "Cambiar foto" : "Agregar foto"}</label>
       <input type="file" accept="image/*" id="modalPhotoInput"
         style="width:100%; padding:8px; border-radius:8px; border:1px solid #333; background:#1a1d24; color:#eaeaea;" />
+      <button type="button" class="btn-small" id="modalSetLocationBtn" style="margin-top:10px;">📍 ${hasLoc ? "Cambiar ubicación" : "Agregar ubicación"}</button>
     `;
         // Remover listeners previos clonando el input
         const oldInput = document.getElementById("modalPhotoInput");
@@ -1491,6 +1492,10 @@
             loadListP();
           }
           closeModal();
+        });
+        document.getElementById("modalSetLocationBtn").addEventListener("click", () => {
+          modalLocationTarget = {id: item.id, type};
+          openMapPicker("modalItem");
         });
         if (hasLoc) initModalMiniMap(item.lat, item.lng);
       } else if (type === "building") {
