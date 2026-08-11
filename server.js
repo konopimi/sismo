@@ -92,6 +92,11 @@ try {
 try {
   db.exec("ALTER TABLE pets ADD COLUMN photo_url TEXT");
 } catch (e) {}
+// --- lat/lng for map picker (separate from free-text location) ---
+for (const t of ["disappeared", "pets", "buildings"]) {
+  try { db.exec(`ALTER TABLE ${t} ADD COLUMN lat REAL`); } catch (e) {}
+  try { db.exec(`ALTER TABLE ${t} ADD COLUMN lng REAL`); } catch (e) {}
+}
 // ========== Comentarios ==========
 app.get("/api/comments", (req, res) => {
   const { itemId, itemType } = req.query;
@@ -139,7 +144,7 @@ app.get("/api/disappeared", (req, res) => {
   const rows = db
     .prepare(
       `
-      SELECT id, name, status, location, city, created_at, photo_url,
+      SELECT id, name, status, location, city, created_at, photo_url, lat, lng,
         (SELECT text FROM comments WHERE item_id = disappeared.id AND item_type = 'disappeared' ORDER BY created_at DESC LIMIT 1) AS last_comment
       FROM disappeared ORDER BY RANDOM()
     `,
@@ -167,7 +172,7 @@ app.patch("/api/disappeared/:id/photo", (req, res) => {
 });
 
 app.post("/api/disappeared", (req, res) => {
-  const { id, name, location, city, image } = req.body || {};
+  const { id, name, location, city, image, lat, lng } = req.body || {};
   if (!name || !name.trim()) {
     return res.status(400).json({ error: "name is required" });
   }
@@ -176,9 +181,11 @@ app.post("/api/disappeared", (req, res) => {
   const loc = location && location.trim() ? location.trim() : null;
   const cty = city && city.trim() ? city.trim() : null;
   const img = image && image.trim() ? image.trim() : null;
+  const latVal = Number.isFinite(lat) ? lat : null;
+  const lngVal = Number.isFinite(lng) ? lng : null;
   db.prepare(
-    "INSERT INTO disappeared (id, name, status, location, city, image, created_at) VALUES (?, ?, 'desaparecido', ?, ?, ?, ?)",
-  ).run(finalId, name.trim(), loc, cty, img, createdAt);
+    "INSERT INTO disappeared (id, name, status, location, city, image, created_at, lat, lng) VALUES (?, ?, 'desaparecido', ?, ?, ?, ?, ?, ?)",
+  ).run(finalId, name.trim(), loc, cty, img, createdAt, latVal, lngVal);
   res.status(201).json({
     id: finalId,
     name: name.trim(),
@@ -187,6 +194,8 @@ app.post("/api/disappeared", (req, res) => {
     city: cty,
     image: img,
     created_at: createdAt,
+    lat: latVal,
+    lng: lngVal,
   });
 });
 
@@ -231,7 +240,7 @@ app.delete("/api/disappeared/:id", (req, res) => {
 app.get("/api/pets", (req, res) => {
   const rows = db
     .prepare(
-      "SELECT id, name, status, location, city, image, photo_url, created_at FROM pets ORDER BY RANDOM()",
+      "SELECT id, name, status, location, city, image, photo_url, created_at, lat, lng FROM pets ORDER BY RANDOM()",
     )
     .all();
   res.json(rows);
@@ -254,7 +263,7 @@ app.patch("/api/pets/:id/photo", (req, res) => {
 });
 
 app.post("/api/pets", (req, res) => {
-  const { id, name, location, city, image } = req.body || {};
+  const { id, name, location, city, image, lat, lng } = req.body || {};
   if (!name || !name.trim()) {
     return res.status(400).json({ error: "name is required" });
   }
@@ -263,9 +272,11 @@ app.post("/api/pets", (req, res) => {
   const loc = location && location.trim() ? location.trim() : null;
   const cty = city && city.trim() ? city.trim() : null;
   const img = image && image.trim() ? image.trim() : null;
+  const latVal = Number.isFinite(lat) ? lat : null;
+  const lngVal = Number.isFinite(lng) ? lng : null;
   db.prepare(
-    "INSERT INTO pets (id, name, status, location, city, image, created_at) VALUES (?, ?, 'desaparecido', ?, ?, ?, ?)",
-  ).run(finalId, name.trim(), loc, cty, img, createdAt);
+    "INSERT INTO pets (id, name, status, location, city, image, created_at, lat, lng) VALUES (?, ?, 'desaparecido', ?, ?, ?, ?, ?, ?)",
+  ).run(finalId, name.trim(), loc, cty, img, createdAt, latVal, lngVal);
   res.status(201).json({
     id: finalId,
     name: name.trim(),
@@ -274,6 +285,8 @@ app.post("/api/pets", (req, res) => {
     city: cty,
     image: img,
     created_at: createdAt,
+    lat: latVal,
+    lng: lngVal,
   });
 });
 
@@ -316,14 +329,14 @@ app.delete("/api/pets/:id", (req, res) => {
 app.get("/api/buildings", (req, res) => {
   const rows = db
     .prepare(
-      "SELECT id, name, status, location, city, image, created_at FROM buildings ORDER BY RANDOM()",
+      "SELECT id, name, status, location, city, image, created_at, lat, lng FROM buildings ORDER BY RANDOM()",
     )
     .all();
   res.json(rows);
 });
 
 app.post("/api/buildings", (req, res) => {
-  const { id, name, location, city, image } = req.body || {};
+  const { id, name, location, city, image, lat, lng } = req.body || {};
   if (!name || !name.trim()) {
     return res.status(400).json({ error: "name is required" });
   }
@@ -332,9 +345,11 @@ app.post("/api/buildings", (req, res) => {
   const loc = location && location.trim() ? location.trim() : null;
   const cty = city && city.trim() ? city.trim() : null;
   const img = image && image.trim() ? image.trim() : null;
+  const latVal = Number.isFinite(lat) ? lat : null;
+  const lngVal = Number.isFinite(lng) ? lng : null;
   db.prepare(
-    "INSERT INTO buildings (id, name, status, location, city, image, created_at) VALUES (?, ?, 'seguro', ?, ?, ?, ?)",
-  ).run(finalId, name.trim(), loc, cty, img, createdAt);
+    "INSERT INTO buildings (id, name, status, location, city, image, created_at, lat, lng) VALUES (?, ?, 'seguro', ?, ?, ?, ?, ?, ?)",
+  ).run(finalId, name.trim(), loc, cty, img, createdAt, latVal, lngVal);
   res.status(201).json({
     id: finalId,
     name: name.trim(),
@@ -343,6 +358,8 @@ app.post("/api/buildings", (req, res) => {
     city: cty,
     image: img,
     created_at: createdAt,
+    lat: latVal,
+    lng: lngVal,
   });
 });
 
