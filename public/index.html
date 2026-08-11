@@ -6,15 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sismo API</title>
   <style>
-    /* --- same styles as before, with nothing extra needed --- */
     * {
       box-sizing: border-box;
     }
 
     body {
       margin: 0;
-      font-family:
-        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: #0f1115;
       color: #eaeaea;
       overflow-y: scroll;
@@ -25,12 +23,37 @@
       margin: 0 0 12px 0;
     }
 
+    .image-input {
+      width: 100%;
+      min-width: 100%;
+      margin-top: 4px;
+      flex-basis: 100%;
+    }
+
     .crear {
       border: 1px solid gray;
       padding: 5px;
       border-radius: 10px;
       margin-bottom: 5px;
       background: teal;
+    }
+
+    .crear form {
+      display: flex;
+      flex-wrap: wrap;
+    }
+
+    .crear form input {
+      min-width: max(200px, 100%);
+    }
+
+    .card-image {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 8px;
+      background: #2a2e36;
+      flex-shrink: 0;
     }
 
     .tabs {
@@ -133,9 +156,10 @@
       background: #1a1d24;
       border-radius: 10px;
       padding: 12px 14px;
-      gap: 5px;
+      gap: 8px;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
+      align-items: center;
       border-left: 4px solid #d64545;
       cursor: default;
       transition: background 0.15s;
@@ -166,8 +190,8 @@
       display: flex;
       gap: 6px;
       flex-wrap: wrap;
-      margin-top: 6px;
       pointer-events: auto;
+      margin-top: 4px;
     }
 
     .btn-small {
@@ -223,7 +247,7 @@
       background: #b53838;
     }
 
-    /* Modal (unchanged) */
+    /* Modal */
     .modal {
       position: fixed;
       inset: 0;
@@ -398,9 +422,9 @@
 </head>
 
 <body>
-  <div style="padding: 5px">
+  <div style="padding:5px">
     <h1>🚨 Sismo API - ADMIN: +57 3153410282</h1>
-    <button id="copyLinkBtn" style="margin-bottom: 5px; background: teal">
+    <button id="copyLinkBtn" style="margin-bottom:5px; background:teal">
       http://neokpm.xyz (COPIAR LINK)
     </button>
   </div>
@@ -420,66 +444,56 @@
       <button class="tab-btn" id="tabEdificiosBtn">🏢 Ubicaciones</button>
       <button class="tab-btn" id="tabAnunciosBtn">📣 Anuncios</button>
     </div>
-    <!-- The search input is per panel, we'll keep them in each panel -->
     <div id="searchPerson" class="search-row">
       <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
     </div>
-    <div id="searchPet" class="search-row" style="display: none">
+    <div id="searchPet" class="search-row" style="display:none">
       <input type="search" id="searchInputP" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
     </div>
-    <div id="searchBuilding" class="search-row" style="display: none">
+    <div id="searchBuilding" class="search-row" style="display:none">
       <input type="search" id="searchInputB" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
     </div>
-    <!-- No search for anuncios -->
   </div>
 
   <!-- Panel Personas -->
   <div id="tabPersonas" class="tab-panel active">
-    <div style="" class="crear">
+    <div class="crear">
       (+) CREAR
-      <form id="addForm" style="margin-top: 5px">
+      <form id="addForm" style="margin-top:5px">
         <input type="text" id="nameInput" placeholder="Nombre de la persona" required />
         <input type="text" id="locationInput" placeholder="Ubicación (opcional)" />
         <select id="cityInput">
           <option value="">Ciudad</option>
         </select>
-        <button type="button" id="gpsBtn" class="gps-btn" title="Usar mi ubicación">
-          📍
-        </button>
+        <input type="text" id="imageInput" class="image-input" placeholder="URL de imagen (opcional)" />
+        <button type="button" id="gpsBtn" class="gps-btn" title="Usar mi ubicación">📍</button>
         <button type="submit">Reportar</button>
       </form>
     </div>
-    <!-- <div class="search-row"> -->
-    <!--   <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." /> -->
-    <!-- </div> -->
     <div id="list" class="list"></div>
   </div>
 
   <!-- Panel Mascotas -->
   <div id="tabPets" class="tab-panel">
-    <div style="" class="crear">
+    <div class="crear">
       (+) CREAR MASCOTA
-      <form id="addFormP" style="margin-top: 5px">
+      <form id="addFormP" style="margin-top:5px">
         <input type="text" id="nameInputP" placeholder="Nombre de la mascota" required />
         <input type="text" id="locationInputP" placeholder="Ubicación (opcional)" />
         <select id="cityInputP">
           <option value="">Ciudad</option>
         </select>
-        <button type="button" id="gpsBtnP" class="gps-btn" title="Usar mi ubicación">
-          📍
-        </button>
+        <input type="text" id="imageInputP" class="image-input" placeholder="URL de imagen (opcional)" />
+        <button type="button" id="gpsBtnP" class="gps-btn" title="Usar mi ubicación">📍</button>
         <button type="submit">Reportar</button>
       </form>
     </div>
-    <!-- <div class="search-row"> -->
-    <!--   <input type="search" id="searchInputP" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." /> -->
-    <!-- </div> -->
     <div id="listP" class="list"></div>
   </div>
 
   <!-- Panel Edificios -->
   <div id="tabEdificios" class="tab-panel">
-    <div style="" class="crear">
+    <div class="crear">
       (+) CREAR UBICACION
       <form id="addFormB">
         <input type="text" id="nameInputB" placeholder="Nombre o dirección del edificio" required />
@@ -487,45 +501,40 @@
         <select id="cityInputB">
           <option value="">Ciudad</option>
         </select>
-        <button type="button" id="gpsBtnB" class="gps-btn" title="Usar mi ubicación">
-          📍
-        </button>
+        <input type="text" id="imageInputB" class="image-input" placeholder="URL de imagen (opcional)" />
+        <button type="button" id="gpsBtnB" class="gps-btn" title="Usar mi ubicación">📍</button>
         <button type="submit">Reportar</button>
       </form>
     </div>
-    <!-- <div class="search-row"> -->
-    <!--   <input type="search" id="searchInputB" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." /> -->
-    <!-- </div> -->
     <div id="listB" class="list"></div>
   </div>
 
   <!-- Panel Anuncios -->
-  <!-- Panel Anuncios -->
   <div id="tabAnuncios" class="tab-panel">
     <div class="crear">
       (+) CREAR ANUNCIO
-      <form id="addFormA" style="margin-top: 5px; flex-direction: column; align-items: stretch">
+      <form id="addFormA" style="margin-top:5px; flex-direction:column; align-items:stretch">
         <textarea id="anuncioInput" rows="3" placeholder="Escribe un anuncio..." required style="
-              flex: 1;
-              padding: 12px;
-              font-size: 1rem;
-              border-radius: 8px;
-              border: 1px solid #333;
-              background: #1a1d24;
-              color: #eaeaea;
-              resize: vertical;
-              min-height: 80px;
-              font-family: inherit;
-              width: 100%;
-              margin-bottom: 8px;
-            "></textarea>
-        <button type="submit" style="width: 100%">Publicar</button>
+                flex: 1;
+                padding: 12px;
+                font-size: 1rem;
+                border-radius: 8px;
+                border: 1px solid #333;
+                background: #1a1d24;
+                color: #eaeaea;
+                resize: vertical;
+                min-height: 80px;
+                font-family: inherit;
+                width: 100%;
+                margin-bottom: 8px;
+              "></textarea>
+        <button type="submit" style="width:100%">Publicar</button>
       </form>
     </div>
     <div id="listA" class="list"></div>
   </div>
 
-  <!-- Modal overlay -->
+  <!-- Modal -->
   <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal-content">
       <button class="modal-close" aria-label="Cerrar">✕</button>
@@ -538,8 +547,14 @@
       <div id="commentsContainer">
         <div id="commentsList" style="margin-bottom:12px;"></div>
         <form id="commentForm" style="display:flex; gap:8px; flex-wrap:wrap;">
-          <input type="text" id="commentInput" placeholder="Escribe un comentario..." required
-            style="flex:1; padding:10px; border-radius:8px; border:1px solid #333; background:#1a1d24; color:#eaeaea;" />
+          <input type="text" id="commentInput" placeholder="Escribe un comentario..." required style="
+                      flex:1;
+                      padding:10px;
+                      border-radius:8px;
+                      border:1px solid #333;
+                      background:#1a1d24;
+                      color:#eaeaea;
+                    " />
           <button type="submit" style="flex:0 0 auto;">Comentar</button>
         </form>
       </div>
@@ -549,26 +564,18 @@
 
   <script>
     const API_BASE =
-      location.hostname === "localhost" || location.hostname === "127.0.0.1"
-        ? "https://neokpm.xyz/api"
-        : "/api";
+      location.hostname === "localhost" || location.hostname === "127.0.0.1" ?
+        "https://neokpm.xyz/api" :
+        "/api";
 
     // Load cities
     fetch("/cities.json")
       .then((r) => r.json())
       .then((cities) => {
-        const opts = cities
-          .map((c) => `<option value="${c}">${c}</option>`)
-          .join("");
-        document
-          .getElementById("cityInput")
-          .insertAdjacentHTML("beforeend", opts);
-        document
-          .getElementById("cityInputP")
-          .insertAdjacentHTML("beforeend", opts);
-        document
-          .getElementById("cityInputB")
-          .insertAdjacentHTML("beforeend", opts);
+        const opts = cities.map((c) => `<option value="${c}">${c}</option>`).join("");
+        document.getElementById("cityInput").insertAdjacentHTML("beforeend", opts);
+        document.getElementById("cityInputP").insertAdjacentHTML("beforeend", opts);
+        document.getElementById("cityInputB").insertAdjacentHTML("beforeend", opts);
       })
       .catch(() => console.error("No se pudo cargar cities.json"));
 
@@ -583,21 +590,15 @@
     const tabAnuncios = document.getElementById("tabAnuncios");
 
     function switchTab(activeBtn, activePanel, tabType) {
-      [tabPersonasBtn, tabPetsBtn, tabEdificiosBtn, tabAnunciosBtn].forEach(
-        (b) => b.classList.remove("active"),
-      );
+      [tabPersonasBtn, tabPetsBtn, tabEdificiosBtn, tabAnunciosBtn].forEach((b) => b.classList.remove("active"));
       activeBtn.classList.add("active");
-      [tabPersonas, tabPets, tabEdificios, tabAnuncios].forEach((p) =>
-        p.classList.remove("active"),
-      );
+      [tabPersonas, tabPets, tabEdificios, tabAnuncios].forEach((p) => p.classList.remove("active"));
       activePanel.classList.add("active");
 
-      // Hide all search rows
       document.getElementById("searchPerson").style.display = "none";
       document.getElementById("searchPet").style.display = "none";
       document.getElementById("searchBuilding").style.display = "none";
 
-      // Show and clear the corresponding search row, then render
       if (tabType === "person") {
         document.getElementById("searchPerson").style.display = "block";
         document.getElementById("searchInput").value = "";
@@ -611,22 +612,13 @@
         document.getElementById("searchInputB").value = "";
         renderB();
       } else if (tabType === "anuncio") {
-        // No search for anuncios
         renderA();
       }
     }
-    tabPersonasBtn.addEventListener("click", () => {
-      switchTab(tabPersonasBtn, tabPersonas, "person");
-    });
-    tabPetsBtn.addEventListener("click", () => {
-      switchTab(tabPetsBtn, tabPets, "pet");
-    });
-    tabEdificiosBtn.addEventListener("click", () => {
-      switchTab(tabEdificiosBtn, tabEdificios, "building");
-    });
-    tabAnunciosBtn.addEventListener("click", () => {
-      switchTab(tabAnunciosBtn, tabAnuncios, "anuncio");
-    });
+    tabPersonasBtn.addEventListener("click", () => {switchTab(tabPersonasBtn, tabPersonas, "person");});
+    tabPetsBtn.addEventListener("click", () => {switchTab(tabPetsBtn, tabPets, "pet");});
+    tabEdificiosBtn.addEventListener("click", () => {switchTab(tabEdificiosBtn, tabEdificios, "building");});
+    tabAnunciosBtn.addEventListener("click", () => {switchTab(tabAnunciosBtn, tabAnuncios, "anuncio");});
 
     // Utilities
     function escapeHtml(str) {
@@ -636,10 +628,7 @@
     }
 
     function normalize(str) {
-      return (str || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
+      return (str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
 
     function fuzzyMatch(query, target) {
@@ -655,47 +644,36 @@
 
     function fuzzyFilter(query, items) {
       if (!query.trim()) return items;
-      return items.filter(
-        (item) =>
-          fuzzyMatch(query, item.name) ||
-          fuzzyMatch(query, item.location || "") ||
-          fuzzyMatch(query, item.city || ""),
+      return items.filter((item) =>
+        fuzzyMatch(query, item.name) ||
+        fuzzyMatch(query, item.location || "") ||
+        fuzzyMatch(query, item.city || "")
       );
     }
 
     async function adminDelete(url) {
       const key = prompt("Clave de administrador:");
       if (!key) return false;
-      const r = await fetch(url, {
-        method: "DELETE",
-        headers: {"x-admin-key": key},
-      });
-      if (r.status === 403) {
-        alert("Clave incorrecta");
-        return false;
-      }
+      const r = await fetch(url, {method: "DELETE", headers: {"x-admin-key": key}});
+      if (r.status === 403) {alert("Clave incorrecta"); return false;}
       return true;
     }
-    // Copy link button
-    document
-      .getElementById("copyLinkBtn")
-      .addEventListener("click", async () => {
-        const url = "http://neokpm.xyz";
-        try {
-          await navigator.clipboard.writeText(url);
-          const btn = document.getElementById("copyLinkBtn");
-          const originalText = btn.textContent;
-          btn.textContent = "✅ ¡Copiado!";
-          setTimeout(() => {
-            btn.textContent = originalText;
-          }, 2000);
-        } catch (err) {
-          alert(
-            "No se pudo copiar. Intenta seleccionar el texto manualmente.",
-          );
-        }
-      });
-    // Modal (same as before)
+
+    // Copy link
+    document.getElementById("copyLinkBtn").addEventListener("click", async () => {
+      const url = "http://neokpm.xyz";
+      try {
+        await navigator.clipboard.writeText(url);
+        const btn = document.getElementById("copyLinkBtn");
+        const originalText = btn.textContent;
+        btn.textContent = "✅ ¡Copiado!";
+        setTimeout(() => {btn.textContent = originalText;}, 2000);
+      } catch (err) {
+        alert("No se pudo copiar. Intenta seleccionar el texto manualmente.");
+      }
+    });
+
+    // ----- Modal -----
     const modal = document.getElementById("modal");
     const modalTitle = document.getElementById("modalTitle");
     const modalStatus = document.getElementById("modalStatus");
@@ -715,15 +693,16 @@
       document.getElementById("commentInput").value = "";
       currentItemId = null;
       currentItemType = null;
+      const url = new URL(window.location);
+      url.searchParams.delete("id");
+      url.searchParams.delete("type");
+      window.history.replaceState({}, "", url);
     }
 
     modalClose.addEventListener("click", closeModal);
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) closeModal();
-    });
+    modal.addEventListener("click", (e) => {if (e.target === modal) closeModal();});
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && modal.classList.contains("open"))
-        closeModal();
+      if (e.key === "Escape" && modal.classList.contains("open")) closeModal();
     });
 
     function openModalForItem(item, type) {
@@ -731,41 +710,57 @@
       const statusLabel = item.status || "desaparecido";
       modalStatus.innerHTML = `<span class="status-tag ${statusClass}">${statusLabel}</span>`;
       modalTitle.textContent = item.name || "Sin nombre";
-      const dateStr = item.created_at
-        ? new Date(item.created_at).toLocaleString("es-CO", {
+      const dateStr = item.created_at ?
+        new Date(item.created_at).toLocaleString("es-CO", {
           day: "2-digit",
           month: "2-digit",
           year: "numeric",
           hour: "2-digit",
           minute: "2-digit",
-        })
-        : "";
+        }) :
+        "";
       let metaParts = [];
       if (item.city) metaParts.push(`📍 ${escapeHtml(item.city)}`);
       if (item.location) metaParts.push(`🗺️ ${escapeHtml(item.location)}`);
       metaParts.push(`🕒 ${dateStr}`);
-      modalMeta.innerHTML = metaParts
-        .map((p) => `<span>${p}</span>`)
-        .join("");
-      modalBody.innerHTML = `<div style="color:#888; font-size:0.95rem;">Detalles del reporte</div>`;
+      modalMeta.innerHTML = metaParts.map((p) => `<span>${p}</span>`).join("");
+
+      let bodyHtml = `<div style="color:#888; font-size:0.95rem;">Detalles del reporte</div>`;
+      if (item.image) {
+        bodyHtml = `<img src="${escapeHtml(item.image)}" alt="Imagen" style="max-width:100%; max-height:200px; border-radius:8px; margin-bottom:12px;" />` + bodyHtml;
+      }
+      modalBody.innerHTML = bodyHtml;
+
       let actionsHtml = "";
       if (type === "person" || type === "pet") {
         if (item.status === "encontrado") {
-          actionsHtml += `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido', '${type}'); closeModal();">Marcar desaparecido</button>`;
+          actionsHtml +=
+            `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','${type}'); closeModal();">Marcar desaparecido</button>`;
         } else {
-          actionsHtml += `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado', '${type}'); closeModal();">Marcar encontrado</button>`;
+          actionsHtml +=
+            `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','${type}'); closeModal();">Marcar encontrado</button>`;
         }
-        actionsHtml += `<button class="btn-small btn-delete" onclick="removeItem('${item.id}', '${type}'); closeModal();">✕ Eliminar</button>`;
+        actionsHtml +=
+          `<button class="btn-small btn-delete" onclick="removeItem('${item.id}','${type}'); closeModal();">✕ Eliminar</button>`;
       } else if (type === "building") {
-        actionsHtml += `<button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro'); closeModal();">Seguro</button>`;
-        actionsHtml += `<button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado'); closeModal();">Dañado</button>`;
-        actionsHtml += `<button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado'); closeModal();">Colapsado</button>`;
-        actionsHtml += `<button class="btn-small btn-delete" onclick="removeB('${item.id}'); closeModal();">✕ Eliminar</button>`;
+        actionsHtml +=
+          `<button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro'); closeModal();">Seguro</button>`;
+        actionsHtml +=
+          `<button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado'); closeModal();">Dañado</button>`;
+        actionsHtml +=
+          `<button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado'); closeModal();">Colapsado</button>`;
+        actionsHtml +=
+          `<button class="btn-small btn-delete" onclick="removeB('${item.id}'); closeModal();">✕ Eliminar</button>`;
       }
       modalActions.innerHTML = actionsHtml;
       modal.classList.add("open");
+      const url = new URL(window.location);
+      url.searchParams.set("id", item.id);
+      url.searchParams.set("type", type);
+      window.history.replaceState({}, "", url);
       loadComments(item.id, type === "person" ? "disappeared" : type === "pet" ? "pets" : "buildings");
     }
+
     // ----- Comments -----
     let currentComments = [];
     let currentItemId = null;
@@ -792,17 +787,20 @@
       }
       list.innerHTML = currentComments.map(c => {
         const date = new Date(c.created_at).toLocaleString("es-CO", {
-          day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
         });
         return `
-      <div style="background:#12151c; border-radius:8px; padding:8px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; border-left:2px solid #d64545;">
-        <div>
-          <div style="color:#eaeaea; word-break:break-word;">${escapeHtml(c.text)}</div>
-          <div style="font-size:0.7rem; color:#888;">${date}</div>
-        </div>
-        <button class="btn-small btn-delete" onclick="deleteComment('${c.id}')" style="flex-shrink:0;">✕</button>
-      </div>
-    `;
+              <div style="background:#12151c; border-radius:8px; padding:8px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; border-left:2px solid #d64545;">
+                <div>
+                  <div style="color:#eaeaea; word-break:break-word;">${escapeHtml(c.text)}</div>
+                  <div style="font-size:0.7rem; color:#888;">${date}</div>
+                </div>
+                <button class="btn-small btn-delete" onclick="deleteComment('${c.id}')" style="flex-shrink:0;">✕</button>
+              </div>
+            `;
       }).join("");
     }
 
@@ -826,13 +824,62 @@
       loadComments(currentItemId, currentItemType);
     });
 
-    // ----- Personas (unchanged) -----
+    // ----- URL param modal opener -----
+    let modalOpenedFromUrl = false;
+    let urlModalAttempts = 0;
+    const MAX_URL_ATTEMPTS = 6;
+
+    function getUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      return {id: params.get("id"), type: params.get("type")};
+    }
+
+    function tryOpenModalFromUrl() {
+      if (modalOpenedFromUrl) return true;
+      const {id, type} = getUrlParams();
+      if (!id || !type) return true;
+      if (type === "anuncio") return true;
+
+      let dataArray = null;
+      if (type === "person") dataArray = personsData;
+      else if (type === "pet") dataArray = petsData;
+      else if (type === "building") dataArray = buildingsData;
+      else return true;
+
+      if (!dataArray || dataArray.length === 0) return false;
+
+      const item = dataArray.find((i) => i.id === id);
+      if (item) {
+        if (type === "person") switchTab(tabPersonasBtn, tabPersonas, "person");
+        else if (type === "pet") switchTab(tabPetsBtn, tabPets, "pet");
+        else if (type === "building") switchTab(tabEdificiosBtn, tabEdificios, "building");
+        setTimeout(() => {
+          openModalForItem(item, type);
+          modalOpenedFromUrl = true;
+        }, 50);
+        return true;
+      }
+      return false;
+    }
+
+    function attemptUrlModal() {
+      if (modalOpenedFromUrl) return;
+      if (urlModalAttempts >= MAX_URL_ATTEMPTS) return;
+      urlModalAttempts++;
+      const ok = tryOpenModalFromUrl();
+      if (!ok) {
+        setTimeout(attemptUrlModal, 400);
+      }
+    }
+
+    // ----- Personas -----
     let personsData = [];
     const listEl = document.getElementById("list");
     const form = document.getElementById("addForm");
     const nameInput = document.getElementById("nameInput");
     const locationInput = document.getElementById("locationInput");
     const cityInput = document.getElementById("cityInput");
+    const imageInput = document.getElementById("imageInput");
     const gpsBtn = document.getElementById("gpsBtn");
     const searchInput = document.getElementById("searchInput");
 
@@ -841,6 +888,7 @@
         const res = await fetch(`${API_BASE}/disappeared`);
         personsData = await res.json();
         render();
+        attemptUrlModal();
       } catch (err) {
         listEl.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
       }
@@ -849,42 +897,43 @@
     function render() {
       const items = fuzzyFilter(searchInput.value, personsData);
       if (!items.length) {
-        listEl.innerHTML = `<div class="empty">${personsData.length ? "Sin resultados." : "No hay reportes todavía."}</div>`;
+        listEl.innerHTML =
+          `<div class="empty">${personsData.length ? "Sin resultados." : "No hay reportes todavía."}</div>`;
         return;
       }
-      listEl.innerHTML = items
-        .map((item) => {
-          const found = item.status === "encontrado";
-          const date = new Date(item.created_at).toLocaleString("es-CO", {
-            day: "2-digit",
-            month: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-          const metaParts = [];
-          if (item.city) metaParts.push(escapeHtml(item.city));
-          if (item.location) metaParts.push(escapeHtml(item.location));
-          metaParts.push(date);
-          return `
-          <div class="card ${found ? "encontrado" : ""}" data-id="${item.id}" data-type="person">
-            <div><span class="status-tag ${found ? "encontrado" : ""}">${item.status}</span></div>
-            <div class="card-inner">
-              <div class="info">
-                <span class="name">${escapeHtml(item.name)}</span>
-                <span class="meta">${metaParts.join(" · ")}</span>
+      listEl.innerHTML = items.map((item) => {
+        const found = item.status === "encontrado";
+        const date = new Date(item.created_at).toLocaleString("es-CO", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const metaParts = [];
+        if (item.city) metaParts.push(escapeHtml(item.city));
+        if (item.location) metaParts.push(escapeHtml(item.location));
+        metaParts.push(date);
+        const imageHtml = item.image ? `<img src="${escapeHtml(item.image)}" alt="Imagen" class="card-image" />` : '';
+        return `
+              <div class="card ${found ? "encontrado" : ""}" data-id="${item.id}" data-type="person">
+                ${imageHtml}
+                <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                  <div><span class="status-tag ${found ? "encontrado" : ""}">${item.status}</span></div>
+                  <div class="info">
+                    <span class="name">${escapeHtml(item.name)}</span>
+                    <span class="meta">${metaParts.join(" · ")}</span>
+                  </div>
+                  <div class="actions">
+                    ${found
+            ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','person')">Marcar desaparecido</button>`
+            : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','person')">Marcar encontrado</button>`
+          }
+                    <button class="btn-small btn-delete" onclick="removeItem('${item.id}','person')">✕</button>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div class="actions">
-              ${found
-              ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','person')">Marcar desaparecido</button>`
-              : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','person')">Marcar encontrado</button>`
-            }
-              <button class="btn-small btn-delete" onclick="removeItem('${item.id}','person')">✕</button>
-            </div>
-          </div>
-        `;
-        })
-        .join("");
+            `;
+      }).join("");
     }
 
     listEl.addEventListener("click", (e) => {
@@ -904,38 +953,36 @@
       const name = nameInput.value.trim();
       const location = locationInput.value.trim();
       const city = cityInput.value.trim();
+      const image = imageInput.value.trim();
       if (!name) return;
       await fetch(`${API_BASE}/disappeared`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({name, location, city}),
+        body: JSON.stringify({name, location, city, image}),
       });
       nameInput.value = "";
       locationInput.value = "";
       cityInput.value = "";
+      imageInput.value = "";
       loadList();
     });
 
     gpsBtn.addEventListener("click", () => {
-      if (!navigator.geolocation) {
-        alert("Geolocalización no disponible.");
-        return;
-      }
+      if (!navigator.geolocation) {alert("Geolocalización no disponible."); return;}
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          locationInput.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
-        },
-        () => alert("No se pudo obtener la ubicación."),
+        (pos) => {locationInput.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;},
+        () => alert("No se pudo obtener la ubicación.")
       );
     });
 
-    // ----- Mascotas (unchanged) -----
+    // ----- Mascotas -----
     let petsData = [];
     const listElP = document.getElementById("listP");
     const formP = document.getElementById("addFormP");
     const nameInputP = document.getElementById("nameInputP");
     const locationInputP = document.getElementById("locationInputP");
     const cityInputP = document.getElementById("cityInputP");
+    const imageInputP = document.getElementById("imageInputP");
     const gpsBtnP = document.getElementById("gpsBtnP");
     const searchInputP = document.getElementById("searchInputP");
 
@@ -944,6 +991,7 @@
         const res = await fetch(`${API_BASE}/pets`);
         petsData = await res.json();
         renderP();
+        attemptUrlModal();
       } catch (err) {
         listElP.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
       }
@@ -952,42 +1000,43 @@
     function renderP() {
       const items = fuzzyFilter(searchInputP.value, petsData);
       if (!items.length) {
-        listElP.innerHTML = `<div class="empty">${petsData.length ? "Sin resultados." : "No hay mascotas reportadas."}</div>`;
+        listElP.innerHTML =
+          `<div class="empty">${petsData.length ? "Sin resultados." : "No hay mascotas reportadas."}</div>`;
         return;
       }
-      listElP.innerHTML = items
-        .map((item) => {
-          const found = item.status === "encontrado";
-          const date = new Date(item.created_at).toLocaleString("es-CO", {
-            day: "2-digit",
-            month: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-          const metaParts = [];
-          if (item.city) metaParts.push(escapeHtml(item.city));
-          if (item.location) metaParts.push(escapeHtml(item.location));
-          metaParts.push(date);
-          return `
-          <div class="card ${found ? "encontrado" : ""}" data-id="${item.id}" data-type="pet">
-            <div><span class="status-tag ${found ? "encontrado" : ""}">${item.status}</span></div>
-            <div class="card-inner">
-              <div class="info">
-                <span class="name">${escapeHtml(item.name)}</span>
-                <span class="meta">${metaParts.join(" · ")}</span>
+      listElP.innerHTML = items.map((item) => {
+        const found = item.status === "encontrado";
+        const date = new Date(item.created_at).toLocaleString("es-CO", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const metaParts = [];
+        if (item.city) metaParts.push(escapeHtml(item.city));
+        if (item.location) metaParts.push(escapeHtml(item.location));
+        metaParts.push(date);
+        const imageHtml = item.image ? `<img src="${escapeHtml(item.image)}" alt="Imagen" class="card-image" />` : '';
+        return `
+              <div class="card ${found ? "encontrado" : ""}" data-id="${item.id}" data-type="pet">
+                ${imageHtml}
+                <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                  <div><span class="status-tag ${found ? "encontrado" : ""}">${item.status}</span></div>
+                  <div class="info">
+                    <span class="name">${escapeHtml(item.name)}</span>
+                    <span class="meta">${metaParts.join(" · ")}</span>
+                  </div>
+                  <div class="actions">
+                    ${found
+            ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','pet')">Marcar desaparecido</button>`
+            : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','pet')">Marcar encontrado</button>`
+          }
+                    <button class="btn-small btn-delete" onclick="removeItem('${item.id}','pet')">✕</button>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div class="actions">
-              ${found
-              ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','pet')">Marcar desaparecido</button>`
-              : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','pet')">Marcar encontrado</button>`
-            }
-              <button class="btn-small btn-delete" onclick="removeItem('${item.id}','pet')">✕</button>
-            </div>
-          </div>
-        `;
-        })
-        .join("");
+            `;
+      }).join("");
     }
 
     listElP.addEventListener("click", (e) => {
@@ -1007,38 +1056,36 @@
       const name = nameInputP.value.trim();
       const location = locationInputP.value.trim();
       const city = cityInputP.value.trim();
+      const image = imageInputP.value.trim();
       if (!name) return;
       await fetch(`${API_BASE}/pets`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({name, location, city}),
+        body: JSON.stringify({name, location, city, image}),
       });
       nameInputP.value = "";
       locationInputP.value = "";
       cityInputP.value = "";
+      imageInputP.value = "";
       loadListP();
     });
 
     gpsBtnP.addEventListener("click", () => {
-      if (!navigator.geolocation) {
-        alert("Geolocalización no disponible.");
-        return;
-      }
+      if (!navigator.geolocation) {alert("Geolocalización no disponible."); return;}
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          locationInputP.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
-        },
-        () => alert("No se pudo obtener la ubicación."),
+        (pos) => {locationInputP.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;},
+        () => alert("No se pudo obtener la ubicación.")
       );
     });
 
-    // ----- Edificios (unchanged) -----
+    // ----- Edificios -----
     let buildingsData = [];
     const listElB = document.getElementById("listB");
     const formB = document.getElementById("addFormB");
     const nameInputB = document.getElementById("nameInputB");
     const locationInputB = document.getElementById("locationInputB");
     const cityInputB = document.getElementById("cityInputB");
+    const imageInputB = document.getElementById("imageInputB");
     const gpsBtnB = document.getElementById("gpsBtnB");
     const searchInputB = document.getElementById("searchInputB");
 
@@ -1047,6 +1094,7 @@
         const res = await fetch(`${API_BASE}/buildings`);
         buildingsData = await res.json();
         renderB();
+        attemptUrlModal();
       } catch (err) {
         listElB.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
       }
@@ -1055,41 +1103,42 @@
     function renderB() {
       const items = fuzzyFilter(searchInputB.value, buildingsData);
       if (!items.length) {
-        listElB.innerHTML = `<div class="empty">${buildingsData.length ? "Sin resultados." : "No hay edificios reportados."}</div>`;
+        listElB.innerHTML =
+          `<div class="empty">${buildingsData.length ? "Sin resultados." : "No hay edificios reportados."}</div>`;
         return;
       }
-      listElB.innerHTML = items
-        .map((item) => {
-          const date = new Date(item.created_at).toLocaleString("es-CO", {
-            day: "2-digit",
-            month: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-          const metaParts = [];
-          if (item.city) metaParts.push(escapeHtml(item.city));
-          if (item.location) metaParts.push(escapeHtml(item.location));
-          metaParts.push(date);
-          const statusClass = item.status || "seguro";
-          return `
-          <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
-            <div><span class="status-tag ${statusClass}">${item.status || "seguro"}</span></div>
-            <div class="card-inner">
-              <div class="info">
-                <span class="name">${escapeHtml(item.name)}</span>
-                <span class="meta">${metaParts.join(" · ")}</span>
+      listElB.innerHTML = items.map((item) => {
+        const date = new Date(item.created_at).toLocaleString("es-CO", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const metaParts = [];
+        if (item.city) metaParts.push(escapeHtml(item.city));
+        if (item.location) metaParts.push(escapeHtml(item.location));
+        metaParts.push(date);
+        const statusClass = item.status || "seguro";
+        const imageHtml = item.image ? `<img src="${escapeHtml(item.image)}" alt="Imagen" class="card-image" />` : '';
+        return `
+              <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
+                ${imageHtml}
+                <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                  <div><span class="status-tag ${statusClass}">${item.status || "seguro"}</span></div>
+                  <div class="info">
+                    <span class="name">${escapeHtml(item.name)}</span>
+                    <span class="meta">${metaParts.join(" · ")}</span>
+                  </div>
+                  <div class="actions">
+                    <button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro')">Seguro</button>
+                    <button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado')">Dañado</button>
+                    <button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado')">Colapsado</button>
+                    <button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div class="actions">
-              <button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro')">Seguro</button>
-              <button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado')">Dañado</button>
-              <button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado')">Colapsado</button>
-              <button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>
-            </div>
-          </div>
-        `;
-        })
-        .join("");
+            `;
+      }).join("");
     }
 
     listElB.addEventListener("click", (e) => {
@@ -1109,32 +1158,29 @@
       const name = nameInputB.value.trim();
       const location = locationInputB.value.trim();
       const city = cityInputB.value.trim();
+      const image = imageInputB.value.trim();
       if (!name) return;
       await fetch(`${API_BASE}/buildings`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({name, location, city}),
+        body: JSON.stringify({name, location, city, image}),
       });
       nameInputB.value = "";
       locationInputB.value = "";
       cityInputB.value = "";
+      imageInputB.value = "";
       loadListB();
     });
 
     gpsBtnB.addEventListener("click", () => {
-      if (!navigator.geolocation) {
-        alert("Geolocalización no disponible.");
-        return;
-      }
+      if (!navigator.geolocation) {alert("Geolocalización no disponible."); return;}
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          locationInputB.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
-        },
-        () => alert("No se pudo obtener la ubicación."),
+        (pos) => {locationInputB.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;},
+        () => alert("No se pudo obtener la ubicación.")
       );
     });
 
-    // ----- Anuncios (NEW) -----
+    // ----- Anuncios -----
     let anunciosData = [];
     const listElA = document.getElementById("listA");
     const formA = document.getElementById("addFormA");
@@ -1155,31 +1201,26 @@
         listElA.innerHTML = `<div class="empty">No hay anuncios todavía.</div>`;
         return;
       }
-      listElA.innerHTML = anunciosData
-        .map((item) => {
-          const date = new Date(item.created_at).toLocaleString("es-CO", {
-            day: "2-digit",
-            month: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-          return `
-          <div class="card" data-id="${item.id}">
-            <div class="info">
-              <span class="name">${escapeHtml(item.text)}</span>
-              <span class="meta">${date}</span>
-            </div>
-            <div class="actions">
-              <button class="btn-small btn-delete" onclick="removeA('${item.id}')">✕</button>
-            </div>
-          </div>
-        `;
-        })
-        .join("");
+      listElA.innerHTML = anunciosData.map((item) => {
+        const date = new Date(item.created_at).toLocaleString("es-CO", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        return `
+              <div class="card" data-id="${item.id}">
+                <div class="info">
+                  <span class="name">${escapeHtml(item.text)}</span>
+                  <span class="meta">${date}</span>
+                </div>
+                <div class="actions">
+                  <button class="btn-small btn-delete" onclick="removeA('${item.id}')">✕</button>
+                </div>
+              </div>
+            `;
+      }).join("");
     }
-
-    // No click modal for anuncios – just inline delete
-    // (but we could, if we want: we can leave it out for simplicity)
 
     formA.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -1202,8 +1243,7 @@
 
     // ----- Shared actions -----
     async function setStatus(id, status, type) {
-      const endpoint =
-        type === "person" ? "disappeared" : type === "pet" ? "pets" : "";
+      const endpoint = type === "person" ? "disappeared" : type === "pet" ? "pets" : "";
       if (!endpoint) return;
       await fetch(`${API_BASE}/${endpoint}/${id}`, {
         method: "PATCH",
@@ -1216,8 +1256,7 @@
 
     async function removeItem(id, type) {
       if (!confirm("¿Eliminar este reporte?")) return;
-      const endpoint =
-        type === "person" ? "disappeared" : type === "pet" ? "pets" : "";
+      const endpoint = type === "person" ? "disappeared" : type === "pet" ? "pets" : "";
       if (!endpoint) return;
       const ok = await adminDelete(`${API_BASE}/${endpoint}/${id}`);
       if (ok) {
@@ -1247,7 +1286,8 @@
     loadListB();
     loadListA();
 
-    // Auto-refresh every 10s
+    setTimeout(attemptUrlModal, 300);
+
     setInterval(() => {
       loadList();
       loadListP();
