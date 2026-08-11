@@ -309,6 +309,15 @@
       background: #1e6b52;
     }
 
+    .city-pin-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4a4f5a;
+      border: 2px solid #8a8f9a;
+      opacity: 0.7;
+    }
+
     .btn-small:disabled {
       opacity: 0.5;
       cursor: default;
@@ -2122,7 +2131,29 @@
       // Guardar referencia global para poder redimensionar
       window.map = map;
 
+      renderCityMarkers();
       renderMapMarkers();
+    }
+
+    let cityMarkersLayer = null;
+
+    function renderCityMarkers() {
+      if (!window.map || cityMarkersLayer) return; // solo una vez
+      cityMarkersLayer = L.layerGroup().addTo(window.map);
+
+      Object.entries(cityCoordinates).forEach(([name, coords]) => {
+        L.marker(coords, {
+          icon: L.divIcon({
+            className: "city-pin",
+            html: `<div class="city-pin-dot"></div>`,
+            iconSize: [14, 14],
+            iconAnchor: [7, 7],
+          }),
+          zIndexOffset: -1000, // por debajo de los marcadores de reportes
+        })
+          .addTo(cityMarkersLayer)
+          .bindTooltip(name, {permanent: false, direction: "top"});
+      });
     }
 
     let mapMarkersLayer = null;
