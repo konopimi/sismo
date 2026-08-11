@@ -200,7 +200,7 @@ app.post("/api/disappeared", (req, res) => {
 });
 
 app.patch("/api/disappeared/:id", (req, res) => {
-  const { status, image } = req.body || {};
+  const { status, image, lat, lng } = req.body || {};
   if (status && !["desaparecido", "encontrado"].includes(status)) {
     return res.status(400).json({ error: "invalid status" });
   }
@@ -214,6 +214,14 @@ app.patch("/api/disappeared/:id", (req, res) => {
     fields.push("image = ?");
     values.push(image && image.trim() ? image.trim() : null);
   }
+  if (lat !== undefined) {
+    fields.push("lat = ?");
+    values.push(Number.isFinite(lat) ? lat : null);
+  }
+  if (lng !== undefined) {
+    fields.push("lng = ?");
+    values.push(Number.isFinite(lng) ? lng : null);
+  }
   if (fields.length === 0) {
     return res.status(400).json({ error: "no fields to update" });
   }
@@ -222,7 +230,7 @@ app.patch("/api/disappeared/:id", (req, res) => {
     .prepare(`UPDATE disappeared SET ${fields.join(", ")} WHERE id = ?`)
     .run(...values);
   if (result.changes === 0) return res.status(404).json({ error: "not found" });
-  res.json({ id: req.params.id, status, image });
+  res.json({ id: req.params.id, status, image, lat, lng });
 });
 
 app.delete("/api/disappeared/:id", (req, res) => {
@@ -291,7 +299,7 @@ app.post("/api/pets", (req, res) => {
 });
 
 app.patch("/api/pets/:id", (req, res) => {
-  const { status, image } = req.body || {};
+  const { status, image, lat, lng } = req.body || {};
   if (status && !["desaparecido", "encontrado"].includes(status)) {
     return res.status(400).json({ error: "invalid status" });
   }
@@ -305,6 +313,14 @@ app.patch("/api/pets/:id", (req, res) => {
     fields.push("image = ?");
     values.push(image && image.trim() ? image.trim() : null);
   }
+  if (lat !== undefined) {
+    fields.push("lat = ?");
+    values.push(Number.isFinite(lat) ? lat : null);
+  }
+  if (lng !== undefined) {
+    fields.push("lng = ?");
+    values.push(Number.isFinite(lng) ? lng : null);
+  }
   if (fields.length === 0) {
     return res.status(400).json({ error: "no fields to update" });
   }
@@ -313,7 +329,7 @@ app.patch("/api/pets/:id", (req, res) => {
     .prepare(`UPDATE pets SET ${fields.join(", ")} WHERE id = ?`)
     .run(...values);
   if (result.changes === 0) return res.status(404).json({ error: "not found" });
-  res.json({ id: req.params.id, status, image });
+  res.json({ id: req.params.id, status, image, lat, lng });
 });
 
 app.delete("/api/pets/:id", (req, res) => {
