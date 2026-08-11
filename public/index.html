@@ -1191,7 +1191,7 @@
         building: document.getElementById("locationDisplayB"),
       };
       const display = displayByContext[mapPickerContext];
-      if (display) display.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      if (display) display.innerHTML = `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" style="color:#4ea1ff;">🗺️ ${lat.toFixed(5)}, ${lng.toFixed(5)}</a>`;
       closeMapPicker();
     });
 
@@ -1246,7 +1246,7 @@
       const metaParts = [];
       if (item.city) metaParts.push(`📍 ${escapeHtml(item.city)}`);
       if (item.location) metaParts.push(`🗺️ ${escapeHtml(item.location)}`);
-      if (item.lat != null && item.lng != null) metaParts.push(`📐 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}`);
+      if (item.lat != null && item.lng != null) metaParts.push(`<a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank" style="color:#4ea1ff;">🗺️ ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</a>`);
       metaParts.push(`🕒 ${dateStr}`);
       modalMeta.innerHTML = metaParts.map(p => `<span>${p}</span>`).join("");
 
@@ -1471,7 +1471,7 @@
         const metaParts = [];
         if (item.city) metaParts.push(escapeHtml(item.city));
         if (item.location) metaParts.push(escapeHtml(item.location));
-        if (item.lat != null && item.lng != null) metaParts.push(`📐 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}`);
+        if (item.lat != null && item.lng != null) metaParts.push(`<a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank" style="color:#4ea1ff;">🗺️ ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</a>`);
         metaParts.push(date);
         let imgHtml = "";
         if (item.photo_url) {
@@ -1674,7 +1674,7 @@
         const metaParts = [];
         if (item.city) metaParts.push(escapeHtml(item.city));
         if (item.location) metaParts.push(escapeHtml(item.location));
-        if (item.lat != null && item.lng != null) metaParts.push(`📐 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}`);
+        if (item.lat != null && item.lng != null) metaParts.push(`<a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank" style="color:#4ea1ff;">🗺️ ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</a>`);
         metaParts.push(date);
         let imgHtml = "";
         if (item.photo_url) {
@@ -1809,7 +1809,7 @@
         const metaParts = [];
         if (item.city) metaParts.push(escapeHtml(item.city));
         if (item.location) metaParts.push(escapeHtml(item.location));
-        if (item.lat != null && item.lng != null) metaParts.push(`📐 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}`);
+        if (item.lat != null && item.lng != null) metaParts.push(`<a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank" style="color:#4ea1ff;">🗺️ ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</a>`);
         metaParts.push(date);
         const statusClass = item.status || "seguro";
         return `
