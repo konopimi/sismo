@@ -1324,7 +1324,18 @@
     function shareAnuncio(id) {
       const item = anunciosData.find((a) => a.id === id);
       if (!item) return;
-      shareContent("Anuncio - Sismo", item.text, "http://neokpm.xyz");
+      shareContent("Anuncio - Sismo", item.text, `http://neokpm.xyz/#anuncio/${item.id}`);
+    }
+
+    // Deep link: #anuncio/<id> abre directamente ese anuncio en su modal.
+    function handleAnuncioDeepLink() {
+      const match = location.hash.match(/^#anuncio\/(.+)$/);
+      if (!match) return;
+      const id = decodeURIComponent(match[1]);
+      const item = anunciosData.find((a) => a.id === id);
+      if (!item) return;
+      switchTab(tabAnunciosBtn, tabAnuncios, "anuncio");
+      openModalForItem(item, "anuncio");
     }
 
     formA.addEventListener("submit", async (e) => {
@@ -1391,7 +1402,7 @@
     loadList();
     loadListP();
     loadListB();
-    loadListA();
+    loadListA().then(handleAnuncioDeepLink);
 
     // Auto-refresh every 10s
     setInterval(() => {
