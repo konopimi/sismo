@@ -627,6 +627,16 @@
       return div.innerHTML;
     }
 
+    function normalizeImageUrl(url) {
+      if (!url || !url.trim()) return null;
+      const trimmed = url.trim();
+      // Convertir Google Drive URLs a formato de imagen directa
+      const match = trimmed.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (match) {
+        return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      }
+      return trimmed;
+    }
     function normalize(str) {
       return (str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
@@ -1016,7 +1026,8 @@
         if (item.city) metaParts.push(escapeHtml(item.city));
         if (item.location) metaParts.push(escapeHtml(item.location));
         metaParts.push(date);
-        const imageHtml = item.image ? `<img src="${escapeHtml(item.image)}" alt="Imagen" class="card-image" />` : '';
+        const imageUrl = item.image ? normalizeImageUrl(item.image) : null;
+        const imageHtml = imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="Imagen" class="card-image" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('afterbegin', '<span class=\"card-image-placeholder\">📷</span>');" />` : '';
         return `
               <div class="card ${found ? "encontrado" : ""}" data-id="${item.id}" data-type="pet">
                 ${imageHtml}

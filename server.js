@@ -23,6 +23,7 @@ db.exec(`
     status TEXT NOT NULL DEFAULT 'seguro',
     location TEXT,
     city TEXT,
+    image TEXT,
     created_at TEXT NOT NULL
   )
 `);
@@ -33,6 +34,7 @@ db.exec(`
     status TEXT NOT NULL DEFAULT 'desaparecido',
     location TEXT,
     city TEXT,
+    image TEXT,
     created_at TEXT NOT NULL
   )
 `);
@@ -43,6 +45,7 @@ db.exec(`
     status TEXT NOT NULL DEFAULT 'desaparecido',
     location TEXT,
     city TEXT,
+    image TEXT,
     created_at TEXT NOT NULL
   )
 `);
@@ -62,6 +65,27 @@ db.exec(`
     created_at TEXT NOT NULL
   )
 `);
+
+// --- Migrations for existing columns (city and image) ---
+try {
+  db.exec("ALTER TABLE disappeared ADD COLUMN city TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE buildings ADD COLUMN city TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE pets ADD COLUMN city TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE disappeared ADD COLUMN image TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE buildings ADD COLUMN image TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE pets ADD COLUMN image TEXT");
+} catch (e) { }
+
 // ========== Comentarios ==========
 app.get("/api/comments", (req, res) => {
   const { itemId, itemType } = req.query;
@@ -104,23 +128,12 @@ app.delete("/api/comments/:id", (req, res) => {
   res.status(204).end();
 });
 
-// --- Migrate existing tables (add city column if missing) ---
-try {
-  db.exec("ALTER TABLE disappeared ADD COLUMN city TEXT");
-} catch (e) {}
-try {
-  db.exec("ALTER TABLE buildings ADD COLUMN city TEXT");
-} catch (e) {}
-try {
-  db.exec("ALTER TABLE pets ADD COLUMN city TEXT");
-} catch (e) {}
-
 // ========== Personas ==========
 app.get("/api/disappeared", (req, res) => {
   const rows = db
     .prepare(
       `
-      SELECT id, name, status, location, city, created_at,
+      SELECT id, name, status, location, city, image, created_at,
         (SELECT text FROM comments WHERE item_id = disappeared.id AND item_type = 'disappeared' ORDER BY created_at DESC LIMIT 1) AS last_comment
       FROM disappeared ORDER BY created_at DESC
     `,
@@ -130,7 +143,7 @@ app.get("/api/disappeared", (req, res) => {
 });
 
 app.post("/api/disappeared", (req, res) => {
-  const { id, name, location, city } = req.body || {};
+  const { id, name, location, city, image } = req.body || {};
   if (!name || !name.trim()) {
     return res.status(400).json({ error: "name is required" });
   }
@@ -138,29 +151,45 @@ app.post("/api/disappeared", (req, res) => {
   const createdAt = new Date().toISOString();
   const loc = location && location.trim() ? location.trim() : null;
   const cty = city && city.trim() ? city.trim() : null;
+  const img = image && image.trim() ? image.trim() : null;
   db.prepare(
-    "INSERT INTO disappeared (id, name, status, location, city, created_at) VALUES (?, ?, 'desaparecido', ?, ?, ?)",
-  ).run(finalId, name.trim(), loc, cty, createdAt);
+    "INSERT INTO disappeared (id, name, status, location, city, image, created_at) VALUES (?, ?, 'desaparecido', ?, ?, ?, ?)",
+  ).run(finalId, name.trim(), loc, cty, img, createdAt);
   res.status(201).json({
     id: finalId,
     name: name.trim(),
     status: "desaparecido",
     location: loc,
     city: cty,
+    image: img,
     created_at: createdAt,
   });
 });
 
 app.patch("/api/disappeared/:id", (req, res) => {
-  const { status } = req.body || {};
-  if (!status || !["desaparecido", "encontrado"].includes(status)) {
+  const { status, image } = req.body || {};
+  if (status && !["desaparecido", "encontrado"].includes(status)) {
     return res.status(400).json({ error: "invalid status" });
   }
+  const fields = [];
+  const values = [];
+  if (status !== undefined) {
+    fields.push("status = ?");
+    values.push(status);
+  }
+  if (image !== undefined) {
+    fields.push("image = ?");
+    values.push(image && image.trim() ? image.trim() : null);
+  }
+  if (fields.length === 0) {
+    return res.status(400).json({ error: "no fields to update" });
+  }
+  values.push(req.params.id);
   const result = db
-    .prepare("UPDATE disappeared SET status = ? WHERE id = ?")
-    .run(status, req.params.id);
+    .prepare(`UPDATE disappeared SET ${fields.join(", ")} WHERE id = ?`)
+    .run(...values);
   if (result.changes === 0) return res.status(404).json({ error: "not found" });
-  res.json({ id: req.params.id, status });
+  res.json({ id: req.params.id, status, image });
 });
 
 app.delete("/api/disappeared/:id", (req, res) => {
@@ -178,14 +207,14 @@ app.delete("/api/disappeared/:id", (req, res) => {
 app.get("/api/pets", (req, res) => {
   const rows = db
     .prepare(
-      "SELECT id, name, status, location, city, created_at FROM pets ORDER BY created_at DESC",
+      "SELECT id, name, status, location, city, image, created_at FROM pets ORDER BY created_at DESC",
     )
     .all();
   res.json(rows);
 });
 
 app.post("/api/pets", (req, res) => {
-  const { id, name, location, city } = req.body || {};
+  const { id, name, location, city, image } = req.body || {};
   if (!name || !name.trim()) {
     return res.status(400).json({ error: "name is required" });
   }
@@ -193,29 +222,45 @@ app.post("/api/pets", (req, res) => {
   const createdAt = new Date().toISOString();
   const loc = location && location.trim() ? location.trim() : null;
   const cty = city && city.trim() ? city.trim() : null;
+  const img = image && image.trim() ? image.trim() : null;
   db.prepare(
-    "INSERT INTO pets (id, name, status, location, city, created_at) VALUES (?, ?, 'desaparecido', ?, ?, ?)",
-  ).run(finalId, name.trim(), loc, cty, createdAt);
+    "INSERT INTO pets (id, name, status, location, city, image, created_at) VALUES (?, ?, 'desaparecido', ?, ?, ?, ?)",
+  ).run(finalId, name.trim(), loc, cty, img, createdAt);
   res.status(201).json({
     id: finalId,
     name: name.trim(),
     status: "desaparecido",
     location: loc,
     city: cty,
+    image: img,
     created_at: createdAt,
   });
 });
 
 app.patch("/api/pets/:id", (req, res) => {
-  const { status } = req.body || {};
-  if (!status || !["desaparecido", "encontrado"].includes(status)) {
+  const { status, image } = req.body || {};
+  if (status && !["desaparecido", "encontrado"].includes(status)) {
     return res.status(400).json({ error: "invalid status" });
   }
+  const fields = [];
+  const values = [];
+  if (status !== undefined) {
+    fields.push("status = ?");
+    values.push(status);
+  }
+  if (image !== undefined) {
+    fields.push("image = ?");
+    values.push(image && image.trim() ? image.trim() : null);
+  }
+  if (fields.length === 0) {
+    return res.status(400).json({ error: "no fields to update" });
+  }
+  values.push(req.params.id);
   const result = db
-    .prepare("UPDATE pets SET status = ? WHERE id = ?")
-    .run(status, req.params.id);
+    .prepare(`UPDATE pets SET ${fields.join(", ")} WHERE id = ?`)
+    .run(...values);
   if (result.changes === 0) return res.status(404).json({ error: "not found" });
-  res.json({ id: req.params.id, status });
+  res.json({ id: req.params.id, status, image });
 });
 
 app.delete("/api/pets/:id", (req, res) => {
@@ -231,14 +276,14 @@ app.delete("/api/pets/:id", (req, res) => {
 app.get("/api/buildings", (req, res) => {
   const rows = db
     .prepare(
-      "SELECT id, name, status, location, city, created_at FROM buildings ORDER BY created_at DESC",
+      "SELECT id, name, status, location, city, image, created_at FROM buildings ORDER BY created_at DESC",
     )
     .all();
   res.json(rows);
 });
 
 app.post("/api/buildings", (req, res) => {
-  const { id, name, location, city } = req.body || {};
+  const { id, name, location, city, image } = req.body || {};
   if (!name || !name.trim()) {
     return res.status(400).json({ error: "name is required" });
   }
@@ -246,29 +291,45 @@ app.post("/api/buildings", (req, res) => {
   const createdAt = new Date().toISOString();
   const loc = location && location.trim() ? location.trim() : null;
   const cty = city && city.trim() ? city.trim() : null;
+  const img = image && image.trim() ? image.trim() : null;
   db.prepare(
-    "INSERT INTO buildings (id, name, status, location, city, created_at) VALUES (?, ?, 'seguro', ?, ?, ?)",
-  ).run(finalId, name.trim(), loc, cty, createdAt);
+    "INSERT INTO buildings (id, name, status, location, city, image, created_at) VALUES (?, ?, 'seguro', ?, ?, ?, ?)",
+  ).run(finalId, name.trim(), loc, cty, img, createdAt);
   res.status(201).json({
     id: finalId,
     name: name.trim(),
     status: "seguro",
     location: loc,
     city: cty,
+    image: img,
     created_at: createdAt,
   });
 });
 
 app.patch("/api/buildings/:id", (req, res) => {
-  const { status } = req.body || {};
-  if (!status || !["seguro", "danado", "colapsado"].includes(status)) {
+  const { status, image } = req.body || {};
+  if (status && !["seguro", "danado", "colapsado"].includes(status)) {
     return res.status(400).json({ error: "invalid status" });
   }
+  const fields = [];
+  const values = [];
+  if (status !== undefined) {
+    fields.push("status = ?");
+    values.push(status);
+  }
+  if (image !== undefined) {
+    fields.push("image = ?");
+    values.push(image && image.trim() ? image.trim() : null);
+  }
+  if (fields.length === 0) {
+    return res.status(400).json({ error: "no fields to update" });
+  }
+  values.push(req.params.id);
   const result = db
-    .prepare("UPDATE buildings SET status = ? WHERE id = ?")
-    .run(status, req.params.id);
+    .prepare(`UPDATE buildings SET ${fields.join(", ")} WHERE id = ?`)
+    .run(...values);
   if (result.changes === 0) return res.status(404).json({ error: "not found" });
-  res.json({ id: req.params.id, status });
+  res.json({ id: req.params.id, status, image });
 });
 
 app.delete("/api/buildings/:id", (req, res) => {
