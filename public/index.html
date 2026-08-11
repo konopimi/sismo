@@ -181,9 +181,9 @@
     }
 
     .card {
+      display: flex;
       background: #1a1d24;
       border-radius: 10px;
-      padding: 12px 14px;
       border-left: 4px solid #d64545;
       cursor: default;
       transition: background 0.15s;
@@ -204,12 +204,17 @@
     }
 
     .card-photo {
-      width: 56px;
-      height: 56px;
+      width: 100px;
+      min-height: 120px;
+      max-height: 120px;
       object-fit: cover;
       border-radius: 8px;
       flex-shrink: 0;
       background: #12151c;
+    }
+
+    .card-main {
+      padding: 5px;
     }
 
     .card .info {
@@ -1255,22 +1260,27 @@
         } else if (item.image) {
           imgHtml = `<img class="card-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" />`;
         }
+        else {
+          imgHtml = `<img style="opacity:0.62;"class="card-photo" src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.vecteezy.com%2Fsystem%2Fresources%2Fpreviews%2F021%2F548%2F095%2Fnon_2x%2Fdefault-profile-picture-avatar-user-avatar-icon-person-icon-head-icon-profile-picture-icons-default-anonymous-user-male-and-female-businessman-photo-placeholder-social-network-avatar-portrait-free-vector.jpg&f=1&nofb=1&ipt=621673f72ece5d2869a9051c758ecc2d3f48741320548453b28c17465f313244" alt="Imagen URL" />`;
+        }
         return `
           <div class="card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="person">
-            <div><span class="status-tag ${found ? 'encontrado' : ''}">${item.status}</span></div>
-            <div class="card-inner">
               ${imgHtml}
-              <div class="info">
-                <span class="name">${escapeHtml(item.name)}</span>
-                <span class="meta">${metaParts.join(" · ")}</span>
+            <div class="card-main">
+              <div><span class="status-tag ${found ? 'encontrado' : ''}">${item.status}</span></div>
+              <div class="card-inner">
+                <div class="info">
+                  <span class="name">${escapeHtml(item.name)}</span>
+                  <span class="meta">${metaParts.join(" · ")}</span>
+                </div>
               </div>
-            </div>
-            <div class="actions">
-              ${found
+              <div class="actions">
+                ${found
             ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','person')">Marcar desaparecido</button>`
             : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','person')">Marcar encontrado</button>`
           }
-              <button class="btn-small btn-delete" onclick="removeItem('${item.id}','person')">✕</button>
+                <button class="btn-small btn-delete" onclick="removeItem('${item.id}','person')">✕</button>
+              </div>
             </div>
           </div>
         `;
@@ -1449,11 +1459,15 @@
         } else if (item.image) {
           imgHtml = `<img class="card-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" />`;
         }
+        else {
+          imgHtml = `<img style="opacity:0.62;"class="card-photo" src="https://external-content.duckduckgo.com/iu/?u=http%3A%2F%2Fvictoriapets.ca%2Fwp-content%2Fthemes%2Fneve-child%2Fimages%2Fplaceholder-pet-image.jpg&f=1&nofb=1&ipt=e0e1204dabf2c9a4e236025578bc41edc6bc8b993269d6a7858d0d9112a04697" alt="Imagen URL" />`;
+        }
         return `
           <div class="card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="pet">
+              ${imgHtml}
+<div class="card-main">
             <div><span class="status-tag ${found ? 'encontrado' : ''}">${item.status}</span></div>
             <div class="card-inner">
-              ${imgHtml}
               <div class="info">
                 <span class="name">${escapeHtml(item.name)}</span>
                 <span class="meta">${metaParts.join(" · ")}</span>
@@ -1465,6 +1479,7 @@
             : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','pet')">Marcar encontrado</button>`
           }
               <button class="btn-small btn-delete" onclick="removeItem('${item.id}','pet')">✕</button>
+            </div>
             </div>
           </div>
         `;
