@@ -790,6 +790,8 @@
 
     const CLOUDINARY_CLOUD_NAME = "snaspwdz";
     const CLOUDINARY_UPLOAD_PRESET = "sismopinto";
+    const isLocalhost = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+
 
     // ================================================================
     //  UTILIDADES
@@ -1018,6 +1020,35 @@
     document.addEventListener("keydown", (e) => {if (e.key === "Escape" && modal.classList.contains("open")) closeModal();});
 
     function openModalForItem(item, type) {
+      const commentsContainer = document.getElementById("commentsContainer");
+
+      // --- Soporte para anuncios en el modal ---
+      if (type === "anuncio") {
+        modalStatus.innerHTML = "";
+        modalTitle.textContent = "Anuncio";
+        modalMeta.innerHTML = `
+          <span>🕒 ${new Date(item.created_at).toLocaleString("es-CO", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        })}</span>
+        `;
+        modalBody.innerHTML = `<div style="white-space:pre-wrap;">${escapeHtml(item.text)}</div>`;
+        modalActions.innerHTML = isLocalhost
+          ? `
+            <button class="btn-small btn-delete" onclick="removeA('${item.id}'); closeModal();">✕ Eliminar</button>
+          `
+          : '';
+        commentsContainer.style.display = "none";
+        modal.classList.add("open");
+        return;
+      } else {
+        commentsContainer.style.display = "";
+      }
+
+      // --- Resto del código existente para personas, mascotas y edificios ---
       const statusClass = item.status || "desaparecido";
       const statusLabel = item.status || "desaparecido";
       modalStatus.innerHTML = `<span class="status-tag ${statusClass}">${statusLabel}</span>`;
@@ -1083,8 +1114,10 @@
           actionsHtml +=
             `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','${type}'); closeModal();">Marcar encontrado</button>`;
         }
-        actionsHtml +=
-          `<button class="btn-small btn-delete" onclick="removeItem('${item.id}','${type}'); closeModal();">✕ Eliminar</button>`;
+        if (isLocalhost) {
+          actionsHtml +=
+            `<button class="btn-small btn-delete" onclick="removeItem('${item.id}','${type}'); closeModal();">✕ Eliminar</button>`;
+        }
       } else if (type === "building") {
         actionsHtml +=
           `<button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro'); closeModal();">Seguro</button>`;
@@ -1092,8 +1125,10 @@
           `<button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado'); closeModal();">Dañado</button>`;
         actionsHtml +=
           `<button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado'); closeModal();">Colapsado</button>`;
-        actionsHtml +=
-          `<button class="btn-small btn-delete" onclick="removeB('${item.id}'); closeModal();">✕ Eliminar</button>`;
+        if (isLocalhost) {
+          actionsHtml +=
+            `<button class="btn-small btn-delete" onclick="removeB('${item.id}'); closeModal();">✕ Eliminar</button>`;
+        }
       }
       modalActions.innerHTML = actionsHtml;
 
@@ -1104,8 +1139,10 @@
       url.searchParams.set("type", type);
       window.history.replaceState({}, "", url);
 
-      // --- Cargar comentarios ---
-      loadComments(item.id, type === "person" ? "disappeared" : type === "pet" ? "pets" : "buildings");
+      // --- Cargar comentarios (solo si no es anuncio) ---
+      if (type !== "anuncio") {
+        loadComments(item.id, type === "person" ? "disappeared" : type === "pet" ? "pets" : "buildings");
+      }
     }
 
     // ================================================================
@@ -1279,7 +1316,9 @@
             ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','person')">Marcar desaparecido</button>`
             : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','person')">Marcar encontrado</button>`
           }
-                <button class="btn-small btn-delete" onclick="removeItem('${item.id}','person')">✕</button>
+                ${isLocalhost
+            ? `<button class="btn-small btn-delete" onclick="removeItem('${item.id}','person')">✕</button>`
+            : ''}
               </div>
             </div>
           </div>
@@ -1478,7 +1517,9 @@
             ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','pet')">Marcar desaparecido</button>`
             : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','pet')">Marcar encontrado</button>`
           }
-              <button class="btn-small btn-delete" onclick="removeItem('${item.id}','pet')">✕</button>
+              ${isLocalhost
+            ? `<button class="btn-small btn-delete" onclick="removeItem('${item.id}','pet')">✕</button>`
+            : ''}
             </div>
             </div>
           </div>
@@ -1598,7 +1639,9 @@
               <button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro')">Seguro</button>
               <button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado')">Dañado</button>
               <button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado')">Colapsado</button>
-              <button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>
+              ${isLocalhost
+            ? `<button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>`
+            : ''}
             </div>
           </div>
         `;
@@ -1683,12 +1726,25 @@
           <span class="meta">${date}</span>
         </div>
         <div class="actions">
-          <button class="btn-small btn-delete" onclick="removeA('${item.id}')">✕</button>
+          ${isLocalhost
+            ? `<button class="btn-small btn-delete" onclick="removeA('${item.id}')">✕</button>`
+            : ''}
         </div>
       </div>
     `;
       }).join("");
     }
+    // --- Abrir modal al hacer clic en un anuncio ---
+    listElA.addEventListener("click", (e) => {
+      if (e.target.closest("button")) return;
+      const card = e.target.closest(".card");
+      if (!card) return;
+      const id = card.dataset.id;
+      if (!id) return;
+      const item = anunciosData.find((a) => a.id === id);
+      if (item) openModalForItem(item, "anuncio");
+    });
+
     formA.addEventListener("submit", async (e) => {
       e.preventDefault();
       const text = anuncioInput.value.trim();
