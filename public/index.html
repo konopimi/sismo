@@ -330,8 +330,14 @@
       font-size: 0.85rem;
       border-bottom: 1px solid #2a2e36;
     }
-    .map-search-result:hover { background: #22262e; }
-    .map-search-result:last-child { border-bottom: none; }
+
+    .map-search-result:hover {
+      background: #22262e;
+    }
+
+    .map-search-result:last-child {
+      border-bottom: none;
+    }
 
     #mapPickerContainer {
       height: 320px;
@@ -418,13 +424,17 @@
       }
     }
 
+    #mapPickerContainer {
+      height: min(100%, 600px);
+    }
+
     .modal-content {
       display: flex;
       flex-direction: column;
       background: #1a1d24;
       border-radius: 14px;
       padding: 8px 9px 9px;
-      max-width: min(500px, 100%);
+      max-width: min(1200px, 100%);
       width: 100%;
       height: 100%;
       max-height: 100%;
@@ -621,7 +631,7 @@
       http://sismoinfo.co (COPIAR LINK)
     </button>
     <br />
-    <a style="background:rgb(200,200,200);"href="https://colombiatebusca.com/">https://colombiatebusca.com/</a>
+    <a style="background:rgb(200,200,200);" href="https://colombiatebusca.com/">https://colombiatebusca.com/</a>
     <div id="apiTargetToggle" style="display: none; margin-bottom: 5px;">
       <button type="button" id="apiTargetRemote" class="btn-small" style="border-radius: 6px 0 0 6px;">Remoto</button>
       <button type="button" id="apiTargetLocal" class="btn-small" style="border-radius: 0 6px 6px 0;">Local</button>
@@ -819,7 +829,8 @@
       <div style="position:relative; margin-bottom:10px;">
         <input type="text" id="mapSearchInput" placeholder="🔍 Buscar dirección o lugar..."
           style="width:100%; padding:10px; border-radius:8px; border:1px solid #333; background:#1a1d24; color:#eaeaea;" />
-        <div id="mapSearchResults" style="display:none; position:absolute; top:100%; left:0; right:0;
+        <div id="mapSearchResults"
+          style="display:none; position:absolute; top:100%; left:0; right:0;
           background:#1a1d24; border:1px solid #333; border-radius:8px; margin-top:4px; z-index:2000; max-height:220px; overflow-y:auto;"></div>
       </div>
       <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
@@ -2009,8 +2020,8 @@
                 <button class="btn-small btn-danado${statusClass === "danado" ? " btn-active" : ""}" ${statusClass === "danado" ? "disabled" : ""} onclick="setStatusB('${item.id}','danado')">Dañado</button>
                 <button class="btn-small btn-colapsado${statusClass === "colapsado" ? " btn-active" : ""}" ${statusClass === "colapsado" ? "disabled" : ""} onclick="setStatusB('${item.id}','colapsado')">Colapsado</button>
                 ${isLocalhost
-              ? `<button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>`
-              : ''}
+            ? `<button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>`
+            : ''}
               </div>
             </div>
           </div>
