@@ -727,10 +727,16 @@
     });
 
     function openModalForItem(item, type) {
-      const statusClass = item.status || "desaparecido";
-      const statusLabel = item.status || "desaparecido";
-      modalStatus.innerHTML = `<span class="status-tag ${statusClass}">${statusLabel}</span>`;
-      modalTitle.textContent = item.name || "Sin nombre";
+      const commentsContainer = document.getElementById("commentsContainer");
+      if (type === "anuncio") {
+        modalStatus.innerHTML = "";
+        modalTitle.textContent = "Anuncio";
+      } else {
+        const statusClass = item.status || "desaparecido";
+        const statusLabel = item.status || "desaparecido";
+        modalStatus.innerHTML = `<span class="status-tag ${statusClass}">${statusLabel}</span>`;
+        modalTitle.textContent = item.name || "Sin nombre";
+      }
       const dateStr = item.created_at
         ? new Date(item.created_at).toLocaleString("es-CO", {
           day: "2-digit",
@@ -747,7 +753,11 @@
       modalMeta.innerHTML = metaParts
         .map((p) => `<span>${p}</span>`)
         .join("");
-      modalBody.innerHTML = `<div style="color:#888; font-size:0.95rem;">Detalles del reporte</div>`;
+      if (type === "anuncio") {
+        modalBody.innerHTML = `<div style="white-space:pre-wrap;">${escapeHtml(item.text)}</div>`;
+      } else {
+        modalBody.innerHTML = `<div style="color:#888; font-size:0.95rem;">Detalles del reporte</div>`;
+      }
       let actionsHtml = "";
       if (type === "person" || type === "pet") {
         if (item.status === "encontrado") {
@@ -761,10 +771,17 @@
         actionsHtml += `<button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado'); closeModal();">Dañado</button>`;
         actionsHtml += `<button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado'); closeModal();">Colapsado</button>`;
         actionsHtml += `<button class="btn-small btn-delete" onclick="removeB('${item.id}'); closeModal();">✕ Eliminar</button>`;
+      } else if (type === "anuncio") {
+        actionsHtml += `<button class="btn-small btn-delete" onclick="removeA('${item.id}'); closeModal();">✕ Eliminar</button>`;
       }
       modalActions.innerHTML = actionsHtml;
       modal.classList.add("open");
-      loadComments(item.id, type === "person" ? "disappeared" : type === "pet" ? "pets" : "buildings");
+      if (type === "anuncio") {
+        commentsContainer.style.display = "none";
+      } else {
+        commentsContainer.style.display = "";
+        loadComments(item.id, type === "person" ? "disappeared" : type === "pet" ? "pets" : "buildings");
+      }
     }
     // ----- Comments -----
     let currentComments = [];
@@ -1178,8 +1195,15 @@
         .join("");
     }
 
-    // No click modal for anuncios – just inline delete
-    // (but we could, if we want: we can leave it out for simplicity)
+    listElA.addEventListener("click", (e) => {
+      if (e.target.closest("button")) return;
+      const card = e.target.closest(".card");
+      if (!card) return;
+      const id = card.dataset.id;
+      if (!id) return;
+      const item = anunciosData.find((a) => a.id === id);
+      if (item) openModalForItem(item, "anuncio");
+    });
 
     formA.addEventListener("submit", async (e) => {
       e.preventDefault();

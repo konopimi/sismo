@@ -3,3 +3,4 @@
 .ai_sessions
 .git
 .remote
+node_modules
