@@ -69,29 +69,29 @@ db.exec(`
 // --- Migrations for existing columns (city and image) ---
 try {
   db.exec("ALTER TABLE disappeared ADD COLUMN city TEXT");
-} catch (e) { }
+} catch (e) {}
 try {
   db.exec("ALTER TABLE buildings ADD COLUMN city TEXT");
-} catch (e) { }
+} catch (e) {}
 try {
   db.exec("ALTER TABLE pets ADD COLUMN city TEXT");
-} catch (e) { }
+} catch (e) {}
 try {
   db.exec("ALTER TABLE disappeared ADD COLUMN image TEXT");
-} catch (e) { }
+} catch (e) {}
 try {
   db.exec("ALTER TABLE buildings ADD COLUMN image TEXT");
-} catch (e) { }
+} catch (e) {}
 try {
   db.exec("ALTER TABLE pets ADD COLUMN image TEXT");
-} catch (e) { }
+} catch (e) {}
 try {
   db.exec("ALTER TABLE disappeared ADD COLUMN photo_url TEXT");
-} catch (e) { }
+} catch (e) {}
 // Add photo_url to pets (for file uploads)
 try {
   db.exec("ALTER TABLE pets ADD COLUMN photo_url TEXT");
-} catch (e) { }
+} catch (e) {}
 // ========== Comentarios ==========
 app.get("/api/comments", (req, res) => {
   const { itemId, itemType } = req.query;
@@ -141,7 +141,7 @@ app.get("/api/disappeared", (req, res) => {
       `
       SELECT id, name, status, location, city, created_at, photo_url,
         (SELECT text FROM comments WHERE item_id = disappeared.id AND item_type = 'disappeared' ORDER BY created_at DESC LIMIT 1) AS last_comment
-      FROM disappeared ORDER BY created_at DESC
+      FROM disappeared ORDER BY RANDOM()
     `,
     )
     .all();
@@ -231,7 +231,7 @@ app.delete("/api/disappeared/:id", (req, res) => {
 app.get("/api/pets", (req, res) => {
   const rows = db
     .prepare(
-      "SELECT id, name, status, location, city, image, photo_url, created_at FROM pets ORDER BY created_at DESC",
+      "SELECT id, name, status, location, city, image, photo_url, created_at FROM pets ORDER BY RANDOM()",
     )
     .all();
   res.json(rows);
@@ -316,7 +316,7 @@ app.delete("/api/pets/:id", (req, res) => {
 app.get("/api/buildings", (req, res) => {
   const rows = db
     .prepare(
-      "SELECT id, name, status, location, city, image, created_at FROM buildings ORDER BY created_at DESC",
+      "SELECT id, name, status, location, city, image, created_at FROM buildings ORDER BY RANDOM()",
     )
     .all();
   res.json(rows);
@@ -386,9 +386,7 @@ app.delete("/api/buildings/:id", (req, res) => {
 // ========== Anuncios ==========
 app.get("/api/anuncios", (req, res) => {
   const rows = db
-    .prepare(
-      "SELECT id, text, created_at FROM anuncios ORDER BY created_at DESC",
-    )
+    .prepare("SELECT id, text, created_at FROM anuncios ORDER BY RANDOM()")
     .all();
   res.json(rows);
 });
