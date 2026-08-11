@@ -102,6 +102,7 @@
     }
 
     .file-name {
+      display: none;
       color: #999;
       font-size: 0.85rem;
       margin-left: 6px;
@@ -914,11 +915,10 @@
       // --- Cuerpo del modal: imágenes y subida de foto (para personas y mascotas) ---
       if (type === "person" || type === "pet") {
         let imagesHtml = "";
-        if (item.image) {
-          imagesHtml += `<img class="modal-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" />`;
-        }
         if (item.photo_url) {
-          imagesHtml += `<img class="modal-photo" src="${escapeHtml(item.photo_url)}" alt="Foto subida" />`;
+          imagesHtml = `<img class="modal-photo" src="${escapeHtml(item.photo_url)}" alt="Foto subida" />`;
+        } else if (item.image) {
+          imagesHtml = `<img class="modal-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" />`;
         }
         modalBody.innerHTML = `
       ${imagesHtml}
