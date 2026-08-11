@@ -303,6 +303,15 @@
       color: white;
     }
 
+    .btn-share {
+      background: #1e6b52;
+      color: #ccc;
+    }
+
+    .btn-share:hover {
+      background: #24805f;
+    }
+
     /* ===== STATUS TAGS ===== */
     .status-tag {
       font-size: 0.7rem;
@@ -580,6 +589,9 @@
       <button type="button" id="apiTargetRemote" class="btn-small" style="border-radius: 6px 0 0 6px;">Remoto</button>
       <button type="button" id="apiTargetLocal" class="btn-small" style="border-radius: 0 6px 6px 0;">Local</button>
     </div>
+    <button id="shareAppBtn" class="btn-share" style="margin-top: 5px; width: 100%; padding: 10px 16px; border-radius: 8px; border: none; color: white; cursor: pointer;">
+      📤 Compartir app
+    </button>
   </div>
 
   <!-- ===== DRIVER (TABS + SEARCH) ===== -->
@@ -941,6 +953,30 @@
     });
 
     // ================================================================
+    //  COMPARTIR (Web Share API + fallback WhatsApp)
+    // ================================================================
+    async function shareContent(title, text, url) {
+      if (navigator.share) {
+        try {
+          await navigator.share({ title, text, url });
+          return;
+        } catch (err) {
+          if (err && err.name === "AbortError") return;
+        }
+      }
+      const waText = encodeURIComponent(url ? `${text}\n${url}` : text);
+      window.open(`https://wa.me/?text=${waText}`, "_blank");
+    }
+
+    document.getElementById("shareAppBtn").addEventListener("click", () => {
+      shareContent(
+        "Sismo",
+        "Reporta o busca personas, mascotas y edificios afectados, y revisa los anuncios de la comunidad.",
+        "https://sismoinfo.co",
+      );
+    });
+
+    // ================================================================
     //  TABS
     // ================================================================
     const tabPersonasBtn = document.getElementById("tabPersonasBtn");
@@ -1069,9 +1105,12 @@
         modalBody.innerHTML = `<div style="white-space:pre-wrap;">${escapeHtml(item.text)}</div>`;
         modalActions.innerHTML = isLocalhost
           ? `
+            <button class="btn-small btn-share" onclick="shareAnuncio('${item.id}'); closeModal();">📤 Compartir</button>
             <button class="btn-small btn-delete" onclick="removeA('${item.id}'); closeModal();">✕ Eliminar</button>
           `
-          : '';
+          : `
+            <button class="btn-small btn-share" onclick="shareAnuncio('${item.id}'); closeModal();">📤 Compartir</button>
+          `;
         commentsContainer.style.display = "none";
         modal.classList.add("open");
         return;
@@ -1795,6 +1834,23 @@
       if (ok) loadListA();
     }
 
+    function shareAnuncio(id) {
+      const item = anunciosData.find((a) => a.id === id);
+      if (!item) return;
+      shareContent("Anuncio - Sismo", item.text, `https://sismoinfo.co/#anuncio/${item.id}`);
+    }
+
+    // Deep link: #anuncio/ abre directamente ese anuncio en su modal.
+    function handleAnuncioDeepLink() {
+      const match = location.hash.match(/^#anuncio\/(.+)$/);
+      if (!match) return;
+      const id = decodeURIComponent(match[1]);
+      const item = anunciosData.find((a) => a.id === id);
+      if (!item) return;
+      switchTab(tabAnunciosBtn, tabAnuncios, "anuncio");
+      openModalForItem(item, "anuncio");
+    }
+
     // ================================================================
     //  ACCIONES COMPARTIDAS
     // ================================================================
@@ -1889,7 +1945,7 @@
     loadList();
     loadListP();
     loadListB();
-    loadListA();
+    loadListA().then(handleAnuncioDeepLink);
 
     setTimeout(attemptUrlModal, 300);
     // Leer parámetro "tab" de la URL al cargar la página
