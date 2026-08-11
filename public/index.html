@@ -309,6 +309,12 @@
       background: #1e6b52;
     }
 
+    .btn-small:disabled {
+      opacity: 0.5;
+      cursor: default;
+      filter: none;
+    }
+
     #mapPickerContainer {
       height: 320px;
       border-radius: 10px;
@@ -1300,12 +1306,10 @@
             `<button class="btn-small btn-delete" onclick="removeItem('${item.id}','${type}'); closeModal();">✕ Eliminar</button>`;
         }
       } else if (type === "building") {
-        actionsHtml +=
-          `<button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro'); closeModal();">Seguro</button>`;
-        actionsHtml +=
-          `<button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado'); closeModal();">Dañado</button>`;
-        actionsHtml +=
-          `<button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado'); closeModal();">Colapsado</button>`;
+        const s = item.status || "seguro";
+        actionsHtml += `<button class="btn-small btn-seguro${s === "seguro" ? " btn-active" : ""}" ${s === "seguro" ? "disabled" : ""} onclick="setStatusB('${item.id}','seguro'); closeModal();">Seguro</button>`;
+        actionsHtml += `<button class="btn-small btn-danado${s === "danado" ? " btn-active" : ""}" ${s === "danado" ? "disabled" : ""} onclick="setStatusB('${item.id}','danado'); closeModal();">Dañado</button>`;
+        actionsHtml += `<button class="btn-small btn-colapsado${s === "colapsado" ? " btn-active" : ""}" ${s === "colapsado" ? "disabled" : ""} onclick="setStatusB('${item.id}','colapsado'); closeModal();">Colapsado</button>`;
         if (isLocalhost) {
           actionsHtml +=
             `<button class="btn-small btn-delete" onclick="removeB('${item.id}'); closeModal();">✕ Eliminar</button>`;
@@ -1814,20 +1818,22 @@
         const statusClass = item.status || "seguro";
         return `
           <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
-            <div><span class="status-tag ${statusClass}">${item.status || "seguro"}</span></div>
-            <div class="card-inner">
-              <div class="info">
-                <span class="name">${escapeHtml(item.name)}</span>
-                <span class="meta">${metaParts.join(" · ")}</span>
+            <div class="card-main">
+              <div><span class="status-tag ${statusClass}">${item.status || "seguro"}</span></div>
+              <div class="card-inner">
+                <div class="info">
+                  <span class="name">${escapeHtml(item.name)}</span>
+                  <span class="meta">${metaParts.join(" · ")}</span>
+                </div>
               </div>
-            </div>
-            <div class="actions">
-              <button class="btn-small btn-seguro" onclick="setStatusB('${item.id}','seguro')">Seguro</button>
-              <button class="btn-small btn-danado" onclick="setStatusB('${item.id}','danado')">Dañado</button>
-              <button class="btn-small btn-colapsado" onclick="setStatusB('${item.id}','colapsado')">Colapsado</button>
-              ${isLocalhost
-            ? `<button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>`
-            : ''}
+              <div class="actions">
+                <button class="btn-small btn-seguro${statusClass === "seguro" ? " btn-active" : ""}" ${statusClass === "seguro" ? "disabled" : ""} onclick="setStatusB('${item.id}','seguro')">Seguro</button>
+                <button class="btn-small btn-danado${statusClass === "danado" ? " btn-active" : ""}" ${statusClass === "danado" ? "disabled" : ""} onclick="setStatusB('${item.id}','danado')">Dañado</button>
+                <button class="btn-small btn-colapsado${statusClass === "colapsado" ? " btn-active" : ""}" ${statusClass === "colapsado" ? "disabled" : ""} onclick="setStatusB('${item.id}','colapsado')">Colapsado</button>
+                ${isLocalhost
+              ? `<button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>`
+              : ''}
+              </div>
             </div>
           </div>
         `;
