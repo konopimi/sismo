@@ -5,7 +5,8 @@
   "description": "Emergency backend for reporting disappeared people",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev:server": "PORT=3000 DB_PATH=./data.local.db node server.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.0.0",

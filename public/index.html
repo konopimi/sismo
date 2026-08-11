@@ -403,6 +403,10 @@
     <button id="copyLinkBtn" style="margin-bottom: 5px; background: teal">
       http://neokpm.xyz (COPIAR LINK)
     </button>
+    <div id="apiTargetToggle" style="display: none; margin-bottom: 5px;">
+      <button type="button" id="apiTargetRemote" class="btn-small" style="border-radius: 6px 0 0 6px;">Remoto</button>
+      <button type="button" id="apiTargetLocal" class="btn-small" style="border-radius: 0 6px 6px 0;">Local</button>
+    </div>
   </div>
   <div id="driver" style="
         padding: 5px;
@@ -548,10 +552,34 @@
   </div>
 
   <script>
-    const API_BASE =
-      location.hostname === "localhost" || location.hostname === "127.0.0.1"
-        ? "https://neokpm.xyz/api"
-        : "/api";
+    const IS_LOCALHOST =
+      location.hostname === "localhost" || location.hostname === "127.0.0.1";
+
+    function resolveApiBase() {
+      if (!IS_LOCALHOST) return "/api";
+      const target = localStorage.getItem("sismo_api_target") || "remote";
+      return target === "local" ? "http://localhost:3000/api" : "https://neokpm.xyz/api";
+    }
+
+    const API_BASE = resolveApiBase();
+
+    if (IS_LOCALHOST) {
+      const toggle = document.getElementById("apiTargetToggle");
+      const btnRemote = document.getElementById("apiTargetRemote");
+      const btnLocal = document.getElementById("apiTargetLocal");
+      const activeTarget = localStorage.getItem("sismo_api_target") || "remote";
+      toggle.style.display = "flex";
+      btnRemote.style.background = activeTarget === "remote" ? "#d64545" : "#333";
+      btnLocal.style.background = activeTarget === "local" ? "#d64545" : "#333";
+      btnRemote.addEventListener("click", () => {
+        localStorage.setItem("sismo_api_target", "remote");
+        location.reload();
+      });
+      btnLocal.addEventListener("click", () => {
+        localStorage.setItem("sismo_api_target", "local");
+        location.reload();
+      });
+    }
 
     // Load cities
     fetch("/cities.json")
