@@ -324,6 +324,15 @@
       filter: none;
     }
 
+    .map-search-result {
+      padding: 8px 10px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      border-bottom: 1px solid #2a2e36;
+    }
+    .map-search-result:hover { background: #22262e; }
+    .map-search-result:last-child { border-bottom: none; }
+
     #mapPickerContainer {
       height: 320px;
       border-radius: 10px;
@@ -612,7 +621,7 @@
       http://sismoinfo.co (COPIAR LINK)
     </button>
     <br />
-    <a href="https://colombiatebusca.com/">https://colombiatebusca.com/</a>
+    <a style="background:rgb(200,200,200);"href="https://colombiatebusca.com/">https://colombiatebusca.com/</a>
     <div id="apiTargetToggle" style="display: none; margin-bottom: 5px;">
       <button type="button" id="apiTargetRemote" class="btn-small" style="border-radius: 6px 0 0 6px;">Remoto</button>
       <button type="button" id="apiTargetLocal" class="btn-small" style="border-radius: 0 6px 6px 0;">Local</button>
