@@ -740,6 +740,14 @@
   </div>
 
   <script>
+    // Mapeo de tipos de pestaña a elementos DOM
+    const tabMap = {
+      person: {btn: document.getElementById("tabPersonasBtn"), panel: document.getElementById("tabPersonas")},
+      pet: {btn: document.getElementById("tabPetsBtn"), panel: document.getElementById("tabPets")},
+      building: {btn: document.getElementById("tabEdificiosBtn"), panel: document.getElementById("tabEdificios")},
+      anuncio: {btn: document.getElementById("tabAnunciosBtn"), panel: document.getElementById("tabAnuncios")},
+      map: {btn: document.getElementById("tabMapBtn"), panel: document.getElementById("tabMapPanel")}
+    };
     // Coordenadas de ciudades principales de Colombia
     // (Agrega más ciudades según necesites)
     const cityCoordinates = {
@@ -945,6 +953,15 @@
           }
         }, 200);
       }
+
+      // Actualizar la URL con el parámetro "tab" (sin recargar)
+      const url = new URL(window.location);
+      if (tabType) {
+        url.searchParams.set("tab", tabType);
+      } else {
+        url.searchParams.delete("tab");
+      }
+      window.history.replaceState({}, "", url);
     }
     tabPersonasBtn.addEventListener("click", () => switchTab(tabPersonasBtn, tabPersonas, "person"));
     tabPetsBtn.addEventListener("click", () => switchTab(tabPetsBtn, tabPets, "pet"));
@@ -1765,6 +1782,23 @@
     loadListA();
 
     setTimeout(attemptUrlModal, 300);
+    // Leer parámetro "tab" de la URL al cargar la página
+    function applyTabFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab && tabMap[tab]) {
+        const {btn, panel} = tabMap[tab];
+        // Si la pestaña es la misma que la activa, no hacer nada (evita doble render)
+        if (!btn.classList.contains("active")) {
+          switchTab(btn, panel, tab);
+        }
+      }
+      // Si no hay parámetro o es inválido, ya está activa "person" por defecto
+    }
+
+    // Ejecutar después de que todo esté cargado
+    setTimeout(applyTabFromUrl, 100);
+
 
   </script>
 
