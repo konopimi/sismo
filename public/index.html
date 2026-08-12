@@ -19,6 +19,7 @@
       display: flex;
       flex-direction: column;
       overflow-x: hidden;
+      scrollbar-gutter: stable both-edges;
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       ont-size: 0.62rem;
@@ -81,7 +82,7 @@
       width: 100%;
       max-width: 100%;
       text-align: left;
-      border: 1px solid gray;
+      border: 2px solid palegoldenrod;
       padding: 8px 10px;
       border-radius: 10px;
       margin-bottom: 8px;
@@ -262,6 +263,16 @@
       transition: background 0.15s;
     }
 
+    input {
+
+      padding: 5px;
+      border-radius: 8px;
+      border: 2px solid rgba(127, 127, 127, 0.62);
+      background: rgba(10, 10, 10, 0.8);
+      color: #888;
+      /* font-size: 0.95rem; */
+    }
+
     .tab-btn {
       /* flex: 1; */
       /* min-width: 80px; */
@@ -317,12 +328,6 @@
 
     .search-row input[type="search"] {
       width: 100%;
-      padding: 5px;
-      /* font-size: 1rem; */
-      border-radius: 8px;
-      border: 1px solid #333;
-      background: #1a1d24;
-      color: #eaeaea;
     }
 
     /* ===== LISTA ===== */
@@ -606,7 +611,7 @@
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
+      z-index: 10000;
       padding: 16px;
       animation: modalFade 0.2s ease-out;
     }
@@ -866,31 +871,31 @@
 
   <!-- ===== PANEL PERSONAS ===== -->
   <div id="tabPersonas" class="tab-panel active">
-    <button class="crear-btn" onclick="openCrearModal('person')">(+) CREAR PERSONA</button>
+    <button class="crear-btn" onclick="openCrearModal('person')">🫂 CREAR PERSONA</button>
     <div id="list" class="list"></div>
   </div>
 
   <!-- ===== PANEL MASCOTAS ===== -->
   <div id="tabPets" class="tab-panel">
-    <button class="crear-btn" onclick="openCrearModal('pet')">(+) CREAR MASCOTA</button>
+    <button class="crear-btn" onclick="openCrearModal('pet')">🐾 CREAR MASCOTA</button>
     <div id="listP" class="list"></div>
   </div>
 
   <!-- ===== PANEL EDIFICIOS ===== -->
   <div id="tabEdificios" class="tab-panel">
-    <button class="crear-btn" onclick="openCrearModal('building')">(+) CREAR UBICACIÓN</button>
+    <button class="crear-btn" onclick="openCrearModal('building')">📍 CREAR UBICACIÓN</button>
     <div id="listB" class="list"></div>
   </div>
 
   <!-- ===== PANEL ANUNCIOS ===== -->
   <div id="tabAnuncios" class="tab-panel">
-    <button class="crear-btn" onclick="openCrearModal('anuncio')">(+) CREAR ANUNCIO</button>
+    <button class="crear-btn" onclick="openCrearModal('anuncio')">📣 CREAR ANUNCIO</button>
     <div id="listA" class="list"></div>
   </div>
 
   <!-- ===== PANEL COLABORADORES ===== -->
   <div id="tabColab" class="tab-panel">
-    <button class="crear-btn" onclick="openCrearModal('colaborador')">(+) UNIRME COMO COLABORADOR</button>
+    <button class="crear-btn" onclick="openCrearModal('colaborador')">🤝 UNIRME COMO COLABORADOR</button>
     <div id="listColab" class="list"></div>
   </div>
 
@@ -1085,7 +1090,7 @@
         background: rgba(20, 20, 20, 0.85);
         backdrop-filter: blur(5px);
         border-top: 2px solid gray;
-        z-index: 100;
+        z-index: 1000;
       ">
     <div class="tabs">
       <button id="crear" style="border:2px solid palegoldenrod;background:teal;color:palegoldenrod"><b>(+)
@@ -1098,14 +1103,8 @@
       <button class="tab-btn" id="tabMapBtn">🗺️ Mapa</button>
     </div>
 
-    <div id="searchPerson" class="search-row">
+    <div id="searchBar" class="search-row">
       <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
-    </div>
-    <div id="searchPet" class="search-row" style="display:none">
-      <input type="search" id="searchInputP" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
-    </div>
-    <div id="searchBuilding" class="search-row" style="display:none">
-      <input type="search" id="searchInputB" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
     </div>
   </div>
 
@@ -1486,29 +1485,22 @@
       // Mostrar el panel seleccionado
       activePanel.classList.add("active");
 
-      // Ocultar todas las barras de búsqueda
-      document.getElementById("searchPerson").style.display = "none";
-      document.getElementById("searchPet").style.display = "none";
-      document.getElementById("searchBuilding").style.display = "none";
+      // Reset the single search bar; the active render fn is set below.
+      document.getElementById("searchInput").value = "";
 
       // Lógica específica según el tipo de tab
       if (tabType === "person") {
-        document.getElementById("searchPerson").style.display = "block";
-        document.getElementById("searchInput").value = "";
-        render();  // Renderizar lista de personas
+        currentRenderFn = render;  // Renderizar lista de personas
       } else if (tabType === "pet") {
-        document.getElementById("searchPet").style.display = "block";
-        document.getElementById("searchInputP").value = "";
-        renderP(); // Renderizar lista de mascotas
+        currentRenderFn = renderP; // Renderizar lista de mascotas
       } else if (tabType === "building") {
-        document.getElementById("searchBuilding").style.display = "block";
-        document.getElementById("searchInputB").value = "";
-        renderB(); // Renderizar lista de edificios
+        currentRenderFn = renderB; // Renderizar lista de edificios
       } else if (tabType === "anuncio") {
-        renderA(); // Renderizar anuncios (sin búsqueda)
+        currentRenderFn = renderA; // Renderizar anuncios
       } else if (tabType === "colaborador") {
-        renderColab(); // Renderizar colaboradores (sin búsqueda)
+        currentRenderFn = renderColab; // Renderizar colaboradores
       } else if (tabType === "map") {
+        currentRenderFn = () => {}; // El mapa tiene su propio selector de ciudad
         // Inicializar el mapa si no está creado
         if (!window.mapInitialized) {
           initMap(); // Esta función debe estar definida en el script posterior
@@ -2170,6 +2162,10 @@
     const imageInput = document.getElementById("imageInput");
     const gpsBtn = document.getElementById("gpsBtn");
     const searchInput = document.getElementById("searchInput");
+    // Single shared search bar: drives whichever section is active.
+    // currentRenderFn is set by switchTab() to the active section's render fn.
+    let currentRenderFn = render;
+    searchInput.addEventListener("input", () => { if (currentRenderFn) currentRenderFn(); });
     const photoInput = document.getElementById("photoInput");
     const fileLabel = document.getElementById("fileLabel");
 
@@ -2251,21 +2247,25 @@
       } else {
         imgHtml = `<img style="opacity:0.62;" class="card-photo" src="${placeholderImg}" alt="Imagen URL" />`;
       }
+      const isCano = item.name.toLowerCase() == 'juan david cano';
       return `
-        <div class="card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="${type}">
+        <div class="card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="${type}" style="${isCano && 'background:lightblue;'}">
           ${imgHtml}
           <div class="card-main">
             <div style="display:flex;">
-              <span class="name">${escapeHtml(item.name)}</span>
-              <span class="status-tag ${found ? 'encontrado' : ''}">${item.status}</span>
-            </div>
+              <span class="name"
+style="${isCano && 'color:teal;'}"
+>${escapeHtml(item.name)}</span>
+<span class="status-tag ${found ? 'encontrado' : ''}" style="${isCano && 'background:lightblue;'}">${isCano ? '👼' : item.status
+        }</span >
+            </div >
             <div class="card-inner">
               <div class="info">
                 <span class="meta">${metaParts.join(" · ")}</span>
                 ${commentBadgeHtml(item)}
               </div>
             </div>
-            <div class="actions">
+<div class="actions" style="${isCano && 'display:none'};">
               ${found
           ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','${type}')">Marcar desaparecido</button>`
           : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','${type}')">Marcar encontrado</button>`
@@ -2274,8 +2274,8 @@
           ? `<button class="btn-small btn-delete" onclick="removeItem('${item.id}','${type}')">✕</button>`
           : ''}
             </div>
-          </div>
-        </div>
+          </div >
+        </div >
       `;
     }
 
@@ -2287,7 +2287,7 @@
       const items = fuzzyFilter(searchInput.value, personsData);
       if (!items.length) {
         listEl.innerHTML =
-          `<div class="empty">${personsData.length ? "Sin resultados." : "No hay reportes todavía."}</div>`;
+          `< div class="empty" > ${personsData.length ? "Sin resultados." : "No hay reportes todavía."}</div > `;
         return;
       }
       renderVirtualList(listEl, items, personCardHtml);
@@ -2302,7 +2302,6 @@
       if (item) openModalForItem(item, "person");
     });
 
-    searchInput.addEventListener("input", render);
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -2317,7 +2316,7 @@
       const payload = {name, location, city, lat, lng};
       if (image) payload.image = image;
 
-      const res = await fetch(`${API_BASE}/disappeared`, {
+      const res = await fetch(`${API_BASE} /disappeared`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(payload),
@@ -2367,7 +2366,6 @@
     const locationInputP = document.getElementById("locationInputP");
     const cityInputP = document.getElementById("cityInputP");
     const gpsBtnP = document.getElementById("gpsBtnP");
-    const searchInputP = document.getElementById("searchInputP");
     const imageInputP = document.getElementById("imageInputP");
     const photoInputP = document.getElementById("photoInputP");
     const fileLabelP = document.getElementById("fileLabelP");
@@ -2450,7 +2448,7 @@
     }
 
     function renderP() {
-      const items = fuzzyFilter(searchInputP.value, petsData);
+      const items = fuzzyFilter(searchInput.value, petsData);
       if (!items.length) {
         listElP.innerHTML =
           `<div class="empty">${petsData.length ? "Sin resultados." : "No hay mascotas reportadas."}</div>`;
@@ -2467,8 +2465,6 @@
       const item = petsData.find(p => p.id === id);
       if (item) openModalForItem(item, "pet");
     });
-
-    searchInputP.addEventListener("input", renderP);
 
     formP.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -2530,7 +2526,6 @@
     const locationInputB = document.getElementById("locationInputB");
     const cityInputB = document.getElementById("cityInputB");
     const gpsBtnB = document.getElementById("gpsBtnB");
-    const searchInputB = document.getElementById("searchInputB");
 
     async function loadListB() {
       try {
@@ -2580,7 +2575,7 @@
     }
 
     function renderB() {
-      const items = fuzzyFilter(searchInputB.value, buildingsData);
+      const items = fuzzyFilter(searchInput.value, buildingsData);
       if (!items.length) {
         listElB.innerHTML =
           `<div class="empty">${buildingsData.length ? "Sin resultados." : "No hay edificios reportados."}</div>`;
@@ -2597,8 +2592,6 @@
       const item = buildingsData.find(b => b.id === id);
       if (item) openModalForItem(item, "building");
     });
-
-    searchInputB.addEventListener("input", renderB);
 
     formB.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -2654,11 +2647,13 @@
     }
 
     function renderA() {
-      if (!anunciosData.length) {
-        listElA.innerHTML = `<div class="empty">No hay anuncios todavía.</div>`;
+      const q = searchInput.value;
+      const items = q.trim() ? anunciosData.filter(a => fuzzyMatch(q, a.text || "")) : anunciosData;
+      if (!items.length) {
+        listElA.innerHTML = `<div class="empty">${anunciosData.length ? "Sin resultados." : "No hay anuncios todavía."}</div>`;
         return;
       }
-      listElA.innerHTML = anunciosData.map(item => {
+      listElA.innerHTML = items.map(item => {
         const date = new Date(item.created_at).toLocaleString("es-CO", {
           day: "2-digit", month: "2-digit",
           hour: "2-digit", minute: "2-digit"
@@ -2784,11 +2779,15 @@
     }
 
     function renderColab() {
-      if (!colabData.length) {
-        listElColab.innerHTML = `<div class="empty">Todavía nadie se ha unido como colaborador.</div>`;
+      const q = searchInput.value;
+      const items = q.trim()
+        ? colabData.filter(c => fuzzyMatch(q, c.name || "") || fuzzyMatch(q, c.skill || "") || fuzzyMatch(q, c.city || "") || fuzzyMatch(q, c.contact || ""))
+        : colabData;
+      if (!items.length) {
+        listElColab.innerHTML = `<div class="empty">${colabData.length ? "Sin resultados." : "Todavía nadie se ha unido como colaborador."}</div>`;
         return;
       }
-      renderVirtualList(listElColab, colabData, colabCardHtml);
+      renderVirtualList(listElColab, items, colabCardHtml);
     }
 
     formColab.addEventListener("submit", async (e) => {
