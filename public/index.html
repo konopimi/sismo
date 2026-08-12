@@ -160,6 +160,23 @@
       color: white;
     }
 
+    /* live count badge on category tabs */
+    .tab-btn .n {
+      font-family: ui-monospace, monospace;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      margin-left: 5px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.22);
+      color: inherit;
+      vertical-align: middle;
+    }
+
+    .tab-btn.active .n {
+      background: rgba(255, 255, 255, 0.22);
+    }
+
     .tab-panel {
       display: none;
       padding: 5px;
@@ -1994,6 +2011,7 @@
         const res = await fetch(`${API_BASE}/disappeared`);
         personsData = await res.json();
         render();
+        updateTabCounts();
         tryOpenModalFromUrl();
       } catch {
         listEl.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
@@ -2200,6 +2218,7 @@
         const res = await fetch(`${API_BASE}/pets`);
         petsData = await res.json();
         renderP();
+        updateTabCounts();
         tryOpenModalFromUrl();
       } catch {
         listElP.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
@@ -2339,6 +2358,7 @@
         const res = await fetch(`${API_BASE}/buildings`);
         buildingsData = await res.json();
         renderB();
+        updateTabCounts();
         tryOpenModalFromUrl();
       } catch {
         listElB.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
@@ -2447,6 +2467,7 @@
         const res = await fetch(`${API_BASE}/anuncios`);
         anunciosData = await res.json();
         renderA();
+        updateTabCounts();
       } catch {
         listElA.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
       }
@@ -2530,9 +2551,33 @@
         const res = await fetch(`${API_BASE}/collaborators`);
         colabData = await res.json();
         renderColab();
+        updateTabCounts();
       } catch {
         listElColab.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
       }
+    }
+
+    // ================================================================
+    //  CONTADORES EN LAS PESTAÑAS
+    //  Mantiene un badge con el total de items por categoría, vivo.
+    // ================================================================
+    function updateTabCounts() {
+      const set = (id, n) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        let badge = btn.querySelector(".n");
+        if (!badge) {
+          badge = document.createElement("span");
+          badge.className = "n";
+          btn.appendChild(badge);
+        }
+        badge.textContent = n;
+      };
+      set("tabPersonasBtn", personsData.length);
+      set("tabPetsBtn", petsData.length);
+      set("tabEdificiosBtn", buildingsData.length);
+      set("tabAnunciosBtn", anunciosData.length);
+      set("tabColabBtn", colabData.length);
     }
 
     function colabCardHtml(item) {
