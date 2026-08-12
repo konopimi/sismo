@@ -93,6 +93,7 @@
 
     /* ===== BOTÓN DE SUBIDA DE ARCHIVO PERSONALIZADO ===== */
     .custom-file-upload {
+      position: relative;
       display: inline-block;
       padding: 10px 16px;
       background: #2a2e36;
@@ -111,7 +112,15 @@
     }
 
     .custom-file-upload input[type="file"] {
-      display: none;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .file-name {
@@ -346,6 +355,50 @@
       margin-bottom: 12px;
     }
 
+    .extra-location-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      background: #12151c;
+      border-radius: 8px;
+      padding: 6px 10px;
+      margin-bottom: 6px;
+      font-size: 0.85rem;
+      flex-wrap: wrap;
+    }
+
+    .nearby-item {
+      cursor: pointer;
+      padding: 7px 10px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.88rem;
+    }
+
+    .nearby-item:hover {
+      background: #1a1d24;
+    }
+
+    .nearby-item .nearby-dist {
+      color: #888;
+      font-size: 0.78rem;
+      flex: 0 0 auto;
+    }
+
+    #mapPickerContext {
+      align-items: center;
+      gap: 8px;
+      background: #12151c;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+    }
+
     .btn-share {
       background: #1e6b52;
       color: #ccc;
@@ -546,6 +599,16 @@
       margin-bottom: 12px;
     }
 
+    .comment-badge {
+      font-size: 0.78rem;
+      color: #9aa0a6;
+      margin-top: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
+    }
+
     .comment-item {
       background: #12151c;
       border-radius: 8px;
@@ -560,6 +623,11 @@
     .comment-item .comment-text {
       color: #eaeaea;
       word-break: break-word;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      font-family: inherit;
+      margin: 0;
     }
 
     .comment-item .comment-meta {
@@ -573,7 +641,7 @@
       flex-wrap: wrap;
     }
 
-    #commentForm input {
+    #commentForm textarea {
       flex: 1;
       padding: 10px;
       border-radius: 8px;
@@ -581,6 +649,10 @@
       background: #1a1d24;
       color: #eaeaea;
       min-width: 120px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      resize: vertical;
+      min-height: 40px;
     }
 
     #commentForm button {
@@ -658,6 +730,7 @@
       <button class="tab-btn" id="tabPetsBtn">🐕 Mascotas</button>
       <button class="tab-btn" id="tabEdificiosBtn">🏢 Lugar</button>
       <button class="tab-btn" id="tabAnunciosBtn">📣 Anuncios</button>
+      <button class="tab-btn" id="tabColabBtn">🤝 Colaboradores</button>
       <button class="tab-btn" id="tabMapBtn">🗺️ Mapa</button>
     </div>
 
@@ -782,6 +855,23 @@
     <div id="listA" class="list"></div>
   </div>
 
+  <!-- ===== PANEL COLABORADORES ===== -->
+  <div id="tabColab" class="tab-panel">
+    <div class="crear">
+      (+) UNIRME COMO COLABORADOR
+      <form id="addFormColab">
+        <input type="text" id="nameInputColab" placeholder="Nombre" required />
+        <input type="text" id="skillInputColab" placeholder="¿Cómo puedes ayudar? (ej: transporte, primeros auxilios)" />
+        <input type="text" id="contactInputColab" placeholder="Contacto (teléfono/WhatsApp, opcional)" />
+        <select id="cityInputColab">
+          <option value="">Ciudad</option>
+        </select>
+        <button type="submit">Unirme</button>
+      </form>
+    </div>
+    <div id="listColab" class="list"></div>
+  </div>
+
   <!-- ===== PANEL MAPA ===== -->
   <div id="tabMapPanel" class="tab-panel">
     <div style="margin-bottom:10px;">
@@ -814,7 +904,7 @@
       <div id="commentsContainer">
         <div id="commentsList"></div>
         <form id="commentForm">
-          <input type="text" id="commentInput" placeholder="Escribe un comentario..." required />
+          <textarea id="commentInput" rows="2" placeholder="Escribe un comentario..." required></textarea>
           <button type="submit">Comentar</button>
         </form>
       </div>
@@ -826,6 +916,7 @@
     <div class="modal-content">
       <button class="modal-close" id="mapModalClose" aria-label="Cerrar">✕</button>
       <h2 id="mapModalTitle">Marca la ubicación</h2>
+      <div id="mapPickerContext" style="display:none;"></div>
       <div style="position:relative; margin-bottom:10px;">
         <input type="text" id="mapSearchInput" placeholder="🔍 Buscar dirección o lugar..."
           style="width:100%; padding:10px; border-radius:8px; border:1px solid #333; background:#1a1d24; color:#eaeaea;" />
@@ -854,6 +945,7 @@
       pet: {btn: document.getElementById("tabPetsBtn"), panel: document.getElementById("tabPets")},
       building: {btn: document.getElementById("tabEdificiosBtn"), panel: document.getElementById("tabEdificios")},
       anuncio: {btn: document.getElementById("tabAnunciosBtn"), panel: document.getElementById("tabAnuncios")},
+      colaborador: {btn: document.getElementById("tabColabBtn"), panel: document.getElementById("tabColab")},
       map: {btn: document.getElementById("tabMapBtn"), panel: document.getElementById("tabMapPanel")}
     };
     // Coordenadas de ciudades principales de Colombia
@@ -921,6 +1013,129 @@
       return div.innerHTML;
     }
 
+    function locationLinksHtml(lat, lng, coordLabel) {
+      const label = coordLabel || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      return `<span class="loc-links">🗺️ ${label} ·
+        <a href="#" onclick="viewOnAppMap(${lat},${lng});return false;" style="color:#4ea1ff;">Ver aquí</a> ·
+        <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noopener" style="color:#4ea1ff;">Google Maps</a> ·
+        <a href="https://waze.com/ul?ll=${lat},${lng}&navigate=yes" target="_blank" rel="noopener" style="color:#4ea1ff;">Waze</a></span>`;
+    }
+
+    function haversineDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371000;
+      const toRad = (deg) => (deg * Math.PI) / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function nearbyItemsHtml(lat, lng, excludeId, excludeType) {
+      const RADIUS_M = 1000;
+      const candidates = [
+        ...personsData.map((item) => ({item, type: "person"})),
+        ...petsData.map((item) => ({item, type: "pet"})),
+        ...buildingsData.map((item) => ({item, type: "building"})),
+      ];
+      const nearby = candidates
+        .filter(({item, type}) => item.lat != null && item.lng != null && !(item.id === excludeId && type === excludeType))
+        .map(({item, type}) => ({item, type, distance: haversineDistance(lat, lng, item.lat, item.lng)}))
+        .filter(({distance}) => distance <= RADIUS_M)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 12);
+      if (!nearby.length) {
+        return `<div style="color:#666; font-size:0.85rem;">Sin items cercanos (menos de ${RADIUS_M / 1000}km).</div>`;
+      }
+      return nearby.map(({item, type, distance}) => {
+        const emoji = MAP_MARKER_META[type] ? MAP_MARKER_META[type].emoji : "📍";
+        const distLabel = distance < 1000 ? `${Math.round(distance)}m` : `${(distance / 1000).toFixed(1)}km`;
+        return `<div class="nearby-item" data-nearby-id="${item.id}" data-nearby-type="${type}">
+          <span>${emoji} ${escapeHtml(item.name)}</span>
+          <span class="nearby-dist">${distLabel}</span>
+        </div>`;
+      }).join("");
+    }
+
+    // ================================================================
+    //  VIRTUALIZACIÓN LIGERA DE LISTAS
+    //  Renderiza en lotes y agrega más al acercarse al final, en vez de
+    //  volcar cientos de tarjetas al DOM de una sola vez.
+    // ================================================================
+    const VIRTUAL_BATCH_SIZE = 30;
+    const virtualObservers = new WeakMap();
+
+    function renderVirtualList(containerEl, items, cardHtmlFn) {
+      const prevObserver = virtualObservers.get(containerEl);
+      if (prevObserver) prevObserver.disconnect();
+
+      let rendered = Math.min(VIRTUAL_BATCH_SIZE, items.length);
+      containerEl.innerHTML = items.slice(0, rendered).map(cardHtmlFn).join("") +
+        `<div class="virtual-sentinel"></div>`;
+      const sentinel = containerEl.querySelector(".virtual-sentinel");
+      if (rendered >= items.length) {
+        sentinel.remove();
+        return;
+      }
+      const observer = new IntersectionObserver((entries) => {
+        if (!entries[0].isIntersecting) return;
+        const next = Math.min(rendered + VIRTUAL_BATCH_SIZE, items.length);
+        sentinel.insertAdjacentHTML("beforebegin", items.slice(rendered, next).map(cardHtmlFn).join(""));
+        rendered = next;
+        if (rendered >= items.length) {
+          observer.disconnect();
+          sentinel.remove();
+        }
+      }, {rootMargin: "600px"});
+      observer.observe(sentinel);
+      virtualObservers.set(containerEl, observer);
+    }
+
+    async function loadExtraLocations(itemId, type) {
+      const container = document.getElementById("modalExtraLocationsContainer");
+      if (!container) return;
+      const itemType = type === "person" ? "disappeared" : "pets";
+      try {
+        const res = await fetch(`${API_BASE}/item-locations?itemId=${itemId}&itemType=${itemType}`);
+        const locations = await res.json();
+        if (!locations.length) {
+          container.innerHTML = `<div style="color:#666; font-size:0.85rem;">Ninguna todavía.</div>`;
+          return;
+        }
+        container.innerHTML = locations.map(loc => `
+          <div class="extra-location-item">
+            <span>${locationLinksHtml(loc.lat, loc.lng, loc.label)}</span>
+            <button type="button" class="btn-small btn-delete" onclick="deleteExtraLocation('${loc.id}','${itemId}','${type}')">✕</button>
+          </div>
+        `).join("");
+      } catch {
+        container.innerHTML = `<div style="color:#666; font-size:0.85rem;">No se pudieron cargar.</div>`;
+      }
+    }
+
+    async function deleteExtraLocation(locationId, itemId, type) {
+      if (!confirm("¿Eliminar esta ubicación adicional?")) return;
+      const ok = await adminDelete(`${API_BASE}/item-locations/${locationId}`);
+      if (ok) loadExtraLocations(itemId, type);
+    }
+
+    function viewOnAppMap(lat, lng) {
+      closeModal();
+      switchTab(tabMapBtn, tabMapPanel, "map");
+      setTimeout(() => {
+        if (window.map) window.map.flyTo([lat, lng], 16, {duration: 0.3});
+      }, 250);
+    }
+
+    function commentBadgeHtml(item) {
+      if (!item.last_comment) return "";
+      const preview = item.last_comment.length > 60
+        ? item.last_comment.slice(0, 60) + "…"
+        : item.last_comment;
+      const count = item.comment_count > 1 ? ` (${item.comment_count})` : "";
+      return `<div class="comment-badge" title="${escapeHtml(item.last_comment)}">💬${count} ${escapeHtml(preview)}</div>`;
+    }
+
     function normalize(str) {
       return (str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
@@ -963,6 +1178,7 @@
         document.getElementById("cityInput").insertAdjacentHTML("beforeend", opts);
         document.getElementById("cityInputP").insertAdjacentHTML("beforeend", opts);
         document.getElementById("cityInputB").insertAdjacentHTML("beforeend", opts);
+        document.getElementById("cityInputColab").insertAdjacentHTML("beforeend", opts);
         // Llenar el selector de ciudades del mapa y agregar evento
         const citySelectorMap = document.getElementById("citySelectorMap");
         if (citySelectorMap) {
@@ -1028,6 +1244,20 @@
       }
     });
 
+    async function copyItemLink(id, type, btn) {
+      const url = new URL(window.location);
+      url.searchParams.set("id", id);
+      url.searchParams.set("type", type);
+      try {
+        await navigator.clipboard.writeText(url.toString());
+        const original = btn.textContent;
+        btn.textContent = "✅ ¡Copiado!";
+        setTimeout(() => {btn.textContent = original;}, 2000);
+      } catch {
+        alert("No se pudo copiar. Intenta seleccionar el texto manualmente.");
+      }
+    }
+
     // ================================================================
     //  COMPARTIR (Web Share API + fallback WhatsApp)
     // ================================================================
@@ -1059,22 +1289,24 @@
     const tabPetsBtn = document.getElementById("tabPetsBtn");
     const tabEdificiosBtn = document.getElementById("tabEdificiosBtn");
     const tabAnunciosBtn = document.getElementById("tabAnunciosBtn");
+    const tabColabBtn = document.getElementById("tabColabBtn");
 
     const tabMapBtn = document.getElementById("tabMapBtn");
     const tabPersonas = document.getElementById("tabPersonas");
     const tabPets = document.getElementById("tabPets");
     const tabEdificios = document.getElementById("tabEdificios");
     const tabAnuncios = document.getElementById("tabAnuncios");
+    const tabColab = document.getElementById("tabColab");
     const tabMapPanel = document.getElementById("tabMapPanel");
 
     function switchTab(activeBtn, activePanel, tabType) {
       // Desactivar todos los botones
-      [tabPersonasBtn, tabPetsBtn, tabEdificiosBtn, tabAnunciosBtn, tabMapBtn].forEach(b => b && b.classList.remove("active"));
+      [tabPersonasBtn, tabPetsBtn, tabEdificiosBtn, tabAnunciosBtn, tabColabBtn, tabMapBtn].forEach(b => b && b.classList.remove("active"));
       // Activar el botón seleccionado
       activeBtn.classList.add("active");
 
       // Ocultar todos los paneles
-      [tabPersonas, tabPets, tabEdificios, tabAnuncios, tabMapPanel].forEach(p => p && p.classList.remove("active"));
+      [tabPersonas, tabPets, tabEdificios, tabAnuncios, tabColab, tabMapPanel].forEach(p => p && p.classList.remove("active"));
       // Mostrar el panel seleccionado
       activePanel.classList.add("active");
 
@@ -1098,6 +1330,8 @@
         renderB(); // Renderizar lista de edificios
       } else if (tabType === "anuncio") {
         renderA(); // Renderizar anuncios (sin búsqueda)
+      } else if (tabType === "colaborador") {
+        renderColab(); // Renderizar colaboradores (sin búsqueda)
       } else if (tabType === "map") {
         // Inicializar el mapa si no está creado
         if (!window.mapInitialized) {
@@ -1126,6 +1360,7 @@
     tabPetsBtn.addEventListener("click", () => switchTab(tabPetsBtn, tabPets, "pet"));
     tabEdificiosBtn.addEventListener("click", () => switchTab(tabEdificiosBtn, tabEdificios, "building"));
     tabAnunciosBtn.addEventListener("click", () => switchTab(tabAnunciosBtn, tabAnuncios, "anuncio"));
+    tabColabBtn.addEventListener("click", () => switchTab(tabColabBtn, tabColab, "colaborador"));
     tabMapBtn.addEventListener("click", () => switchTab(tabMapBtn, tabMapPanel, "map"));
 
     // ================================================================
@@ -1177,6 +1412,7 @@
     const mapPickerLat = {person: null, pet: null, building: null};
     const mapPickerLng = {person: null, pet: null, building: null};
     let modalLocationTarget = null; // {id, type} cuando se edita ubicación desde el modal
+    let modalExtraLocationTarget = null; // {id, type} cuando se agrega una ubicación adicional
     let leafletMap = null;
     let leafletMarker = null;
     let modalMiniMap = null;
@@ -1210,6 +1446,9 @@
 
       let existingLat = mapPickerLat[context];
       let existingLng = mapPickerLng[context];
+      const mapPickerContextEl = document.getElementById("mapPickerContext");
+      mapPickerContextEl.style.display = "none";
+      mapPickerContextEl.innerHTML = "";
       if (context === "modalItem" && modalLocationTarget) {
         const dataArr = modalLocationTarget.type === "building" ? buildingsData
           : modalLocationTarget.type === "person" ? personsData : petsData;
@@ -1217,6 +1456,35 @@
         if (target && target.lat != null && target.lng != null) {
           existingLat = target.lat;
           existingLng = target.lng;
+        }
+        if (target) {
+          const emoji = MAP_MARKER_META[modalLocationTarget.type]
+            ? MAP_MARKER_META[modalLocationTarget.type].emoji
+            : "📍";
+          const photo = target.photo_url || target.image;
+          mapPickerContextEl.innerHTML = `
+            ${photo ? `<img src="${escapeHtml(photo)}" alt="" style="width:36px;height:36px;border-radius:8px;object-fit:cover;flex:0 0 auto;" />` : ""}
+            <span style="font-weight:600;">${emoji} ${escapeHtml(target.name)}</span>
+            <span style="color:#999;">${target.location ? escapeHtml(target.location) : (target.lat != null ? "Ubicación actual en el mapa" : "Sin ubicación todavía")}</span>
+          `;
+          mapPickerContextEl.style.display = "flex";
+        }
+      } else if (context === "modalItemExtra" && modalExtraLocationTarget) {
+        const dataArr = modalExtraLocationTarget.type === "person" ? personsData : petsData;
+        const target = dataArr.find(i => i.id === modalExtraLocationTarget.id);
+        existingLat = null;
+        existingLng = null;
+        if (target) {
+          const emoji = MAP_MARKER_META[modalExtraLocationTarget.type]
+            ? MAP_MARKER_META[modalExtraLocationTarget.type].emoji
+            : "📍";
+          const photo = target.photo_url || target.image;
+          mapPickerContextEl.innerHTML = `
+            ${photo ? `<img src="${escapeHtml(photo)}" alt="" style="width:36px;height:36px;border-radius:8px;object-fit:cover;flex:0 0 auto;" />` : ""}
+            <span style="font-weight:600;">${emoji} ${escapeHtml(target.name)}</span>
+            <span style="color:#999;">Marca otra ubicación donde pudo haber sido visto/a</span>
+          `;
+          mapPickerContextEl.style.display = "flex";
         }
       }
       if (existingLat != null && existingLng != null) {
@@ -1363,6 +1631,20 @@
         return;
       }
 
+      if (mapPickerContext === "modalItemExtra" && modalExtraLocationTarget) {
+        const {id, type} = modalExtraLocationTarget;
+        const itemType = type === "person" ? "disappeared" : "pets";
+        await fetch(`${API_BASE}/item-locations`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({itemId: id, itemType, lat, lng}),
+        });
+        modalExtraLocationTarget = null;
+        closeMapPicker();
+        loadExtraLocations(id, type);
+        return;
+      }
+
       mapPickerLat[mapPickerContext] = lat;
       mapPickerLng[mapPickerContext] = lng;
       const btnByContext = {person: gpsBtn, pet: gpsBtnP, building: gpsBtnB};
@@ -1455,7 +1737,7 @@
       const metaParts = [];
       if (item.city) metaParts.push(`📍 ${escapeHtml(item.city)}`);
       if (item.location) metaParts.push(`🗺️ ${escapeHtml(item.location)}`);
-      if (item.lat != null && item.lng != null) metaParts.push(`<a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank" style="color:#4ea1ff;">🗺️ ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</a>`);
+      if (item.lat != null && item.lng != null) metaParts.push(locationLinksHtml(item.lat, item.lng));
       metaParts.push(`🕒 ${dateStr}`);
       modalMeta.innerHTML = metaParts.map(p => `<span>${p}</span>`).join("");
 
@@ -1472,10 +1754,25 @@
         modalBody.innerHTML = `
       ${imagesHtml}
       ${hasLoc ? `<div id="modalMiniMapContainer" style="height:min(60vh,600px);border-radius:10px; margin-bottom:10px; overflow:hidden;"></div>` : ""}
+      <button type="button" class="btn-small" id="modalSetLocationBtn" style="margin-bottom:10px;">📍 ${hasLoc ? "Cambiar ubicación" : "Agregar ubicación"}</button>
+      <div style="margin-bottom:14px;">
+        <div style="color:#999; font-size:0.8rem; margin-bottom:6px;">📍 Otras ubicaciones posibles</div>
+        <div id="modalExtraLocationsContainer" style="margin-bottom:6px;"></div>
+        <button type="button" class="btn-small" id="modalAddExtraLocationBtn">+ Agregar otra ubicación posible</button>
+      </div>
       <label style="display:block; font-size:0.8rem; color:#999; margin-bottom:4px;">${item.photo_url ? "Cambiar foto" : "Agregar foto"}</label>
       <input type="file" accept="image/*" id="modalPhotoInput"
         style="width:100%; padding:8px; border-radius:8px; border:1px solid #333; background:#1a1d24; color:#eaeaea;" />
     `;
+        document.getElementById("modalSetLocationBtn").addEventListener("click", () => {
+          modalLocationTarget = {id: item.id, type};
+          openMapPicker("modalItem");
+        });
+        document.getElementById("modalAddExtraLocationBtn").addEventListener("click", () => {
+          modalExtraLocationTarget = {id: item.id, type};
+          openMapPicker("modalItemExtra");
+        });
+        loadExtraLocations(item.id, type);
         // Remover listeners previos clonando el input
         const oldInput = document.getElementById("modalPhotoInput");
         const newInput = oldInput.cloneNode(true);
@@ -1499,15 +1796,33 @@
           ${hasLoc ? `<div id="modalMiniMapContainer" style="height:min(60vh,600px); border-radius:10px; margin-bottom:10px; overflow:hidden;"></div>` : ""}
           <div style="color:#888; font-size:0.95rem; margin-bottom:8px;">
             ${hasLoc
-            ? `📐 <a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank" style="color:#4ea1ff;">${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</a>`
+            ? `📐 ${locationLinksHtml(item.lat, item.lng)}`
             : "Este lugar no tiene ubicación en el mapa todavía."}
           </div>
           <button type="button" class="btn-small" id="modalSetLocationBtn">📍 ${hasLoc ? "Cambiar ubicación" : "Agregar ubicación"}</button>
+          ${hasLoc ? `
+            <div style="margin-top:14px;">
+              <div style="color:#999; font-size:0.8rem; margin-bottom:6px;">📍 Items cercanos (menos de 1km)</div>
+              <div id="modalNearbyContainer">${nearbyItemsHtml(item.lat, item.lng, item.id, "building")}</div>
+            </div>
+          ` : ""}
         `;
         document.getElementById("modalSetLocationBtn").addEventListener("click", () => {
           modalLocationTarget = {id: item.id, type: "building"};
           openMapPicker("modalItem");
         });
+        const nearbyContainer = document.getElementById("modalNearbyContainer");
+        if (nearbyContainer) {
+          nearbyContainer.addEventListener("click", (e) => {
+            const row = e.target.closest("[data-nearby-id]");
+            if (!row) return;
+            const nId = row.dataset.nearbyId;
+            const nType = row.dataset.nearbyType;
+            const arr = nType === "person" ? personsData : nType === "pet" ? petsData : buildingsData;
+            const nItem = arr.find((x) => x.id === nId);
+            if (nItem) openModalForItem(nItem, nType);
+          });
+        }
         if (hasLoc) initModalMiniMap(item.lat, item.lng);
       } else {
         modalBody.innerHTML = `<div style="color:#888; font-size:0.95rem;">Detalles del reporte</div>`;
@@ -1515,6 +1830,9 @@
 
       // --- Acciones del modal (botones) ---
       let actionsHtml = "";
+      if (type === "person" || type === "pet" || type === "building") {
+        actionsHtml += `<button type="button" class="btn-small" onclick="copyItemLink('${item.id}','${type}', this)">🔗 Copiar enlace</button>`;
+      }
       if (type === "person" || type === "pet") {
         if (item.status === "encontrado") {
           actionsHtml +=
@@ -1584,7 +1902,7 @@
         return `
           <div class="comment-item">
             <div>
-              <div class="comment-text">${escapeHtml(c.text)}</div>
+              <pre class="comment-text">${escapeHtml(c.text)}</pre>
               <div class="comment-meta">${date}</div>
             </div>
             <button class="btn-small btn-delete" onclick="deleteComment('${c.id}')">✕</button>
@@ -1681,6 +1999,52 @@
       }
     }
 
+    function personCardHtml(item) {
+      const found = item.status === "encontrado";
+      const date = new Date(item.created_at).toLocaleString("es-CO", {
+        day: "2-digit", month: "2-digit",
+        hour: "2-digit", minute: "2-digit"
+      });
+      const metaParts = [];
+      if (item.city) metaParts.push(escapeHtml(item.city));
+      if (item.location) metaParts.push(escapeHtml(item.location));
+      if (item.lat != null && item.lng != null) metaParts.push(locationLinksHtml(item.lat, item.lng));
+      metaParts.push(date);
+      let imgHtml = "";
+      if (item.photo_url) {
+        imgHtml = `<img class="card-photo" src="${escapeHtml(item.photo_url)}" alt="Foto" />`;
+      } else if (item.image) {
+        imgHtml = `<img class="card-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" />`;
+      }
+      else {
+        imgHtml = `<img style="opacity:0.62;"class="card-photo" src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.vecteezy.com%2Fsystem%2Fresources%2Fpreviews%2F021%2F548%2F095%2Fnon_2x%2Fdefault-profile-picture-avatar-user-avatar-icon-person-icon-head-icon-profile-picture-icons-default-anonymous-user-male-and-female-businessman-photo-placeholder-social-network-avatar-portrait-free-vector.jpg&f=1&nofb=1&ipt=621673f72ece5d2869a9051c758ecc2d3f48741320548453b28c17465f313244" alt="Imagen URL" />`;
+      }
+      return `
+        <div class="card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="person">
+            ${imgHtml}
+          <div class="card-main">
+            <div><span class="status-tag ${found ? 'encontrado' : ''}">${item.status}</span></div>
+            <div class="card-inner">
+              <div class="info">
+                <span class="name">${escapeHtml(item.name)}</span>
+                <span class="meta">${metaParts.join(" · ")}</span>
+                ${commentBadgeHtml(item)}
+              </div>
+            </div>
+            <div class="actions">
+              ${found
+          ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','person')">Marcar desaparecido</button>`
+          : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','person')">Marcar encontrado</button>`
+        }
+              ${isLocalhost
+          ? `<button class="btn-small btn-delete" onclick="removeItem('${item.id}','person')">✕</button>`
+          : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     function render() {
       const items = fuzzyFilter(searchInput.value, personsData);
       if (!items.length) {
@@ -1688,50 +2052,7 @@
           `<div class="empty">${personsData.length ? "Sin resultados." : "No hay reportes todavía."}</div>`;
         return;
       }
-      listEl.innerHTML = items.map(item => {
-        const found = item.status === "encontrado";
-        const date = new Date(item.created_at).toLocaleString("es-CO", {
-          day: "2-digit", month: "2-digit",
-          hour: "2-digit", minute: "2-digit"
-        });
-        const metaParts = [];
-        if (item.city) metaParts.push(escapeHtml(item.city));
-        if (item.location) metaParts.push(escapeHtml(item.location));
-        if (item.lat != null && item.lng != null) metaParts.push(`<a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank" style="color:#4ea1ff;">🗺️ ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</a>`);
-        metaParts.push(date);
-        let imgHtml = "";
-        if (item.photo_url) {
-          imgHtml = `<img class="card-photo" src="${escapeHtml(item.photo_url)}" alt="Foto" />`;
-        } else if (item.image) {
-          imgHtml = `<img class="card-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" />`;
-        }
-        else {
-          imgHtml = `<img style="opacity:0.62;"class="card-photo" src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.vecteezy.com%2Fsystem%2Fresources%2Fpreviews%2F021%2F548%2F095%2Fnon_2x%2Fdefault-profile-picture-avatar-user-avatar-icon-person-icon-head-icon-profile-picture-icons-default-anonymous-user-male-and-female-businessman-photo-placeholder-social-network-avatar-portrait-free-vector.jpg&f=1&nofb=1&ipt=621673f72ece5d2869a9051c758ecc2d3f48741320548453b28c17465f313244" alt="Imagen URL" />`;
-        }
-        return `
-          <div class="card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="person">
-              ${imgHtml}
-            <div class="card-main">
-              <div><span class="status-tag ${found ? 'encontrado' : ''}">${item.status}</span></div>
-              <div class="card-inner">
-                <div class="info">
-                  <span class="name">${escapeHtml(item.name)}</span>
-                  <span class="meta">${metaParts.join(" · ")}</span>
-                </div>
-              </div>
-              <div class="actions">
-                ${found
-            ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','person')">Marcar desaparecido</button>`
-            : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','person')">Marcar encontrado</button>`
-          }
-                ${isLocalhost
-            ? `<button class="btn-small btn-delete" onclick="removeItem('${item.id}','person')">✕</button>`
-            : ''}
-              </div>
-            </div>
-          </div>
-        `;
-      }).join("");
+      renderVirtualList(listEl, items, personCardHtml);
     }
 
     listEl.addEventListener("click", (e) => {
@@ -1884,6 +2205,52 @@
       }
     }
 
+    function petCardHtml(item) {
+      const found = item.status === "encontrado";
+      const date = new Date(item.created_at).toLocaleString("es-CO", {
+        day: "2-digit", month: "2-digit",
+        hour: "2-digit", minute: "2-digit"
+      });
+      const metaParts = [];
+      if (item.city) metaParts.push(escapeHtml(item.city));
+      if (item.location) metaParts.push(escapeHtml(item.location));
+      if (item.lat != null && item.lng != null) metaParts.push(locationLinksHtml(item.lat, item.lng));
+      metaParts.push(date);
+      let imgHtml = "";
+      if (item.photo_url) {
+        imgHtml = `<img class="card-photo" src="${escapeHtml(item.photo_url)}" alt="Foto" />`;
+      } else if (item.image) {
+        imgHtml = `<img class="card-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" />`;
+      }
+      else {
+        imgHtml = `<img style="opacity:0.62;"class="card-photo" src="https://external-content.duckduckgo.com/iu/?u=http%3A%2F%2Fvictoriapets.ca%2Fwp-content%2Fthemes%2Fneve-child%2Fimages%2Fplaceholder-pet-image.jpg&f=1&nofb=1&ipt=e0e1204dabf2c9a4e236025578bc41edc6bc8b993269d6a7858d0d9112a04697" alt="Imagen URL" />`;
+      }
+      return `
+        <div class="card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="pet">
+            ${imgHtml}
+<div class="card-main">
+          <div><span class="status-tag ${found ? 'encontrado' : ''}">${item.status}</span></div>
+          <div class="card-inner">
+            <div class="info">
+              <span class="name">${escapeHtml(item.name)}</span>
+              <span class="meta">${metaParts.join(" · ")}</span>
+              ${commentBadgeHtml(item)}
+            </div>
+          </div>
+          <div class="actions">
+            ${found
+          ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','pet')">Marcar desaparecido</button>`
+          : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','pet')">Marcar encontrado</button>`
+        }
+            ${isLocalhost
+          ? `<button class="btn-small btn-delete" onclick="removeItem('${item.id}','pet')">✕</button>`
+          : ''}
+          </div>
+          </div>
+        </div>
+      `;
+    }
+
     function renderP() {
       const items = fuzzyFilter(searchInputP.value, petsData);
       if (!items.length) {
@@ -1891,50 +2258,7 @@
           `<div class="empty">${petsData.length ? "Sin resultados." : "No hay mascotas reportadas."}</div>`;
         return;
       }
-      listElP.innerHTML = items.map(item => {
-        const found = item.status === "encontrado";
-        const date = new Date(item.created_at).toLocaleString("es-CO", {
-          day: "2-digit", month: "2-digit",
-          hour: "2-digit", minute: "2-digit"
-        });
-        const metaParts = [];
-        if (item.city) metaParts.push(escapeHtml(item.city));
-        if (item.location) metaParts.push(escapeHtml(item.location));
-        if (item.lat != null && item.lng != null) metaParts.push(`<a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank" style="color:#4ea1ff;">🗺️ ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</a>`);
-        metaParts.push(date);
-        let imgHtml = "";
-        if (item.photo_url) {
-          imgHtml = `<img class="card-photo" src="${escapeHtml(item.photo_url)}" alt="Foto" />`;
-        } else if (item.image) {
-          imgHtml = `<img class="card-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" />`;
-        }
-        else {
-          imgHtml = `<img style="opacity:0.62;"class="card-photo" src="https://external-content.duckduckgo.com/iu/?u=http%3A%2F%2Fvictoriapets.ca%2Fwp-content%2Fthemes%2Fneve-child%2Fimages%2Fplaceholder-pet-image.jpg&f=1&nofb=1&ipt=e0e1204dabf2c9a4e236025578bc41edc6bc8b993269d6a7858d0d9112a04697" alt="Imagen URL" />`;
-        }
-        return `
-          <div class="card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="pet">
-              ${imgHtml}
-<div class="card-main">
-            <div><span class="status-tag ${found ? 'encontrado' : ''}">${item.status}</span></div>
-            <div class="card-inner">
-              <div class="info">
-                <span class="name">${escapeHtml(item.name)}</span>
-                <span class="meta">${metaParts.join(" · ")}</span>
-              </div>
-            </div>
-            <div class="actions">
-              ${found
-            ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','pet')">Marcar desaparecido</button>`
-            : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','pet')">Marcar encontrado</button>`
-          }
-              ${isLocalhost
-            ? `<button class="btn-small btn-delete" onclick="removeItem('${item.id}','pet')">✕</button>`
-            : ''}
-            </div>
-            </div>
-          </div>
-        `;
-      }).join("");
+      renderVirtualList(listElP, items, petCardHtml);
     }
 
     listElP.addEventListener("click", (e) => {
@@ -2020,6 +2344,41 @@
       }
     }
 
+    function buildingCardHtml(item) {
+      const date = new Date(item.created_at).toLocaleString("es-CO", {
+        day: "2-digit", month: "2-digit",
+        hour: "2-digit", minute: "2-digit"
+      });
+      const metaParts = [];
+      if (item.city) metaParts.push(escapeHtml(item.city));
+      if (item.location) metaParts.push(escapeHtml(item.location));
+      if (item.lat != null && item.lng != null) metaParts.push(locationLinksHtml(item.lat, item.lng));
+      metaParts.push(date);
+      const statusClass = item.status || "seguro";
+      return `
+        <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
+          <div class="card-main">
+            <div><span class="status-tag ${statusClass}">${item.status || "seguro"}</span></div>
+            <div class="card-inner">
+              <div class="info">
+                <span class="name">${escapeHtml(item.name)}</span>
+                <span class="meta">${metaParts.join(" · ")}</span>
+                ${commentBadgeHtml(item)}
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn-small btn-seguro${statusClass === "seguro" ? " btn-active" : ""}" ${statusClass === "seguro" ? "disabled" : ""} onclick="setStatusB('${item.id}','seguro')">Seguro</button>
+              <button class="btn-small btn-danado${statusClass === "danado" ? " btn-active" : ""}" ${statusClass === "danado" ? "disabled" : ""} onclick="setStatusB('${item.id}','danado')">Dañado</button>
+              <button class="btn-small btn-colapsado${statusClass === "colapsado" ? " btn-active" : ""}" ${statusClass === "colapsado" ? "disabled" : ""} onclick="setStatusB('${item.id}','colapsado')">Colapsado</button>
+              ${isLocalhost
+          ? `<button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>`
+          : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     function renderB() {
       const items = fuzzyFilter(searchInputB.value, buildingsData);
       if (!items.length) {
@@ -2027,39 +2386,7 @@
           `<div class="empty">${buildingsData.length ? "Sin resultados." : "No hay edificios reportados."}</div>`;
         return;
       }
-      listElB.innerHTML = items.map(item => {
-        const date = new Date(item.created_at).toLocaleString("es-CO", {
-          day: "2-digit", month: "2-digit",
-          hour: "2-digit", minute: "2-digit"
-        });
-        const metaParts = [];
-        if (item.city) metaParts.push(escapeHtml(item.city));
-        if (item.location) metaParts.push(escapeHtml(item.location));
-        if (item.lat != null && item.lng != null) metaParts.push(`<a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank" style="color:#4ea1ff;">🗺️ ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</a>`);
-        metaParts.push(date);
-        const statusClass = item.status || "seguro";
-        return `
-          <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
-            <div class="card-main">
-              <div><span class="status-tag ${statusClass}">${item.status || "seguro"}</span></div>
-              <div class="card-inner">
-                <div class="info">
-                  <span class="name">${escapeHtml(item.name)}</span>
-                  <span class="meta">${metaParts.join(" · ")}</span>
-                </div>
-              </div>
-              <div class="actions">
-                <button class="btn-small btn-seguro${statusClass === "seguro" ? " btn-active" : ""}" ${statusClass === "seguro" ? "disabled" : ""} onclick="setStatusB('${item.id}','seguro')">Seguro</button>
-                <button class="btn-small btn-danado${statusClass === "danado" ? " btn-active" : ""}" ${statusClass === "danado" ? "disabled" : ""} onclick="setStatusB('${item.id}','danado')">Dañado</button>
-                <button class="btn-small btn-colapsado${statusClass === "colapsado" ? " btn-active" : ""}" ${statusClass === "colapsado" ? "disabled" : ""} onclick="setStatusB('${item.id}','colapsado')">Colapsado</button>
-                ${isLocalhost
-            ? `<button class="btn-small btn-delete" onclick="removeB('${item.id}')">✕</button>`
-            : ''}
-              </div>
-            </div>
-          </div>
-        `;
-      }).join("");
+      renderVirtualList(listElB, items, buildingCardHtml);
     }
 
     listElB.addEventListener("click", (e) => {
@@ -2186,6 +2513,91 @@
       shareContent("Anuncio - Sismo", item.text, `https://sismoinfo.co/#anuncio/${item.id}`);
     }
 
+    // ================================================================
+    //  COLABORADORES (Voluntarios)
+    // ================================================================
+    let colabData = [];
+    const listElColab = document.getElementById("listColab");
+    const formColab = document.getElementById("addFormColab");
+    const nameInputColab = document.getElementById("nameInputColab");
+    const skillInputColab = document.getElementById("skillInputColab");
+    const contactInputColab = document.getElementById("contactInputColab");
+    const cityInputColab = document.getElementById("cityInputColab");
+
+    async function loadListColab() {
+      try {
+        const res = await fetch(`${API_BASE}/collaborators`);
+        colabData = await res.json();
+        renderColab();
+      } catch {
+        listElColab.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
+      }
+    }
+
+    function colabCardHtml(item) {
+      const date = new Date(item.created_at).toLocaleString("es-CO", {
+        day: "2-digit", month: "2-digit",
+        hour: "2-digit", minute: "2-digit"
+      });
+      const metaParts = [];
+      if (item.city) metaParts.push(escapeHtml(item.city));
+      if (item.contact) metaParts.push(escapeHtml(item.contact));
+      metaParts.push(date);
+      return `
+        <div class="card" data-id="${item.id}">
+          <div class="card-main">
+            <div class="card-inner">
+              <div class="info">
+                <span class="name">🤝 ${escapeHtml(item.name)}</span>
+                ${item.skill ? `<span class="meta">${escapeHtml(item.skill)}</span>` : ""}
+                <span class="meta">${metaParts.join(" · ")}</span>
+              </div>
+            </div>
+            <div class="actions">
+              ${isLocalhost
+          ? `<button class="btn-small btn-delete" onclick="removeColab('${item.id}')">✕</button>`
+          : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderColab() {
+      if (!colabData.length) {
+        listElColab.innerHTML = `<div class="empty">Todavía nadie se ha unido como colaborador.</div>`;
+        return;
+      }
+      renderVirtualList(listElColab, colabData, colabCardHtml);
+    }
+
+    formColab.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = nameInputColab.value.trim();
+      if (!name) return;
+      await fetch(`${API_BASE}/collaborators`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          name,
+          skill: skillInputColab.value.trim(),
+          contact: contactInputColab.value.trim(),
+          city: cityInputColab.value.trim(),
+        }),
+      });
+      nameInputColab.value = "";
+      skillInputColab.value = "";
+      contactInputColab.value = "";
+      cityInputColab.value = "";
+      loadListColab();
+    });
+
+    async function removeColab(id) {
+      if (!confirm("¿Quitar este colaborador?")) return;
+      const ok = await adminDelete(`${API_BASE}/collaborators/${id}`);
+      if (ok) loadListColab();
+    }
+
     // Deep link: #anuncio/ abre directamente ese anuncio en su modal.
     function handleAnuncioDeepLink() {
       const match = location.hash.match(/^#anuncio\/(.+)$/);
@@ -2291,6 +2703,7 @@
     loadList();
     loadListP();
     loadListB();
+    loadListColab();
     loadListA().then(handleAnuncioDeepLink);
 
     setTimeout(attemptUrlModal, 300);
