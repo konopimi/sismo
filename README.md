@@ -15,7 +15,7 @@ VIBECODE A LO QUE MARCA SIN MIEDO
 
 ---
 
-cd public/
+cd public/ &&
 npx browser-sync start --server --files "public/index.html, server.js,"
 
 Forks activos:
