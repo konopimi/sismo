@@ -16,12 +16,16 @@
     html {}
 
     body {
+      display: flex;
+      flex-direction: column;
       overflow-x: hidden;
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       ont-size: 0.62rem;
       background: #0f1115;
       color: #eaeaea;
+      min-height: 100vh;
+      max-height: 100vh;
     }
 
     h1 {
@@ -40,11 +44,16 @@
       flex: 1;
     }
 
+    #tabMapPanel {
+      display: flex;
+      min-height: 100%;
+      flex: 1;
+    }
+
     #map {
-      height: 500px;
-      width: 100%;
-      border-radius: 10px;
-      border: 1px solid #333;
+      flex: 1;
+      min-height: 100%;
+      min-width: 100%;
     }
 
     .top-bar {
@@ -308,7 +317,7 @@
 
     .search-row input[type="search"] {
       width: 100%;
-      padding: 12px;
+      padding: 5px;
       /* font-size: 1rem; */
       border-radius: 8px;
       border: 1px solid #333;
@@ -886,21 +895,25 @@
   </div>
 
   <!-- ===== PANEL MAPA ===== -->
-  <div id="tabMapPanel" class="tab-panel">
+  <div id="tabMapPanel" style="position:relative">
     <div style="margin-bottom:10px;">
-      <label for="citySelectorMap" style="color:#ccc; margin-right:8px;">📍 Ir a ciudad:</label>
+      <!-- <label for="citySelectorMap" style="color:#ccc; margin-right:8px;">Ir a ciudad:</label> -->
       <select id="citySelectorMap" style="
+          position:absolute;
+          top:5px;
+          right:5px;
           padding: 8px 12px;
           border-radius: 8px;
           border: 1px solid #333;
-          background: #1a1d24;
+          background: rgba(10,10,10,0.8);
           color: #eaeaea;
           min-width: 150px;
+          z-index:999;
         ">
-        <option value="">-- Seleccionar --</option>
+        <option value="">-- 📍 IR A --</option>
       </select>
     </div>
-    <div id="map" style="height:500px; width:100%; border-radius:10px; border:1px solid #333;"></div>
+    <div id="map" style=""></div>
   </div>
 
   <!-- ===== CREAR MODAL (all creation forms) ===== -->
@@ -1072,7 +1085,6 @@
         background: rgba(20, 20, 20, 0.85);
         backdrop-filter: blur(5px);
         border-top: 2px solid gray;
-        margin-top: 5px;
         z-index: 100;
       ">
     <div class="tabs">
@@ -2215,7 +2227,12 @@
       }
     }
 
-    function personCardHtml(item) {
+    // Shared card renderer for persons and pets (same layout, same fields).
+    // Only the entity type and fallback image differ between the two.
+    const PERSON_PLACEHOLDER = "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.vecteezy.com%2Fsystem%2Fresources%2Fpreviews%2F021%2F548%2F095%2Fnon_2x%2Fdefault-profile-picture-avatar-user-avatar-icon-person-icon-head-icon-profile-picture-icons-default-anonymous-user-male-and-female-businessman-photo-placeholder-social-network-avatar-portrait-free-vector.jpg&f=1&nofb=1&ipt=621673f72ece5d2869a9051c758ecc2d3f48741320548453b28c17465f313244";
+    const PET_PLACEHOLDER = "https://external-content.duckduckgo.com/iu/?u=http%3A%2F%2Fvictoriapets.ca%2Fwp-content%2Fthemes%2Fneve-child%2Fimages%2Fplaceholder-pet-image.jpg&f=1&nofb=1&ipt=e0e1204dabf2c9a4e236025578bc41edc6bc8b993269d6a7858d0d9112a04697";
+
+    function entityCardHtml(item, type, placeholderImg) {
       const found = item.status === "encontrado";
       const date = new Date(item.created_at).toLocaleString("es-CO", {
         day: "2-digit", month: "2-digit",
@@ -2231,20 +2248,17 @@
         imgHtml = `<img class="card-photo" src="${escapeHtml(item.photo_url)}" alt="Foto" />`;
       } else if (item.image) {
         imgHtml = `<img class="card-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" />`;
-      }
-      else {
-        imgHtml = `<img style="opacity:0.62;"class="card-photo" src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.vecteezy.com%2Fsystem%2Fresources%2Fpreviews%2F021%2F548%2F095%2Fnon_2x%2Fdefault-profile-picture-avatar-user-avatar-icon-person-icon-head-icon-profile-picture-icons-default-anonymous-user-male-and-female-businessman-photo-placeholder-social-network-avatar-portrait-free-vector.jpg&f=1&nofb=1&ipt=621673f72ece5d2869a9051c758ecc2d3f48741320548453b28c17465f313244" alt="Imagen URL" />`;
+      } else {
+        imgHtml = `<img style="opacity:0.62;" class="card-photo" src="${placeholderImg}" alt="Imagen URL" />`;
       }
       return `
-        <div class="card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="person">
-            ${imgHtml}
+        <div class="card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="${type}">
+          ${imgHtml}
           <div class="card-main">
-            <divs style="display:flex;">  
-                <span class="name">${escapeHtml(item.name)}</span>
-                <span class="status-tag ${found ? 'encontrado' : ''}">${item.status}</span>
-
-
-</div>
+            <div style="display:flex;">
+              <span class="name">${escapeHtml(item.name)}</span>
+              <span class="status-tag ${found ? 'encontrado' : ''}">${item.status}</span>
+            </div>
             <div class="card-inner">
               <div class="info">
                 <span class="meta">${metaParts.join(" · ")}</span>
@@ -2253,16 +2267,20 @@
             </div>
             <div class="actions">
               ${found
-          ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','person')">Marcar desaparecido</button>`
-          : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','person')">Marcar encontrado</button>`
+          ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','${type}')">Marcar desaparecido</button>`
+          : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','${type}')">Marcar encontrado</button>`
         }
               ${isLocalhost
-          ? `<button class="btn-small btn-delete" onclick="removeItem('${item.id}','person')">✕</button>`
+          ? `<button class="btn-small btn-delete" onclick="removeItem('${item.id}','${type}')">✕</button>`
           : ''}
             </div>
           </div>
         </div>
       `;
+    }
+
+    function personCardHtml(item) {
+      return entityCardHtml(item, "person", PERSON_PLACEHOLDER);
     }
 
     function render() {
@@ -2428,50 +2446,7 @@
     }
 
     function petCardHtml(item) {
-      const found = item.status === "encontrado";
-      const date = new Date(item.created_at).toLocaleString("es-CO", {
-        day: "2-digit", month: "2-digit",
-        hour: "2-digit", minute: "2-digit"
-      });
-      const metaParts = [];
-      if (item.city) metaParts.push(escapeHtml(item.city));
-      if (item.location) metaParts.push(escapeHtml(item.location));
-      if (item.lat != null && item.lng != null) metaParts.push(locationLinksHtml(item.lat, item.lng));
-      metaParts.push(date);
-      let imgHtml = "";
-      if (item.photo_url) {
-        imgHtml = `<img class="card-photo" src="${escapeHtml(item.photo_url)}" alt="Foto" />`;
-      } else if (item.image) {
-        imgHtml = `<img class="card-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" />`;
-      }
-      else {
-        imgHtml = `<img style="opacity:0.62;"class="card-photo" src="https://external-content.duckduckgo.com/iu/?u=http%3A%2F%2Fvictoriapets.ca%2Fwp-content%2Fthemes%2Fneve-child%2Fimages%2Fplaceholder-pet-image.jpg&f=1&nofb=1&ipt=e0e1204dabf2c9a4e236025578bc41edc6bc8b993269d6a7858d0d9112a04697" alt="Imagen URL" />`;
-      }
-      return `
-        <div class="card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="pet">
-            ${imgHtml}
-<div class="card-main">
-          <div style="display:flex;">
-              <span class="name"style="">${escapeHtml(item.name)}</span>
-<span class="status-tag ${found ? 'encontrado' : ''}">${item.status}</span></div>
-          <div class="card-inner">
-            <div class="info">
-              <span class="meta">${metaParts.join(" · ")}</span>
-              ${commentBadgeHtml(item)}
-            </div>
-          </div>
-          <div class="actions">
-            ${found
-          ? `<button class="btn-small btn-missing" onclick="setStatus('${item.id}','desaparecido','pet')">Marcar desaparecido</button>`
-          : `<button class="btn-small btn-found" onclick="setStatus('${item.id}','encontrado','pet')">Marcar encontrado</button>`
-        }
-            ${isLocalhost
-          ? `<button class="btn-small btn-delete" onclick="removeItem('${item.id}','pet')">✕</button>`
-          : ''}
-          </div>
-          </div>
-        </div>
-      `;
+      return entityCardHtml(item, "pet", PET_PLACEHOLDER);
     }
 
     function renderP() {
