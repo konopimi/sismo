@@ -117,8 +117,12 @@ try {
 } catch (e) {}
 // --- lat/lng for map picker (separate from free-text location) ---
 for (const t of ["disappeared", "pets", "buildings"]) {
-  try { db.exec(`ALTER TABLE ${t} ADD COLUMN lat REAL`); } catch (e) {}
-  try { db.exec(`ALTER TABLE ${t} ADD COLUMN lng REAL`); } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE ${t} ADD COLUMN lat REAL`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE ${t} ADD COLUMN lng REAL`);
+  } catch (e) {}
 }
 // ========== Comentarios ==========
 app.get("/api/comments", (req, res) => {
@@ -153,6 +157,7 @@ app.post("/api/comments", (req, res) => {
 
 app.delete("/api/comments/:id", (req, res) => {
   if (!process.env.ADMIN_KEY || req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
+
     return res.status(403).json({ error: "forbidden" });
   }
   const result = db
@@ -182,7 +187,10 @@ app.get("/api/item-locations", (req, res) => {
 app.post("/api/item-locations", (req, res) => {
   const { itemId, itemType, lat, lng, label } = req.body || {};
   if (!itemId || !itemType || !["disappeared", "pets"].includes(itemType)) {
-    return res.status(400).json({ error: "itemId and a valid itemType are required" });
+
+    return res
+      .status(400)
+      .json({ error: "itemId and a valid itemType are required" });
   }
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return res.status(400).json({ error: "lat and lng are required" });
@@ -193,11 +201,18 @@ app.post("/api/item-locations", (req, res) => {
   db.prepare(
     "INSERT INTO item_locations (id, item_id, item_type, lat, lng, label, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
   ).run(finalId, itemId, itemType, lat, lng, lbl, createdAt);
-  res.status(201).json({ id: finalId, lat, lng, label: lbl, created_at: createdAt });
+
+  res
+    .status(201)
+    .json({ id: finalId, lat, lng, label: lbl, created_at: createdAt });
 });
 
 app.delete("/api/item-locations/:id", (req, res) => {
-  if (!process.env.ADMIN_KEY || req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
+  if (
+    !process.env.ADMIN_KEY ||
+    req.headers["x-admin-key"] !== process.env.ADMIN_KEY
+  ) {
+
     return res.status(403).json({ error: "forbidden" });
   }
   const result = db
@@ -303,7 +318,12 @@ app.patch("/api/disappeared/:id", (req, res) => {
 });
 
 app.delete("/api/disappeared/:id", (req, res) => {
-  if (!process.env.ADMIN_KEY || req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
+
+  if (
+    !process.env.ADMIN_KEY ||
+    req.headers["x-admin-key"] !== process.env.ADMIN_KEY
+  ) {
+
     return res.status(403).json({ error: "forbidden" });
   }
   const result = db
@@ -407,7 +427,12 @@ app.patch("/api/pets/:id", (req, res) => {
 });
 
 app.delete("/api/pets/:id", (req, res) => {
-  if (!process.env.ADMIN_KEY || req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
+
+  if (
+    !process.env.ADMIN_KEY ||
+    req.headers["x-admin-key"] !== process.env.ADMIN_KEY
+  ) {
+
     return res.status(403).json({ error: "forbidden" });
   }
   const result = db.prepare("DELETE FROM pets WHERE id = ?").run(req.params.id);
@@ -493,7 +518,11 @@ app.patch("/api/buildings/:id", (req, res) => {
 });
 
 app.delete("/api/buildings/:id", (req, res) => {
-  if (!process.env.ADMIN_KEY || req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
+
+  if (
+    !process.env.ADMIN_KEY ||
+    req.headers["x-admin-key"] !== process.env.ADMIN_KEY
+  ) {
     return res.status(403).json({ error: "forbidden" });
   }
   const result = db
@@ -537,7 +566,11 @@ app.post("/api/collaborators", (req, res) => {
 });
 
 app.delete("/api/collaborators/:id", (req, res) => {
-  if (!process.env.ADMIN_KEY || req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
+
+  if (
+    !process.env.ADMIN_KEY ||
+    req.headers["x-admin-key"] !== process.env.ADMIN_KEY
+  ) {
     return res.status(403).json({ error: "forbidden" });
   }
   const result = db
@@ -571,7 +604,11 @@ app.post("/api/anuncios", (req, res) => {
 });
 
 app.delete("/api/anuncios/:id", (req, res) => {
-  if (!process.env.ADMIN_KEY || req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
+
+  if (
+    !process.env.ADMIN_KEY ||
+    req.headers["x-admin-key"] !== process.env.ADMIN_KEY
+  ) {
     return res.status(403).json({ error: "forbidden" });
   }
   const result = db
