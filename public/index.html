@@ -39,8 +39,9 @@
     }
 
     .top-bar {
-      background: rgba(127, 127, 127, 0.62);
-      border-bottom: rgb(127, 127, 127);
+      background: rgba(100, 100, 100, 0.38);
+      border-bottom: 2px solid rgb(127, 127, 127, 0.62);
+      padding: 5px;
     }
 
     .crear {
@@ -806,7 +807,9 @@
 
   <!-- ===== HEADER ===== -->
   <div class="top-bar" style="display:flex;align-items: center;">
-    <div style="flex:1;">🚨SISMOINFO.CO</div>
+    <img src="logo.png"
+      style="max-height:30px;margin-right:13px;transform:scale(162%) translate(-5px,3px);z-index:999;" />
+    <b style="flex:1;color:palegoldenrod;font-size:110%; ;">SISMOINFO.CO ⛑️</b>
     <button id="copyLinkBtn">
       🔗 LINK
     </button>
@@ -1117,18 +1120,23 @@
       const toggle = document.getElementById("apiTargetToggle");
       const btnRemote = document.getElementById("apiTargetRemote");
       const btnLocal = document.getElementById("apiTargetLocal");
-      const activeTarget = localStorage.getItem("sismo_api_target") || "remote";
-      toggle.style.display = "flex";
-      btnRemote.style.background = activeTarget === "remote" ? "#d64545" : "#333";
-      btnLocal.style.background = activeTarget === "local" ? "#d64545" : "#333";
-      btnRemote.addEventListener("click", () => {
-        localStorage.setItem("sismo_api_target", "remote");
-        location.reload();
-      });
-      btnLocal.addEventListener("click", () => {
-        localStorage.setItem("sismo_api_target", "local");
-        location.reload();
-      });
+      // The toggle HTML may be commented out; bail if missing.
+      if (!toggle || !btnRemote || !btnLocal) {
+        // no-op: API target selector is disabled in this build
+      } else {
+        const activeTarget = localStorage.getItem("sismo_api_target") || "remote";
+        toggle.style.display = "flex";
+        btnRemote.style.background = activeTarget === "remote" ? "#d64545" : "#333";
+        btnLocal.style.background = activeTarget === "local" ? "#d64545" : "#333";
+        btnRemote.addEventListener("click", () => {
+          localStorage.setItem("sismo_api_target", "remote");
+          location.reload();
+        });
+        btnLocal.addEventListener("click", () => {
+          localStorage.setItem("sismo_api_target", "local");
+          location.reload();
+        });
+      }
     }
 
 
