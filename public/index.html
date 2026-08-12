@@ -16,13 +16,14 @@
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      ont-size: 0.62rem;
       background: #0f1115;
       color: #eaeaea;
       overflow-y: scroll;
     }
 
     h1 {
-      font-size: 1rem;
+      /* font-size: 1rem; */
       margin: 0 0 5px 0;
     }
 
@@ -37,12 +38,89 @@
       border: 1px solid #333;
     }
 
+    .top-bar {
+      background: rgba(127, 127, 127, 0.62);
+      border-bottom: rgb(127, 127, 127);
+    }
+
     .crear {
       border: 1px solid gray;
       padding: 8px 10px;
       border-radius: 10px;
       margin-bottom: 8px;
       background: teal;
+    }
+
+    /* Button that opens the creation modal (replaces inline forms) */
+    .crear-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: 1px solid gray;
+      padding: 8px 10px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      background: teal;
+      color: palegoldenrod;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .crear-btn:hover {
+      filter: brightness(1.1);
+    }
+
+    /* Each form inside the crear modal; only the active one is shown */
+    .crear-form-wrap {
+      display: none;
+    }
+
+    .crear-form-wrap.active {
+      display: block;
+    }
+
+    /* Forms inside the modal reuse .crear form styling */
+    #crearModal .crear-form-wrap form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    #crearModal .crear-form-wrap form input,
+    #crearModal .crear-form-wrap form select {
+      flex: 1 1 150px;
+      min-width: 120px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #1a1d24;
+      color: #eaeaea;
+    }
+
+    #crearModal .crear-form-wrap form .gps-btn {
+      flex: 0 0 auto;
+      background: #333;
+      padding: 10px 14px;
+    }
+
+    #crearModal .crear-form-wrap form .gps-btn:hover {
+      background: #444;
+    }
+
+    #crearModal .crear-form-wrap form button[type="submit"] {
+      flex: 1 1 100px;
+      background: #d64545;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    #crearModal .crear-form-wrap form button[type="submit"]:hover {
+      background: #b53838;
     }
 
     .crear form {
@@ -58,7 +136,7 @@
       flex: 1 1 150px;
       min-width: 120px;
       padding: 10px 12px;
-      font-size: 0.95rem;
+      /* font-size: 0.95rem; */
       border-radius: 8px;
       border: 1px solid #333;
       background: #1a1d24;
@@ -83,7 +161,7 @@
       border-radius: 8px;
       padding: 10px 16px;
       cursor: pointer;
-      font-size: 0.95rem;
+      /* font-size: 0.95rem; */
       transition: background 0.15s;
     }
 
@@ -100,7 +178,7 @@
       color: #ddd;
       border-radius: 8px;
       cursor: pointer;
-      font-size: 0.95rem;
+      /* font-size: 0.95rem; */
       transition: background 0.15s;
       border: 1px solid #444;
       flex: 0 0 auto;
@@ -126,7 +204,7 @@
     .file-name {
       display: none;
       color: #999;
-      font-size: 0.85rem;
+      /* font-size: 0.85rem; */
       margin-left: 6px;
       flex: 1 1 120px;
       min-width: 80px;
@@ -136,23 +214,37 @@
     /* ===== TABS ===== */
     .tabs {
       display: flex;
+      gap: 5px;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+    }
+
+    button {
+
+      min-width: 80px;
+      padding: 5px;
+      border-radius: 8px;
+      border: 2px solid rgba(127, 127, 127, 0.62);
+      background: #1a1d24;
+      color: #888;
+      /* font-size: 0.95rem; */
+      cursor: pointer;
+      transition: background 0.15s;
     }
 
     .tab-btn {
-      flex: 1;
-      min-width: 80px;
-      padding: 10px;
-      border: none;
-      border-radius: 8px;
-      background: #1a1d24;
-      color: #888;
-      font-size: 0.95rem;
-      cursor: pointer;
-      transition: background 0.15s;
+      /* flex: 1; */
+      /* min-width: 80px; */
+      /* padding: 5px; */
+      /* border-radius: 8px; */
+      /* border: 2px solid rgba(127, 127, 127, 0.62); */
+      /* background: #1a1d24; */
+      /* color: #888; */
+      /* /* font-size: 0.95rem; */
+      */
+      /* cursor: pointer; */
+      /* transition: background 0.15s; */
     }
 
     .tab-btn.active {
@@ -163,7 +255,7 @@
     /* live count badge on category tabs */
     .tab-btn .n {
       font-family: ui-monospace, monospace;
-      font-size: 0.68rem;
+      /* font-size: 0.68rem; */
       font-weight: 700;
       padding: 1px 6px;
       margin-left: 5px;
@@ -194,7 +286,7 @@
     .search-row input[type="search"] {
       width: 100%;
       padding: 12px;
-      font-size: 1rem;
+      /* font-size: 1rem; */
       border-radius: 8px;
       border: 1px solid #333;
       background: #1a1d24;
@@ -254,11 +346,11 @@
 
     .card .name {
       font-weight: 600;
-      font-size: 1.05rem;
+      /* font-size: 1.05rem; */
     }
 
     .card .meta {
-      font-size: 0.8rem;
+      /* font-size: 0.8rem; */
       color: #999;
     }
 
@@ -277,14 +369,14 @@
       overflow-wrap: break-word;
       font-family: inherit;
       margin: 0;
-      font-size: 1.05rem;
+      /* font-size: 1.05rem; */
       font-weight: 600;
       color: #eaeaea;
     }
 
     .btn-small {
       padding: 8px 12px;
-      font-size: 0.85rem;
+      /* font-size: 0.85rem; */
       border-radius: 6px;
       border: none;
       cursor: pointer;
@@ -353,7 +445,7 @@
     .map-search-result {
       padding: 8px 10px;
       cursor: pointer;
-      font-size: 0.85rem;
+      /* font-size: 0.85rem; */
       border-bottom: 1px solid #2a2e36;
     }
 
@@ -381,7 +473,7 @@
       border-radius: 8px;
       padding: 6px 10px;
       margin-bottom: 6px;
-      font-size: 0.85rem;
+      /* font-size: 0.85rem; */
       flex-wrap: wrap;
     }
 
@@ -393,7 +485,7 @@
       justify-content: space-between;
       align-items: center;
       gap: 8px;
-      font-size: 0.88rem;
+      /* font-size: 0.88rem; */
     }
 
     .nearby-item:hover {
@@ -402,7 +494,7 @@
 
     .nearby-item .nearby-dist {
       color: #888;
-      font-size: 0.78rem;
+      /* font-size: 0.78rem; */
       flex: 0 0 auto;
     }
 
@@ -413,7 +505,7 @@
       border-radius: 8px;
       padding: 8px 10px;
       margin-bottom: 10px;
-      font-size: 0.9rem;
+      /* font-size: 0.9rem; */
     }
 
     .btn-share {
@@ -427,7 +519,7 @@
 
     /* ===== STATUS TAGS ===== */
     .status-tag {
-      font-size: 0.7rem;
+      /* font-size: 0.7rem; */
       text-transform: uppercase;
       padding: 2px 10px;
       border-radius: 4px;
@@ -537,7 +629,7 @@
       width: 34px;
       height: 34px;
       border-radius: 50%;
-      font-size: 18px;
+      /* font-size: 18px; */
       cursor: pointer;
       line-height: 1;
       display: flex;
@@ -553,7 +645,7 @@
 
     .modal-content h2 {
       margin: 0 0 6px 0;
-      font-size: 1.4rem;
+      /* font-size: 1.4rem; */
       padding-right: 30px;
       word-break: break-word;
     }
@@ -564,7 +656,7 @@
     }
 
     .modal-meta {
-      font-size: 0.9rem;
+      /* font-size: 0.9rem; */
       color: #aaa;
       margin-bottom: 4px;
       line-height: 1.6;
@@ -607,7 +699,7 @@
       flex: 1;
       min-width: 80px;
       padding: 10px 12px;
-      font-size: 0.9rem;
+      /* font-size: 0.9rem; */
       text-align: center;
     }
 
@@ -617,7 +709,7 @@
     }
 
     .comment-badge {
-      font-size: 0.78rem;
+      /* font-size: 0.78rem; */
       color: #9aa0a6;
       margin-top: 4px;
       overflow: hidden;
@@ -648,7 +740,7 @@
     }
 
     .comment-item .comment-meta {
-      font-size: 0.7rem;
+      /* font-size: 0.7rem; */
       color: #888;
     }
 
@@ -667,7 +759,7 @@
       color: #eaeaea;
       min-width: 120px;
       font-family: inherit;
-      font-size: 0.95rem;
+      /* font-size: 0.95rem; */
       resize: vertical;
       min-height: 40px;
     }
@@ -688,12 +780,12 @@
       }
 
       .modal-content h2 {
-        font-size: 1.2rem;
+        /* font-size: 1.2rem; */
       }
 
       .modal-actions button {
         min-width: 60px;
-        font-size: 0.8rem;
+        /* font-size: 0.8rem; */
         padding: 8px 10px;
       }
 
@@ -713,26 +805,33 @@
 <body>
 
   <!-- ===== HEADER ===== -->
-  <div style="padding: 5px">
-    <button id="copyLinkBtn"
-      style="margin-bottom: 5px; background: teal; border: none; padding: 10px 16px; border-radius: 8px; color: white; cursor: pointer;">
-      <h2>🚨 SISMOINFO.CO (COPIAR LINK)</h2>
+  <div class="top-bar" style="display:flex;align-items: center;">
+    <div style="flex:1;">🚨SISMOINFO.CO</div>
+    <button id="copyLinkBtn">
+      🔗 LINK
     </button>
-    <div>ADMIN: +57 3153410282 IG:@neokpm</div>
-    <br />
-    <a style="background:rgb(200,200,200);" href="https://colombiatebusca.com/">https://colombiatebusca.com/</a>
-    <div id="apiTargetToggle" style="display: none; margin-bottom: 5px;">
-      <button type="button" id="apiTargetRemote" class="btn-small" style="border-radius: 6px 0 0 6px;">Remoto</button>
-      <button type="button" id="apiTargetLocal" class="btn-small" style="border-radius: 0 6px 6px 0;">Local</button>
-    </div>
-    <button id="shareAppBtn" class="btn-share"
-      style="margin-top: 5px; width: 100%; padding: 10px 16px; border-radius: 8px; border: none; color: white; cursor: pointer;">
-      📤 Compartir app
+    <button id="shareAppBtn">
+      📤 Compartir
     </button>
+
+    <!-- <div id="apiTargetToggle" style="display:none;margin-left:auto;"> -->
+    <!-- <button type="button" id="apiTargetRemote" class="btn-small" style="border-radius: 6px 0 0 6px;">🌏 </button> -->
+    <!-- <button type="button" id="apiTargetLocal" class="btn-small" style="border-radius: 0 6px 6px 0;">🖥️ </button> -->
+
+    <!-- </div> -->
+  </div>
+  <div style="display:none;padding:5px;">
+    <div>+57 3153410282 @neokpm</div>
+    <a style=" margin-left:auto;border-radius:5px;padding:3px;background:rgb(200,200,200);"
+      href="https://colombiatebusca.com/">
+      https://colombiatebusca.com/</a>
   </div>
 
   <!-- ===== DRIVER (TABS + SEARCH) ===== -->
   <div id="driver" style="
+      display:flex;
+      flex-direction:column;
+      gap:10px;
         padding: 5px;
         position: sticky;
         top: 0;
@@ -743,11 +842,13 @@
         z-index: 100;
       ">
     <div class="tabs">
+      <button id="crear" style="border:2px solid palegoldenrod;background:teal;color:palegoldenrod"><b>(+)
+          CREAR!!!</b></button>
       <button class="tab-btn active" id="tabPersonasBtn">🫂 Personas</button>
       <button class="tab-btn" id="tabPetsBtn">🐕 Mascotas</button>
       <button class="tab-btn" id="tabEdificiosBtn">🏢 Lugar</button>
       <button class="tab-btn" id="tabAnunciosBtn">📣 Anuncios</button>
-      <button class="tab-btn" id="tabColabBtn">🤝 Colaboradores</button>
+      <button class="tab-btn" id="tabColabBtn">🤝 Voluntad</button>
       <button class="tab-btn" id="tabMapBtn">🗺️ Mapa</button>
     </div>
 
@@ -764,129 +865,31 @@
 
   <!-- ===== PANEL PERSONAS ===== -->
   <div id="tabPersonas" class="tab-panel active">
-    <div class="crear">
-      (+) CREAR PERSONA
-      <form id="addForm">
-        <input type="text" id="nameInput" placeholder="Nombre de la persona" required />
-        <input type="text" id="locationInput" placeholder="Ubicación (opcional)" />
-        <select id="cityInput">
-          <option value="">Ciudad</option>
-        </select>
-        <button type="button" id="gpsBtn" class="gps-btn" title="Usar mi ubicación">📍</button>
-        <span id="locationDisplay" style="font-size:0.8rem; color:#666; min-width:120px;"></span>
-        <div style="min-width: 100%;">
-          🖼️ Dos opciones (URL o Subir imagen)
-          <br />
-          <!-- Campo URL -->
-          <input type="text" id="imageInput" placeholder="URL de imagen (opcional)" />
-          <!-- Previsualización de URL -->
-          <img id="urlPreview" class="photo-preview" style="display:none;" alt="Vista previa URL" />
-
-          <!-- Campo de archivo personalizado -->
-          <label class="custom-file-upload">
-            📷 Subir foto
-            <input type="file" id="photoInput" accept="image/*" />
-          </label>
-          <span class="file-name" id="fileLabel">Sube una foto</span>
-          <img id="photoPreview" class="photo-preview" style="display:none;" alt="Vista previa" />
-        </div>
-        <button type="submit">Reportar</button>
-      </form>
-    </div>
+    <button class="crear-btn" onclick="openCrearModal('person')">(+) CREAR PERSONA</button>
     <div id="list" class="list"></div>
   </div>
 
   <!-- ===== PANEL MASCOTAS ===== -->
   <div id="tabPets" class="tab-panel">
-    <div class="crear">
-      (+) CREAR MASCOTA
-      <form id="addFormP">
-        <input type="text" id="nameInputP" placeholder="Nombre de la mascota" required />
-        <input type="text" id="locationInputP" placeholder="Ubicación (opcional)" />
-        <select id="cityInputP">
-          <option value="">Ciudad</option>
-        </select>
-        <button type="button" id="gpsBtnP" class="gps-btn" title="Usar mi ubicación">📍</button>
-        <span id="locationDisplayP" style="font-size:0.8rem; color:#666; min-width:120px;"></span>
-        <div style="min-width: 100%;">
-          🖼️ Dos opciones (URL o Subir imagen)
-          <br />
-          <!-- Campo URL -->
-          <input type="text" id="imageInputP" placeholder="URL de imagen (opcional)" />
-          <!-- Previsualización de URL -->
-          <img id="urlPreviewP" class="photo-preview" style="display:none;" alt="Vista previa URL" />
-
-          <!-- Campo de archivo personalizado -->
-          <label class="custom-file-upload">
-            📷 Subir foto
-            <input type="file" id="photoInputP" accept="image/*" />
-          </label>
-          <span class="file-name" id="fileLabelP">Sube una foto</span>
-          <img id="photoPreviewP" class="photo-preview" style="display:none;" alt="Vista previa" />
-        </div>
-        <button type="submit">Reportar</button>
-      </form>
-    </div>
+    <button class="crear-btn" onclick="openCrearModal('pet')">(+) CREAR MASCOTA</button>
     <div id="listP" class="list"></div>
   </div>
 
   <!-- ===== PANEL EDIFICIOS ===== -->
   <div id="tabEdificios" class="tab-panel">
-    <div class="crear">
-      (+) CREAR UBICACIÓN
-      <form id="addFormB">
-        <input type="text" id="nameInputB" placeholder="Nombre o dirección del edificio" required />
-        <input type="text" id="locationInputB" placeholder="Ubicación (opcional)" />
-        <select id="cityInputB">
-          <option value="">Ciudad</option>
-        </select>
-        <button type="button" id="gpsBtnB" class="gps-btn" title="Usar mi ubicación">📍</button>
-        <span id="locationDisplayB" style="font-size:0.8rem; color:#666; min-width:120px;"></span>
-        <button type="submit">Reportar</button>
-      </form>
-    </div>
+    <button class="crear-btn" onclick="openCrearModal('building')">(+) CREAR UBICACIÓN</button>
     <div id="listB" class="list"></div>
   </div>
 
   <!-- ===== PANEL ANUNCIOS ===== -->
   <div id="tabAnuncios" class="tab-panel">
-    <div class="crear">
-      (+) CREAR ANUNCIO
-      <form id="addFormA" style="flex-direction:column; align-items:stretch;">
-        <textarea id="anuncioInput" rows="3" placeholder="Escribe un anuncio..." required style="
-              padding: 12px;
-              font-size: 1rem;
-              border-radius: 8px;
-              border: 1px solid #333;
-              background: #1a1d24;
-              color: #eaeaea;
-              resize: vertical;
-              min-height: 80px;
-              font-family: inherit;
-              width: 100%;
-              margin-bottom: 8px;
-            "></textarea>
-        <button type="submit" style="width:100%;">Publicar</button>
-      </form>
-    </div>
+    <button class="crear-btn" onclick="openCrearModal('anuncio')">(+) CREAR ANUNCIO</button>
     <div id="listA" class="list"></div>
   </div>
 
   <!-- ===== PANEL COLABORADORES ===== -->
   <div id="tabColab" class="tab-panel">
-    <div class="crear">
-      (+) UNIRME COMO COLABORADOR
-      <form id="addFormColab">
-        <input type="text" id="nameInputColab" placeholder="Nombre" required />
-        <input type="text" id="skillInputColab"
-          placeholder="¿Cómo puedes ayudar? (ej: transporte, primeros auxilios)" />
-        <input type="text" id="contactInputColab" placeholder="Contacto (teléfono/WhatsApp, opcional)" />
-        <select id="cityInputColab">
-          <option value="">Ciudad</option>
-        </select>
-        <button type="submit">Unirme</button>
-      </form>
-    </div>
+    <button class="crear-btn" onclick="openCrearModal('colaborador')">(+) UNIRME COMO COLABORADOR</button>
     <div id="listColab" class="list"></div>
   </div>
 
@@ -900,13 +903,120 @@
           border: 1px solid #333;
           background: #1a1d24;
           color: #eaeaea;
-          font-size: 0.95rem;
           min-width: 150px;
         ">
         <option value="">-- Seleccionar --</option>
       </select>
     </div>
     <div id="map" style="height:500px; width:100%; border-radius:10px; border:1px solid #333;"></div>
+  </div>
+
+  <!-- ===== CREAR MODAL (all creation forms) ===== -->
+  <div id="crearModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="crearModalTitle">
+    <div class="modal-content" style="max-width:560px; height:auto; max-height:90vh;">
+      <button class="modal-close" id="crearModalClose" aria-label="Cerrar">✕</button>
+      <h2 id="crearModalTitle">Crear</h2>
+      <div class="modal-divider"></div>
+
+      <!-- PERSONA -->
+      <div class="crear-form-wrap" data-type="person">
+        <form id="addForm">
+          <input type="text" id="nameInput" placeholder="Nombre de la persona" required />
+          <input type="text" id="locationInput" placeholder="Ubicación (opcional)" />
+          <select id="cityInput">
+            <option value="">Ciudad</option>
+          </select>
+          <button type="button" id="gpsBtn" class="gps-btn" title="Usar mi ubicación">📍</button>
+          <span id="locationDisplay" style="font-size:62%; color:#666; min-width:120px;"></span>
+          <div style="min-width: 100%;">
+            🖼️ Dos opciones (URL o Subir imagen)
+            <br />
+            <input type="text" id="imageInput" placeholder="URL de imagen (opcional)" />
+            <img id="urlPreview" class="photo-preview" style="display:none;" alt="Vista previa URL" />
+            <label class="custom-file-upload">
+              📷 Subir foto
+              <input type="file" id="photoInput" accept="image/*" />
+            </label>
+            <span class="file-name" id="fileLabel">Sube una foto</span>
+            <img id="photoPreview" class="photo-preview" style="display:none;" alt="Vista previa" />
+          </div>
+          <button type="submit">Reportar</button>
+        </form>
+      </div>
+
+      <!-- MASCOTA -->
+      <div class="crear-form-wrap" data-type="pet">
+        <form id="addFormP">
+          <input type="text" id="nameInputP" placeholder="Nombre de la mascota" required />
+          <input type="text" id="locationInputP" placeholder="Ubicación (opcional)" />
+          <select id="cityInputP">
+            <option value="">Ciudad</option>
+          </select>
+          <button type="button" id="gpsBtnP" class="gps-btn" title="Usar mi ubicación">📍</button>
+          <span id="locationDisplayP" style="font-size:0.8rem; color:#666; min-width:120px;"></span>
+          <div style="min-width: 100%;">
+            🖼️ Dos opciones (URL o Subir imagen)
+            <br />
+            <input type="text" id="imageInputP" placeholder="URL de imagen (opcional)" />
+            <img id="urlPreviewP" class="photo-preview" style="display:none;" alt="Vista previa URL" />
+            <label class="custom-file-upload">
+              📷 Subir foto
+              <input type="file" id="photoInputP" accept="image/*" />
+            </label>
+            <span class="file-name" id="fileLabelP">Sube una foto</span>
+            <img id="photoPreviewP" class="photo-preview" style="display:none;" alt="Vista previa" />
+          </div>
+          <button type="submit">Reportar</button>
+        </form>
+      </div>
+
+      <!-- UBICACIÓN / EDIFICIO -->
+      <div class="crear-form-wrap" data-type="building">
+        <form id="addFormB">
+          <input type="text" id="nameInputB" placeholder="Nombre o dirección del edificio" required />
+          <input type="text" id="locationInputB" placeholder="Ubicación (opcional)" />
+          <select id="cityInputB">
+            <option value="">Ciudad</option>
+          </select>
+          <button type="button" id="gpsBtnB" class="gps-btn" title="Usar mi ubicación">📍</button>
+          <span id="locationDisplayB" style="font-size:62%; color:#666; min-width:120px;"></span>
+          <button type="submit">Reportar</button>
+        </form>
+      </div>
+
+      <!-- ANUNCIO -->
+      <div class="crear-form-wrap" data-type="anuncio">
+        <form id="addFormA" style="flex-direction:column; align-items:stretch;">
+          <textarea id="anuncioInput" rows="3" placeholder="Escribe un anuncio..." required style="
+                padding: 12px;
+                border-radius: 8px;
+                border: 1px solid #333;
+                background: #1a1d24;
+                color: #eaeaea;
+                resize: vertical;
+                min-height: 80px;
+                font-family: inherit;
+                width: 100%;
+                margin-bottom: 8px;
+              "></textarea>
+          <button type="submit" style="width:100%;">Publicar</button>
+        </form>
+      </div>
+
+      <!-- COLABORADOR -->
+      <div class="crear-form-wrap" data-type="colaborador">
+        <form id="addFormColab">
+          <input type="text" id="nameInputColab" placeholder="Nombre" required />
+          <input type="text" id="skillInputColab"
+            placeholder="¿Cómo puedes ayudar? (ej: transporte, primeros auxilios)" />
+          <input type="text" id="contactInputColab" placeholder="Contacto (teléfono/WhatsApp, opcional)" />
+          <select id="cityInputColab">
+            <option value="">Ciudad</option>
+          </select>
+          <button type="submit">Unirme</button>
+        </form>
+      </div>
+    </div>
   </div>
 
   <!-- ===== MODAL ===== -->
@@ -1382,6 +1492,56 @@
     tabMapBtn.addEventListener("click", () => switchTab(tabMapBtn, tabMapPanel, "map"));
 
     // ================================================================
+    //  CREAR MODAL
+    //  Unified modal hosting all creation forms. Only the form matching
+    //  the requested type is shown; the others stay hidden.
+    // ================================================================
+    const crearModal = document.getElementById("crearModal");
+    const crearModalTitle = document.getElementById("crearModalTitle");
+    const crearModalClose = document.getElementById("crearModalClose");
+    const crearFormWraps = crearModal.querySelectorAll(".crear-form-wrap");
+
+    const CREAR_META = {
+      person: {title: "Crear persona"},
+      pet: {title: "Crear mascota"},
+      building: {title: "Crear ubicación"},
+      anuncio: {title: "Crear anuncio"},
+      colaborador: {title: "Unirme como colaborador"},
+    };
+
+    function openCrearModal(type) {
+      if (!CREAR_META[type]) type = "person";
+      crearModalTitle.textContent = CREAR_META[type].title;
+      crearFormWraps.forEach(w => {
+        w.classList.toggle("active", w.dataset.type === type);
+      });
+      crearModal.classList.add("open");
+    }
+
+    function closeCrearModal() {
+      crearModal.classList.remove("open");
+    }
+
+    crearModalClose.addEventListener("click", closeCrearModal);
+    crearModal.addEventListener("click", (e) => {
+      if (e.target === crearModal) closeCrearModal();
+    });
+
+    // Top (+) CREAR!!! button: open modal for the currently active tab.
+    document.getElementById("crear").addEventListener("click", () => {
+      const activeBtn = document.querySelector(".tab-btn.active");
+      let type = "person";
+      if (activeBtn) {
+        const id = activeBtn.id;
+        if (id === "tabPetsBtn") type = "pet";
+        else if (id === "tabEdificiosBtn") type = "building";
+        else if (id === "tabAnunciosBtn") type = "anuncio";
+        else if (id === "tabColabBtn") type = "colaborador";
+      }
+      openCrearModal(type);
+    });
+
+    // ================================================================
     //  MODAL
     // ================================================================
     const modal = document.getElementById("modal");
@@ -1420,6 +1580,7 @@
     modal.addEventListener("click", (e) => {if (e.target === modal) closeModal();});
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
+      if (crearModal.classList.contains("open")) closeCrearModal();
       if (modal.classList.contains("open")) closeModal();
       if (mapModal.classList.contains("open")) closeMapPicker();
     });
@@ -1774,11 +1935,11 @@
       ${hasLoc ? `<div id="modalMiniMapContainer" style="height:min(60vh,600px);border-radius:10px; margin-bottom:10px; overflow:hidden;"></div>` : ""}
       <button type="button" class="btn-small" id="modalSetLocationBtn" style="margin-bottom:10px;">📍 ${hasLoc ? "Cambiar ubicación" : "Agregar ubicación"}</button>
       <div style="margin-bottom:14px;">
-        <div style="color:#999; font-size:0.8rem; margin-bottom:6px;">📍 Otras ubicaciones posibles</div>
+        <div style="color:#999; margin-bottom:6px;">📍 Otras ubicaciones posibles</div>
         <div id="modalExtraLocationsContainer" style="margin-bottom:6px;"></div>
         <button type="button" class="btn-small" id="modalAddExtraLocationBtn">+ Agregar otra ubicación posible</button>
       </div>
-      <label style="display:block; font-size:0.8rem; color:#999; margin-bottom:4px;">${item.photo_url ? "Cambiar foto" : "Agregar foto"}</label>
+      <label style="display:block; color:#999; margin-bottom:4px;">${item.photo_url ? "Cambiar foto" : "Agregar foto"}</label>
       <input type="file" accept="image/*" id="modalPhotoInput"
         style="width:100%; padding:8px; border-radius:8px; border:1px solid #333; background:#1a1d24; color:#eaeaea;" />
     `;
@@ -1812,7 +1973,7 @@
         const hasLoc = item.lat != null && item.lng != null;
         modalBody.innerHTML = `
           ${hasLoc ? `<div id="modalMiniMapContainer" style="height:min(60vh,600px); border-radius:10px; margin-bottom:10px; overflow:hidden;"></div>` : ""}
-          <div style="color:#888; font-size:0.95rem; margin-bottom:8px;">
+          <div style="color:#888; margin-bottom:8px;">
             ${hasLoc
             ? `📐 ${locationLinksHtml(item.lat, item.lng)}`
             : "Este lugar no tiene ubicación en el mapa todavía."}
@@ -1820,7 +1981,7 @@
           <button type="button" class="btn-small" id="modalSetLocationBtn">📍 ${hasLoc ? "Cambiar ubicación" : "Agregar ubicación"}</button>
           ${hasLoc ? `
             <div style="margin-top:14px;">
-              <div style="color:#999; font-size:0.8rem; margin-bottom:6px;">📍 Items cercanos (menos de 1km)</div>
+              <div style="color:#999;  margin-bottom:6px;">📍 Items cercanos (menos de 1km)</div>
               <div id="modalNearbyContainer">${nearbyItemsHtml(item.lat, item.lng, item.id, "building")}</div>
             </div>
           ` : ""}
@@ -1843,7 +2004,7 @@
         }
         if (hasLoc) initModalMiniMap(item.lat, item.lng);
       } else {
-        modalBody.innerHTML = `<div style="color:#888; font-size:0.95rem;">Detalles del reporte</div>`;
+        modalBody.innerHTML = `<div style="color:#888;">Detalles del reporte</div>`;
       }
 
       // --- Acciones del modal (botones) ---
@@ -2133,6 +2294,7 @@
       gpsBtn.title = "Usar mi ubicación";
       document.getElementById("locationDisplay").textContent = "";
       loadList();
+      closeCrearModal();
     });
 
     gpsBtn.addEventListener("click", () => openMapPicker("person"));
@@ -2337,6 +2499,7 @@
       gpsBtnP.title = "Usar mi ubicación";
       document.getElementById("locationDisplayP").textContent = "";
       loadListP();
+      closeCrearModal();
     });
 
     gpsBtnP.addEventListener("click", () => openMapPicker("pet"));
@@ -2443,6 +2606,7 @@
       gpsBtnB.title = "Usar mi ubicación";
       document.getElementById("locationDisplayB").textContent = "";
       loadListB();
+      closeCrearModal();
     });
 
     gpsBtnB.addEventListener("click", () => openMapPicker("building"));
@@ -2521,6 +2685,7 @@
       });
       anuncioInput.value = "";
       loadListA();
+      closeCrearModal();
     });
 
     async function removeA(id) {
