@@ -22,8 +22,8 @@
     }
 
     h1 {
-      font-size: 1.3rem;
-      margin: 0 0 12px 0;
+      font-size: 1rem;
+      margin: 0 0 5px 0;
     }
 
     #commentsContainer {
@@ -714,11 +714,11 @@
 
   <!-- ===== HEADER ===== -->
   <div style="padding: 5px">
-    <h1>🚨 SISMOINFO.CO - ADMIN: +57 3153410282 IG:@neokpm</h1>
     <button id="copyLinkBtn"
       style="margin-bottom: 5px; background: teal; border: none; padding: 10px 16px; border-radius: 8px; color: white; cursor: pointer;">
-      http://sismoinfo.co (COPIAR LINK)
+      <h2>🚨 SISMOINFO.CO (COPIAR LINK)</h2>
     </button>
+    <div>ADMIN: +57 3153410282 IG:@neokpm</div>
     <br />
     <a style="background:rgb(200,200,200);" href="https://colombiatebusca.com/">https://colombiatebusca.com/</a>
     <div id="apiTargetToggle" style="display: none; margin-bottom: 5px;">
@@ -2563,15 +2563,8 @@
     // ================================================================
     function updateTabCounts() {
       const set = (id, n) => {
-        const btn = document.getElementById(id);
-        if (!btn) return;
-        let badge = btn.querySelector(".n");
-        if (!badge) {
-          badge = document.createElement("span");
-          badge.className = "n";
-          btn.appendChild(badge);
-        }
-        badge.textContent = n;
+        const badge = document.querySelector(`#${id} .n`);
+        if (badge) badge.textContent = n;
       };
       set("tabPersonasBtn", personsData.length);
       set("tabPetsBtn", petsData.length);
