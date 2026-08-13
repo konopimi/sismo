@@ -403,10 +403,10 @@
       /* border: 2px solid rgba(127, 127, 127, 0.62); */
       /* background: #1a1d24; */
       /* color: #888; */
-      /* /* font-size: 0.95rem; */
-      */
+      /* font-size: 0.95rem; */
       /* cursor: pointer; */
       /* transition: background 0.15s; */
+      position: relative;
     }
 
     .tab-btn.active {
@@ -414,21 +414,29 @@
       color: white;
     }
 
-    /* live count badge on category tabs */
+    /* live count badge on category tabs, floating top-right corner */
     .tab-btn .n {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
       font-family: ui-monospace, monospace;
-      /* font-size: 0.68rem; */
+      font-size: 0.62rem;
       font-weight: 700;
-      padding: 1px 6px;
-      margin-left: 5px;
+      line-height: 16px;
+      text-align: center;
       border-radius: 999px;
-      background: rgba(0, 0, 0, 0.22);
-      color: inherit;
-      vertical-align: middle;
+      background: #d64545;
+      color: white;
+      box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.9);
     }
 
     .tab-btn.active .n {
-      background: rgba(255, 255, 255, 0.22);
+      background: white;
+      color: #d64545;
+      box-shadow: 0 0 0 2px #d64545;
     }
 
     .tab-panel>button {
@@ -968,7 +976,7 @@
   <div class="top-bar" style="display:flex;align-items: center;">
     <img src="logo.png"
       style="max-height:30px;margin-right:13px;transform:scale(162%) translate(-5px,3px);z-index:999;" />
-    <b style="flex:1;color:palegoldenrod;font-size:110%; ;">SISMOINFO.CO ⛑️</b>
+    <b style="flex:1;font-size:110%; ;"><span style="color:#FCD116;">SISMO</span><span style="color:#3A5DC5;">INFO</span><span style="color:#CE1126;">.CO</span> ⛑️</b>
     <button id="copyLinkBtn">
       🔗 LINK
     </button>
@@ -1221,11 +1229,11 @@
     <div class="tabs">
       <button id="crear" style="border:2px solid palegoldenrod;background:teal;color:palegoldenrod"><b>(+)
           CREAR!!!</b></button>
-      <button class="tab-btn active" id="tabPersonasBtn">🫂 Personas</button>
-      <button class="tab-btn" id="tabPetsBtn">🐕 Mascotas</button>
-      <button class="tab-btn" id="tabEdificiosBtn">🏢 Lugar</button>
-      <button class="tab-btn" id="tabAnunciosBtn">📣 Anuncios</button>
-      <button class="tab-btn" id="tabColabBtn">🤝 Voluntad</button>
+      <button class="tab-btn active" id="tabPersonasBtn">🫂 Personas<span class="n">0</span></button>
+      <button class="tab-btn" id="tabPetsBtn">🐕 Mascotas<span class="n">0</span></button>
+      <button class="tab-btn" id="tabEdificiosBtn">🏢 Lugar<span class="n">0</span></button>
+      <button class="tab-btn" id="tabAnunciosBtn">📣 Anuncios<span class="n">0</span></button>
+      <button class="tab-btn" id="tabColabBtn">🤝 Voluntad<span class="n">0</span></button>
       <button class="tab-btn" id="tabMapBtn">🗺️ Mapa</button>
     </div>
 
