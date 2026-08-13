@@ -1050,7 +1050,7 @@
     </div>
     <div id="map" style=""></div>
     <div id="mapSidebar" class="map-sidebar">
-      <div class="map-sidebar-title">🫂 Personas · 🐕 Mascotas</div>
+      <div class="map-sidebar-title">🫂 Personas · 🐕 Mascotas · 🏢 Lugares</div>
       <div id="mapSidebarList" class="map-sidebar-list"></div>
     </div>
   </div>
@@ -3142,16 +3142,19 @@ style="${isCano && 'color:teal;'}"
       building: {emoji: "🏢", color: "#e0a63c", data: () => buildingsData, tabArgs: () => [tabEdificiosBtn, tabEdificios, "building"]},
     };
 
+    let mapMarkersById = {};
+
     function renderMapMarkers() {
       if (!window.map) return;
       if (mapMarkersLayer) window.map.removeLayer(mapMarkersLayer);
       mapMarkersLayer = L.layerGroup().addTo(window.map);
+      mapMarkersById = {};
 
       Object.keys(MAP_MARKER_META).forEach(type => {
         const {emoji, color, data} = MAP_MARKER_META[type];
         data().forEach(item => {
           if (item.lat == null || item.lng == null) return;
-          L.marker([item.lat, item.lng], {
+          const marker = L.marker([item.lat, item.lng], {
             icon: L.divIcon({
               className: "",
               html: `<div style="
@@ -3176,31 +3179,34 @@ style="${isCano && 'color:teal;'}"
               ${item.status ? `<span class="status-tag ${item.status}">${item.status}</span><br>` : ""}
               <a href="#" onclick="window.__mapPopupOpen('${item.id}','${type}'); return false;">Ver detalle</a>
             `);
+          mapMarkersById[`${type}:${item.id}`] = marker;
         });
       });
 
       renderMapSidebar();
     }
 
-    // Sidebar del mapa: listado minimalista de personas y mascotas.
-    const MAP_SIDEBAR_EMOJI = {person: "🫂", pet: "🐕"};
+    // Sidebar del mapa: listado minimalista de personas, mascotas y lugares.
+    const MAP_SIDEBAR_EMOJI = {person: "🫂", pet: "🐕", building: "🏢"};
 
     function mapSidebarCardHtml(item, type) {
-      const found = item.status === "encontrado";
+      const positive = item.status === "encontrado" || item.status === "seguro";
       const photo = item.photo_url || item.image;
-      const placeholder = type === "pet" ? PET_PLACEHOLDER : PERSON_PLACEHOLDER;
+      const placeholder = type === "pet" ? PET_PLACEHOLDER : type === "building" ? null : PERSON_PLACEHOLDER;
       const imgHtml = photo
         ? `<img class="map-sidebar-photo" src="${escapeHtml(photo)}" alt="" />`
-        : `<img class="map-sidebar-photo" style="opacity:0.62;" src="${placeholder}" alt="" />`;
+        : placeholder
+          ? `<img class="map-sidebar-photo" style="opacity:0.62;" src="${placeholder}" alt="" />`
+          : `<div class="map-sidebar-photo" style="display:flex;align-items:center;justify-content:center;font-size:20px;opacity:0.5;">${MAP_SIDEBAR_EMOJI[type]}</div>`;
       const location = item.city || item.location || "Sin ubicación";
       return `
-        <div class="map-sidebar-card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="${type}">
+        <div class="map-sidebar-card ${positive ? 'encontrado' : ''}" data-id="${item.id}" data-type="${type}">
           ${imgHtml}
           <div class="map-sidebar-info">
             <span class="map-sidebar-name">${MAP_SIDEBAR_EMOJI[type]} ${escapeHtml(item.name)}</span>
             <span class="map-sidebar-meta">${escapeHtml(location)}</span>
           </div>
-          <span class="status-tag ${found ? 'encontrado' : ''}">${item.status}</span>
+          <span class="status-tag ${item.status}">${item.status}</span>
         </div>
       `;
     }
@@ -3208,10 +3214,16 @@ style="${isCano && 'color:teal;'}"
     function renderMapSidebar() {
       const listEl = document.getElementById("mapSidebarList");
       if (!listEl) return;
+      const hasCoords = ({item}) => item.lat != null && item.lng != null;
       const items = [
         ...personsData.map(item => ({item, type: "person"})),
         ...petsData.map(item => ({item, type: "pet"})),
-      ].sort((a, b) => new Date(b.item.created_at) - new Date(a.item.created_at));
+        ...buildingsData.map(item => ({item, type: "building"})),
+      ].sort((a, b) => {
+        const locatableDiff = hasCoords(b) - hasCoords(a);
+        if (locatableDiff !== 0) return locatableDiff;
+        return new Date(b.item.created_at) - new Date(a.item.created_at);
+      });
       if (!items.length) {
         listEl.innerHTML = `<div style="color:#777; font-size:0.78rem; padding:8px;">Sin registros todavía.</div>`;
         return;
@@ -3219,17 +3231,20 @@ style="${isCano && 'color:teal;'}"
       listEl.innerHTML = items.map(({item, type}) => mapSidebarCardHtml(item, type)).join("");
     }
 
+    // Al hacer click en una card del sidebar, enfocamos su marcador en el
+    // mapa (feedback de PR: no abrir el modal directamente desde acá; más
+    // adelante se define cómo mostrar más info en el contexto del mapa).
     document.getElementById("mapSidebarList").addEventListener("click", (e) => {
       const card = e.target.closest(".map-sidebar-card");
       if (!card) return;
       const type = card.dataset.type;
-      const source = type === "pet" ? petsData : personsData;
+      const source = type === "pet" ? petsData : type === "building" ? buildingsData : personsData;
       const item = source.find(p => p.id === card.dataset.id);
-      if (!item) return;
-      if (item.lat != null && item.lng != null && window.map) {
-        window.map.flyTo([item.lat, item.lng], 15);
-      }
-      openModalForItem(item, type);
+      if (!item || !window.map || item.lat == null || item.lng == null) return;
+      // Acercar directamente al punto exacto de su marcador y mostrar el popup.
+      window.map.flyTo([item.lat, item.lng], 17);
+      const marker = mapMarkersById[`${type}:${item.id}`];
+      if (marker) marker.openPopup();
     });
 
     window.__mapPopupOpen = function (id, type) {
