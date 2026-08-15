@@ -2360,8 +2360,17 @@ function renderA() {
         hour: "2-digit",
         minute: "2-digit",
       });
+      const mainImg =
+        item.photo_url ||
+        item.image ||
+        (Array.isArray(item.images) && item.images[0]) ||
+        null;
+      const imgHtml = mainImg
+        ? `<img class="card-photo" src="${escapeHtml(mainImg)}" alt="Imagen" />`
+        : "";
       return `
       <div class="card" data-id="${item.id}" style="display:flex;flex-direction:column;">
+        ${imgHtml}
         <div class="info" style="padding:5px;">
           <pre class="anuncio-text">${escapeHtml(item.text)}</pre>
           <span class="meta">${date}</span>

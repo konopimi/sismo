@@ -1122,6 +1122,47 @@ textarea {
   margin-bottom: 12px;
 }
 
+/* ===== Galería de imágenes de anuncios ===== */
+.anuncio-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.anuncio-gallery-item {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  background: #1a1d24;
+}
+
+.anuncio-gallery-item.is-main {
+  border-color: #fcd116;
+}
+
+.anuncio-gallery-item img {
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+  display: block;
+}
+
+.anuncio-gallery-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+}
+
+.anuncio-main-badge {
+  font-size: 0.7rem;
+  color: #fcd116;
+  text-align: center;
+  padding: 2px 4px;
+}
+
 .modal-actions {
   display: flex;
   gap: 5px;
