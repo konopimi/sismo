@@ -52,6 +52,7 @@ const STATUS_META = {
   seguro:       { color: "#3fa34d", cssClass: "seguro", label: "seguro" },
   danado:       { color: "#e0a63c", cssClass: "danado", label: "dañado" },
   colapsado:    { color: "#b53838", cssClass: "colapsado", label: "colapsado" },
+  acopio:       { color: "#ffffff", cssClass: "acopio", label: "📦 acopio" },
   angel:        { color: "#add8e6", cssClass: "angel", label: "👼" },
 };
 window.STATUS_META = STATUS_META;

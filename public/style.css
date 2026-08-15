@@ -788,6 +788,10 @@ textarea {
   border-left-color: #b53838;
 }
 
+.card.acopio {
+  border-left-color: #ffffff;
+}
+
 .card .card-inner {
   display: flex;
   flex: 1;
@@ -958,6 +962,11 @@ textarea {
 
 .status-tag.colapsado {
   background: #b53838;
+}
+
+.status-tag.acopio {
+  background: #ffffff;
+  color: #222;
 }
 
 .empty {

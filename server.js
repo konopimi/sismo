@@ -635,7 +635,7 @@ app.patch("/api/buildings/:id/photo", handlePhotoPatch("buildings"));
 
 app.patch("/api/buildings/:id", (req, res) => {
   const { status, image, lat, lng } = req.body || {};
-  if (status && !["seguro", "danado", "colapsado"].includes(status)) {
+  if (status && !["seguro", "danado", "colapsado", "acopio"].includes(status)) {
     return res.status(400).json({ error: "invalid status" });
   }
   const fields = [];

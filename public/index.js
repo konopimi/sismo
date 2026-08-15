@@ -1488,6 +1488,7 @@ function openModalForItem(item, type) {
     actionsHtml += `<button class="btn-small btn-seguro${s === "seguro" ? " btn-active" : ""}" ${s === "seguro" ? "disabled" : ""} onclick="setStatusB('${item.id}','seguro'); closeModal();">Seguro</button>`;
     actionsHtml += `<button class="btn-small btn-danado${s === "danado" ? " btn-active" : ""}" ${s === "danado" ? "disabled" : ""} onclick="setStatusB('${item.id}','danado'); closeModal();">Dañado</button>`;
     actionsHtml += `<button class="btn-small btn-colapsado${s === "colapsado" ? " btn-active" : ""}" ${s === "colapsado" ? "disabled" : ""} onclick="setStatusB('${item.id}','colapsado'); closeModal();">Colapsado</button>`;
+    actionsHtml += `<button class="btn-small btn-acopio${s === "acopio" ? " btn-active" : ""}" ${s === "acopio" ? "disabled" : ""} onclick="setStatusB('${item.id}','acopio'); closeModal();">📦 Acopio</button>`;
     if (isLocalhost) {
       actionsHtml += `<button class="btn-small btn-delete" onclick="removeB('${item.id}'); closeModal();">✕ Eliminar</button>`;
     }
@@ -2165,6 +2166,7 @@ function buildingCardHtml(item) {
               <button class="btn-seguro${statusClass === "seguro" ? " btn-active" : ""}" ${statusClass === "seguro" ? "disabled" : ""} onclick="setStatusB('${item.id}','seguro')">🫶</button>
               <button style="display:none;"class="btn-danado${statusClass === "danado" ? " btn-active" : ""}" ${statusClass === "danado" ? "disabled" : ""} onclick="setStatusB('${item.id}','danado')">Dañado</button>
               <button class=" btn-colapsado${statusClass === "colapsado" ? " btn-active" : ""}" ${statusClass === "colapsado" ? "disabled" : ""} onclick="setStatusB('${item.id}','colapsado')">💥</button>
+              <button class=" btn-acopio${statusClass === "acopio" ? " btn-active" : ""}" ${statusClass === "acopio" ? "disabled" : ""} onclick="setStatusB('${item.id}','acopio')">📦</button>
               ${isLocalhost
       ? `<button class="" onclick="removeB('${item.id}')">✕</button>`
       : ""

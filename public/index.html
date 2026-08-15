@@ -102,6 +102,7 @@
           <button class="filter-pill" data-status="seguro">🫶 Seguro</button>
           <button class="filter-pill" data-status="danado">⚠️ Dañado</button>
           <button class="filter-pill" data-status="colapsado">💥 Colapsado</button>
+          <button class="filter-pill" data-status="acopio">📦 Acopio</button>
         </div>
         <select class="filter-select" data-filter="city">
           <option value="">📍 TODAS</option>
@@ -136,20 +137,39 @@
   </div>
   <!-- ===== PANEL MAPA ===== -->
   <div id="tabMapPanel" class="tab-panel">
-    <div>
+    <div id="map">
+
       <!-- <label for="citySelectorMap" style="color:#ccc; margin-right:8px;">Ir a ciudad:</label> -->
-      <div style="
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            display: flex;
-            flex-direction: column;
-            align-items: right;
-            gap: 10px;
-            z-index: 999;
-          ">
+      <div id="mapTypeFilter" style="
+              display: flex;
+              /* flex-direction: column; */
+              position:absolute;
+              /* top:calc(var(--top-bar-height) + 3px); */
+              top:3px;
+              right:3px;
+              justify-content:right;
+              gap: 4px;
+              background: rgba(10, 10, 10, 0.38);
+              border-radius: 10px 10px 10px 10px ;
+              padding:3px;
+              border: 1px solid rgba(127, 127, 127, 0.6);
+              z-index:99999999999999999999999999;
+            ">
+        <button class="filter-pill active" data-map-type="person">🫂</button>
+        <button class="filter-pill active" data-map-type="pet">🐕</button>
+        <button class="filter-pill active" data-map-type="building">🏢</button>
+        <label style="
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                cursor: pointer;
+              ">
+          <span style="font-size: 0.75rem; color: #ccc">🔥</span>
+          <input type="checkbox" id="heatmapToggle" checked onchange="toggleHeatmap(this.checked)" />
+        </label>
+
         <select id="citySelectorMap" style="
-              padding: 8px 12px;
+              padding: 3px 5px;
               border-radius: 8px;
               border: 1px solid #333;
               background: rgba(10, 10, 10, 0.8);
@@ -158,42 +178,7 @@
             ">
           <option value="">-- 📍 IR A --</option>
         </select>
-        <div id="mapTypeFilter" style="
-              display: flex;
-              /* flex-direction: column; */
-              gap: 4px;
-              background: rgba(10, 10, 10, 0.1);
-              /* padding: 6px; */
-              border-radius: 8px;
-              border: 1px solid rgba(127, 127, 127, 0.6);
-            ">
-          <button class="filter-pill active" data-map-type="person">🫂</button>
-          <button class="filter-pill active" data-map-type="pet">🐕</button>
-          <button class="filter-pill active" data-map-type="building">🏢</button>
-        </div>
-        <div style="
-              background: rgba(10, 10, 10, 0.8);
-              padding: 3px 5px;
-              border-radius: 5px;
-              border: 1px solid rgba(127, 127, 127, 0.6);
-              margin-left: auto;
-              margin-bottom: 6px;
-            ">
-          <label style="
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                cursor: pointer;
-              ">
-            <span style="font-size: 0.75rem; color: #ccc">Mapa de calor 🔥
-            </span>
-            <input type="checkbox" id="heatmapToggle" onchange="toggleHeatmap(this.checked)" />
-          </label>
-        </div>
       </div>
-    </div>
-    <div id="map">
-
       <div id="mapSidebar" class="map-sidebar">
         <div class="map-sidebar-title">🫂 Personas · 🐕 Mascotas</div>
         <div id="mapSidebarList" class="map-sidebar-list"></div>
@@ -203,6 +188,7 @@
       <div id="offscreenArrows"></div>
 
     </div>
+
   </div>
   <!-- ===== PANEL SISMOS ===== -->
   <div id="tabSismos" class="tab-panel">
@@ -551,7 +537,7 @@
               background: #1a1d24;
               color: #eaeaea;
             " />
-      <input type="number" id="mapPickerLngInput" step="any" placeholder="Longitud" style="
+        <input type="number" id="mapPickerLngInput" step="any" placeholder="Longitud" style="
               flex: 1 1 120px;
               padding: 10px;
               border-radius: 8px;
@@ -559,11 +545,11 @@
               background: #1a1d24;
               color: #eaeaea;
             " />
-      <button type="button" id="mapPickerGoBtn">
-        Ir
-      </button>
-    </div>
-    <div id="mapPickerContainer"></div>
+        <button type="button" id="mapPickerGoBtn">
+          Ir
+        </button>
+      </div>
+      <div id="mapPickerContainer"></div>
     </div>
     <div class="modal-actions" data-modal-footer>
       <button type="button" id="mapPickerConfirm">
