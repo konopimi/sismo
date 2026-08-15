@@ -537,19 +537,22 @@ function switchTab(activeBtn, activePanel, tabType) {
   // Reset filters for the incoming tab (mirrors search reset on tab switch).
   if (tabType && filterState[tabType]) resetFilters(tabType);
 
-  // Lógica específica según el tipo de tab
-  if (tabType === "person") {
-    currentRenderFn = render; // Renderizar lista de personas
-  } else if (tabType === "pet") {
-    currentRenderFn = renderP; // Renderizar lista de mascotas
-  } else if (tabType === "building") {
-    currentRenderFn = renderB; // Renderizar lista de edificios
-  } else if (tabType === "anuncio") {
-    currentRenderFn = renderA; // Renderizar anuncios
-  } else if (tabType === "colaborador") {
-    currentRenderFn = renderColab; // Renderizar colaboradores
-  } else if (tabType === "map") {
-    currentRenderFn = () => { }; // El mapa tiene su propio selector de ciudad
+  // Lookup table for the render function of each tab. Tabs with side
+  // effects (map, sismos) still need their own branch below.
+  const RENDER_FN_BY_TAB = {
+    person: render,
+    pet: renderP,
+    building: renderB,
+    anuncio: renderA,
+    colaborador: renderColab,
+    map: () => {},
+    wiki: () => {},
+    sismos: () => {},
+  };
+  currentRenderFn = RENDER_FN_BY_TAB[tabType] || (() => {});
+
+  // Side effects specific to certain tabs.
+  if (tabType === "map") {
     // Crear el mapa una sola vez
     if (!window.sismoMap) {
       initMap();
@@ -561,10 +564,7 @@ function switchTab(activeBtn, activePanel, tabType) {
         renderMapMarkers();
       }
     }, 200);
-  } else if (tabType === "wiki") {
-    currentRenderFn = () => { }; // Wiki is static content
   } else if (tabType === "sismos") {
-    currentRenderFn = () => { };
     if (!window.sismoChart) {
       initSismoChart();
     }
