@@ -72,8 +72,6 @@ const TYPE_REGISTRY = {
   person: {
     data: () => personsData,
     emoji: "🫂",
-    btn: tabPersonasBtn,
-    panel: tabPersonas,
     apiType: "disappeared",
     createTitle: "Crear persona",
     renderFn: () => render,
@@ -81,8 +79,6 @@ const TYPE_REGISTRY = {
   pet: {
     data: () => petsData,
     emoji: "🐕",
-    btn: tabPetsBtn,
-    panel: tabPets,
     apiType: "pets",
     createTitle: "Crear mascota",
     renderFn: () => renderP,
@@ -90,8 +86,6 @@ const TYPE_REGISTRY = {
   building: {
     data: () => buildingsData,
     emoji: "🏢",
-    btn: tabEdificiosBtn,
-    panel: tabEdificios,
     apiType: "buildings",
     createTitle: "Crear ubicación",
     renderFn: () => renderB,
@@ -99,8 +93,6 @@ const TYPE_REGISTRY = {
   anuncio: {
     data: () => anunciosData,
     emoji: "📢",
-    btn: tabAnunciosBtn,
-    panel: tabAnuncios,
     apiType: "anuncios",
     createTitle: "Crear anuncio",
     renderFn: () => renderA,
@@ -108,25 +100,17 @@ const TYPE_REGISTRY = {
   colaborador: {
     data: () => colabData,
     emoji: "🤝",
-    btn: tabColabBtn,
-    panel: tabColab,
     apiType: "collaborators",
     createTitle: "Colaborar",
     renderFn: () => renderColab,
   },
   map: {
-    btn: tabMapBtn,
-    panel: tabMapPanel,
     renderFn: () => {},
   },
   wiki: {
-    btn: wikiBtn,
-    panel: tabWiki,
     renderFn: () => {},
   },
   sismos: {
-    btn: tabSismosBtn,
-    panel: tabSismos,
     renderFn: () => {},
   },
 };
