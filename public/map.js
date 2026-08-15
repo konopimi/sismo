@@ -47,7 +47,7 @@ function visibleMapItems() {
 // Single source of truth for status semantics (color, CSS class, label).
 // Exposed on window so index.js can also use it.
 const STATUS_META = {
-  desaparecido: { color: "#d64545", cssClass: "desaparecido", label: "desaparecido", icon: "❓" },
+  desaparecido: { color: "#d64545", cssClass: "desaparecido", label: "desaparecido", icon: "🔍" },
   encontrado:   { color: "#3fa34d", cssClass: "encontrado", label: "encontrado", icon: "✅" },
   seguro:       { color: "#3fa34d", cssClass: "seguro", label: "seguro", icon: "🫶" },
   danado:       { color: "#e0a63c", cssClass: "danado", label: "dañado", icon: "⚠️" },
