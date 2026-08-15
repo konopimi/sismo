@@ -13,12 +13,12 @@
 //   7. Adds city_normalized and department_normalized fields
 //   8. Writes parsed_encontrados_normalized.json
 
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
 
-const INPUT = path.join(__dirname, "parsed_encontrados.json");
-const CITIES = path.join(__dirname, "public", "cities.json");
-const OUTPUT = path.join(__dirname, "parsed_encontrados_normalized.json");
+const INPUT = "/home/kpm/.local/src/sismo_spider/parsed_encontrados.json";
+const CITIES = "/home/kpm/.local/src/sismo/public/cities.json";
+const OUTPUT =
+  "/home/kpm/.local/src/sismo_spider/parsed_encontrados_normalized.json";
 
 // --- helpers ---
 // Lowercase + strip tildes + trim, so "Quibdó" and "quibdo" match.
@@ -27,6 +27,7 @@ const normalize = (s) =>
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
     .trim();
 
 // --- load cities.json ---
