@@ -56,6 +56,51 @@ function resolveItemCoords(item) {
   return [null, null];
 }
 
+// Pixel distance between cluster centers when two+ types collide at the
+// same location. Kept small so the circles stay visually grouped.
+const CLUSTER_OFFSET_D = 14;
+
+// Precomputed per render: rounded "lat,lng" -> array of types present there.
+// Lets iconCreateFunction look up collisions without re-scanning all data.
+let clusterCollisionMap = {};
+
+function buildClusterCollisionMap() {
+  const map = {};
+  Object.keys(MAP_MARKER_META).forEach((type) => {
+    if (!isTypeVisible(type)) return;
+    MAP_MARKER_META[type].data().forEach((item) => {
+      const [lat, lng] = resolveItemCoords(item);
+      if (lat == null || lng == null) return;
+      const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+      if (!map[key]) map[key] = [];
+      if (!map[key].includes(type)) map[key].push(type);
+    });
+  });
+  clusterCollisionMap = map;
+}
+
+// Return the [dx, dy] pixel offset for a cluster of `type` at `latlng`,
+// so overlapping clusters of different types don't sit on top of each
+// other. 1 type -> centered; 2 types -> 1D line; 3 types -> triangle.
+function computeClusterOffset(type, latlng) {
+  const key = `${latlng.lat.toFixed(5)},${latlng.lng.toFixed(5)}`;
+  const present = clusterCollisionMap[key] || [];
+  const n = present.length;
+  if (n <= 1) return [0, 0];
+  const idx = present.indexOf(type);
+  if (idx < 0) return [0, 0];
+  if (n === 2) {
+    return idx === 0 ? [-CLUSTER_OFFSET_D, 0] : [CLUSTER_OFFSET_D, 0];
+  }
+  // n === 3: triangle (top, bottom-left, bottom-right).
+  const tri = [
+    [0, -CLUSTER_OFFSET_D],
+    [-CLUSTER_OFFSET_D, CLUSTER_OFFSET_D],
+    [CLUSTER_OFFSET_D, CLUSTER_OFFSET_D],
+  ];
+  return tri[idx];
+}
+
 function renderCityMarkers() {
   if (!window.sismoMap) return;
   if (cityMarkersLayer) {
@@ -269,6 +314,10 @@ function renderMapMarkers() {
   if (!window.sismoMap) return;
   if (mapMarkersLayer) window.sismoMap.removeLayer(mapMarkersLayer);
 
+  // Precompute which types share a location so cluster icons can be
+  // nudged apart when they'd otherwise overlap.
+  buildClusterCollisionMap();
+
   // One cluster group per type so clusters never mix "apples with
   // oranges": a person cluster only ever contains persons, a pet cluster
   // only pets, etc. Each group gets its own iconCreateFunction that knows
@@ -283,6 +332,9 @@ function renderMapMarkers() {
       iconCreateFunction: (cluster) => {
         const total = cluster.getChildCount();
         const size = total < 10 ? "small" : total < 100 ? "medium" : "large";
+        // Shift the icon so colliding clusters of different types spread
+        // out (line for 2, triangle for 3) instead of stacking exactly.
+        const [dx, dy] = computeClusterOffset(type, cluster.getLatLng());
         return L.divIcon({
           html: `<div class="cluster-counts">
                    <span class="cluster-emoji">${emoji}</span>
@@ -290,6 +342,7 @@ function renderMapMarkers() {
                  </div>`,
           className: `marker-cluster marker-cluster-${size}`,
           iconSize: [40, 40],
+          iconAnchor: [20 - dx, 20 - dy],
         });
       },
     });
