@@ -416,7 +416,25 @@ h1 {
   border-color: palegoldenrod;
 }
 
-/* Building status pills: active color follows the status color. */
+/* Status pills: active color follows the status color. */
+.filter-pill[data-status="desaparecido"].active {
+  background: #d64545;
+  color: #fff;
+  border-color: #d64545;
+}
+
+.filter-pill[data-status="encontrado"].active {
+  background: #3fa34d;
+  color: #fff;
+  border-color: #3fa34d;
+}
+
+.filter-pill[data-status="angel"].active {
+  background: #add8e6;
+  color: #222;
+  border-color: #add8e6;
+}
+
 .filter-pill[data-status="seguro"].active {
   background: #3fa34d;
   color: #fff;

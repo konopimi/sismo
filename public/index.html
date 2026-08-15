@@ -59,8 +59,8 @@
         </button>
         <div class="filter-pills">
           <button class="filter-pill active" data-status="">Todo</button>
-          <button class="filter-pill" data-status="desaparecido">Desap.</button>
-          <button class="filter-pill" data-status="encontrado">Encont.</button>
+          <button class="filter-pill" data-status="desaparecido">🔍 <span class="pill-label">Desap.</span></button>
+          <button class="filter-pill" data-status="encontrado">✅ <span class="pill-label">Encont.</span></button>
           <button class="filter-pill" data-status="angel">👼</button>
         </div>
         <select class="filter-select" data-filter="city">
@@ -80,8 +80,8 @@
         </button>
         <div class="filter-pills">
           <button class="filter-pill active" data-status="">Todos</button>
-          <button class="filter-pill" data-status="desaparecido">Desaparecido</button>
-          <button class="filter-pill" data-status="encontrado">Encontrado</button>
+          <button class="filter-pill" data-status="desaparecido">🔍 <span class="pill-label">Desaparecido</span></button>
+          <button class="filter-pill" data-status="encontrado">✅ <span class="pill-label">Encontrado</span></button>
         </div>
         <select class="filter-select" data-filter="city">
           <option value="">📍 TODAS</opton>
@@ -192,12 +192,49 @@
   </div>
   <!-- ===== PANEL SISMOS ===== -->
   <div id="tabSismos" class="tab-panel">
-    <div id="sismoAlert" class="alerta" style="">
-      <div style="font-size:80%; color:lightgray;align-item:left;">Último sismo</div>
-      <div><span id="ultimoLugar">Cargando...</span></div>
-      <div><span id="ultimoMag" style="font-size:162%;font-weight:bold;">--</span> <span id="ultimoHora"
-          style="margin-left:10px;color:#999;"></span></div>
+    <!-- ===== ÚLTIMO SISMO (card, consistente con el resto) ===== -->
+    <div id="sismoAlert" class="alerta">
+      <div class="alerta-head">
+        <span class="alerta-title">Último sismo</span>
+        <span id="ultimoRel" class="alerta-rel">—</span>
+      </div>
+      <div class="alerta-body">
+        <span id="ultimoMag" class="alerta-mag">--</span>
+        <span class="alerta-info">
+          <span id="ultimoLugar" class="alerta-lugar">Cargando...</span>
+          <span id="ultimoHora" class="alerta-hora"></span>
+        </span>
+      </div>
     </div>
+
+    <!-- ===== FILTROS (misma familia visual: pills + selects) ===== -->
+    <div class="tool-bar" style="position:static;top:auto;">
+      <div class="filter-row" data-tab="sismos">
+        <div class="filter-pills" id="sismoMagPills">
+          <button class="filter-pill active" data-mag="0">Todas</button>
+          <button class="filter-pill" data-mag="3">M3+</button>
+          <button class="filter-pill" data-mag="4">M4+</button>
+          <button class="filter-pill" data-mag="5">M5+</button>
+          <button class="filter-pill" data-mag="6">M6+</button>
+        </div>
+        <select class="filter-select" id="sismoDepthFilter">
+          <option value="">Profundidad: todas</option>
+          <option value="shallow">Superficial (&lt;30 km)</option>
+          <option value="mid">Intermedia (30–70 km)</option>
+          <option value="deep">Profunda (70–150 km)</option>
+          <option value="vdeep">Muy profunda (&gt;150 km)</option>
+        </select>
+        <select class="filter-select" id="sismoDateFilter">
+          <option value="0">Fecha: toda</option>
+          <option value="1">Últimas 24 h</option>
+          <option value="7">Últimos 7 días</option>
+          <option value="30">Últimos 30 días</option>
+          <option value="365">Último año</option>
+        </select>
+        <input type="text" class="filter-input" id="sismoLocationFilter" placeholder="📍 Lugar..." />
+      </div>
+    </div>
+
     <div id="sismoChart"
       style="display:none;height:400px;width:100%;background:#222;border-radius:0px 0px 10px 10px;border-bottom:1px solid #e9ecef;">
     </div>
