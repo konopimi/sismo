@@ -1,6 +1,7 @@
 .ai_last_session
 .ai_permitted_files
 .ai_sessions/
+.ai_diffs/
 .git/
 remote-sismo/
 admin/
