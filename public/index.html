@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SISMOINFO.CO</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="modal.css" />
   <!-- Leaflet CSS y JS para el mapa -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -211,13 +212,13 @@
   </div>
   <!-- ===== PANEL SISMOS ===== -->
   <div id="tabSismos" class="tab-panel">
-    <div style="max-height:100% - var(--driver-height);">
+    <div style="max-height:100%">
       <div id="sismoAlert" class="alerta" style="margin-bottom:15px;">
         <div><strong>Último sismo:</strong> <span id="ultimoLugar">Cargando...</span></div>
         <div><span id="ultimoMag" style="font-size:28px;font-weight:bold;">--</span> <span id="ultimoHora"
             style="margin-left:10px;color:#999;"></span></div>
       </div>
-      <div id="sismoChart" style="width:100%;background:#fff;border-radius:12px;border:1px solid #e9ecef;">
+      <div id="sismoChart" style="height:400px;width:100%;background:#fff;border-radius:12px;border:1px solid #e9ecef;">
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:14px;color:#999;">
         <span>Fuente: USGS | Actualización cada 10s</span>

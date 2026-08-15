@@ -520,21 +520,6 @@ h1 {
   background: #444;
 }
 
-#crearModal .crear-form-wrap form button[type="submit"] {
-  flex: 1 1 100px;
-  background: #d64545;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-#crearModal .crear-form-wrap form button[type="submit"]:hover {
-  background: #b53838;
-}
-
 .crear form {
   display: flex;
   flex-wrap: wrap;
@@ -716,7 +701,6 @@ textarea {
 
 .tab-panel {
   display: none;
-  overflow: hidden;
   padding: 5px;
   flex: 1;
 }
@@ -969,220 +953,6 @@ textarea {
   border-radius: 8px;
 }
 
-/* ===== MODAL ===== */
-.modal {
-  position: fixed;
-  min-height: 100vh;
-  min-height: 100dvh;
-  max-height: 100vh;
-  max-height: 100dvh;
-  min-width: 100vw;
-  max-width: 100vw;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(10px);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  padding: 5px;
-  animation: modalFade 0.2s ease-out;
-}
-
-.modal-header {
-  position: sticky;
-  top: 0px;
-  display: flex;
-  gap: 5px;
-  background: rgba(127, 127, 127, 0.38);
-  align-items: center;
-  padding: 4px 6px;
-  backdrop-filter: blur(10px);
-  border-bottom: 2px solid rgba(127, 127, 127, 0.82);
-  z-index: 999999;
-}
-
-.modal.open {
-  display: flex;
-}
-
-@keyframes modalFade {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-#mapPickerContainer {
-  height: min(100%, 600px);
-}
-
-.modal-content {
-  display: flex;
-  flex-direction: column;
-  background: #1a1d24;
-  border-radius: 10px;
-  max-width: min(1200px, 100%);
-  width: 100%;
-  height: 100%;
-  max-height: 100%;
-  overflow-y: auto;
-  position: relative;
-  border: 1px solid #2a2e36;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-}
-
-.modal-content::-webkit-scrollbar {
-  width: 4px;
-}
-
-.modal-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.modal-content::-webkit-scrollbar-thumb {
-  background: #444;
-  border-radius: 4px;
-}
-
-.modal-close {
-  /* position: absolute; */
-  /* top: 12px; */
-  /* right: 12px; */
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-}
-
-.modal-random {
-  /* position: absolute; */
-  /* top: 12px; */
-  /* left: 12px; */
-  line-height: 1;
-  /* display: flex; */
-  /* display: none; */
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-  cursor: pointer;
-}
-
-.modal-random:hover {
-  background: #3a3e46;
-  color: #eee;
-}
-
-.modal-close:hover {
-  background: #3a3e46;
-  color: #eee;
-}
-
-.modal-content h2 {
-  margin: 0 0 6px 0;
-  /* font-size: 1.4rem; */
-  padding-right: 30px;
-  word-break: break-word;
-}
-
-.modal-status {
-  display: inline-block;
-  margin-bottom: 12px;
-}
-
-.modal-meta {
-  /* font-size: 0.9rem; */
-  color: #aaa;
-  margin-bottom: 4px;
-  line-height: 1.6;
-}
-
-.modal-meta span {
-  display: inline-block;
-  margin-right: 12px;
-}
-
-.modal-divider {
-  height: 1px;
-  background: #2a2e36;
-  margin: 16px 0;
-}
-
-.modal-photo {
-  max-height: 90vh;
-  width: 100%;
-  /* max-height: 280px; */
-  object-fit: contain;
-  border-radius: 10px;
-  margin-bottom: 12px;
-}
-
-/* ===== Galería de imágenes de anuncios ===== */
-.anuncio-gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.anuncio-gallery-item {
-  position: relative;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 2px solid transparent;
-  background: #1a1d24;
-}
-
-.anuncio-gallery-item.is-main {
-  border-color: #fcd116;
-}
-
-.anuncio-gallery-item img {
-  width: 100%;
-  height: 90px;
-  object-fit: cover;
-  display: block;
-}
-
-.anuncio-gallery-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 4px;
-}
-
-.anuncio-main-badge {
-  font-size: 0.7rem;
-  color: #fcd116;
-  text-align: center;
-  padding: 2px 4px;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
-  position: sticky;
-  bottom: 0px;
-  margin-top: 16px;
-  background: rgba(127, 127, 127, 0.38);
-  align-items: center;
-  padding: 3px;
-  backdrop-filter: blur(10px);
-  border-top: 2px solid rgba(127, 127, 127, 0.82);
-  z-index: 999999;
-}
-
-#commentsList {
-  flex: 1;
-  margin-bottom: 12px;
-}
 
 .comment-badge {
   /* font-size: 0.78rem; */
@@ -1259,7 +1029,7 @@ textarea {
 .alerta {
   background: rgba(127, 127, 172, 0.6);
   border-radius: 10px;
-  padding: 15px 20px;
+  padding: 10px 15px;
   border: 1px solid #b8d4e8;
   display: flex;
   justify-content: space-between;
