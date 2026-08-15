@@ -89,7 +89,7 @@
     try {
       const apiBase = window.API_BASE || "/api";
       const res = await fetch(
-        `${apiBase}/earthquakes?minmagnitude=1.0&limit=300`,
+        `${apiBase}/earthquakes?minmagnitude=0&limit=500&days=365`,
       );
       if (!res.ok) throw new Error("Error en API");
       const data = await res.json();

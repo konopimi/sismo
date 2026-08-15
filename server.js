@@ -807,13 +807,19 @@ app.get("/api/health", (req, res) => res.json({ ok: true }));
 // ============================================================
 app.get("/api/earthquakes", async (req, res) => {
   try {
-    // Parámetros: magnitud mínima (default 1.0) y límite (default 300).
+    // Parámetros: magnitud mínima (default 0) y límite (default 500).
     // USGS permite hasta 20000 resultados por petición.
-    const minmag = parseFloat(req.query.minmagnitude) || 1.0;
-    const limit = Math.min(parseInt(req.query.limit, 10) || 300, 20000);
+    const minmag = parseFloat(req.query.minmagnitude) || 0;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 500, 20000);
+
+    // Ventana temporal: USGS por defecto solo devuelve los últimos 30 días
+    // si no se pasa starttime/endtime. Ampliamos a 365 días por defecto.
+    const days = parseInt(req.query.days, 10) || 365;
+    const end = new Date();
+    const start = new Date(end.getTime() - days * 86400000);
 
     // Bounding box aproximado de Colombia (puedes ajustarlo)
-    const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&minlatitude=-4&maxlatitude=12&minlongitude=-80&maxlongitude=-66&minmagnitude=${minmag}&limit=${limit}&orderby=time`;
+    const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&minlatitude=-4&maxlatitude=12&minlongitude=-80&maxlongitude=-66&minmagnitude=${minmag}&limit=${limit}&orderby=time&starttime=${start.toISOString()}&endtime=${end.toISOString()}`;
 
     const response = await fetch(url);
     if (!response.ok) throw new Error("Error al consultar USGS");
