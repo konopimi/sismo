@@ -1,3 +1,6 @@
+// DIAGNÓSTICO TEMPORAL: verifica si ECharts cargó.
+console.log("[sismos] typeof echarts =", typeof echarts);
+
 // Keep CSS variables --top-bar-height and --driver-height in sync with
 // the real rendered heights of the top bar and the bottom driver bar.
 // These bars are content-driven (they wrap on narrow screens), so we
@@ -2738,7 +2741,6 @@ trackLayoutHeights();
 //  SISMOS EN TIEMPO REAL (ECharts)
 // ================================================================
 function initSismoChart() {
-  alert("initSismoChart");
   const dom = document.getElementById("sismoChart");
   if (!dom) return;
   if (typeof echarts === "undefined") {
@@ -2747,6 +2749,8 @@ function initSismoChart() {
   }
   sismosChart = echarts.init(dom);
   window.sismoChart = sismosChart;
+  // Asegura que el contenedor tenga tamaño antes de dibujar.
+  setTimeout(() => sismosChart && sismosChart.resize(), 50);
   const option = {
     tooltip: {
       trigger: "axis",
