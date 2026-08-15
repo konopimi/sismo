@@ -782,45 +782,27 @@ function openMapPicker(context) {
   mapPickerContextEl.style.display = "none";
   mapPickerContextEl.innerHTML = "";
   if (context === "modalItem" && modalLocationTarget) {
-    const dataArr =
-      modalLocationTarget.type === "building"
-        ? buildingsData
-        : modalLocationTarget.type === "person"
-          ? personsData
-          : petsData;
-    const target = dataArr.find((i) => i.id === modalLocationTarget.id);
+    const { target, contextHtml } = mapPickerContextInfo(
+      modalLocationTarget,
+      target.location ? escapeHtml(target.location) : target.lat != null ? "Ubicación actual en el mapa" : "Sin ubicación todavía",
+    );
     if (target && target.lat != null && target.lng != null) {
       existingLat = target.lat;
       existingLng = target.lng;
     }
     if (target) {
-      const emoji = MAP_MARKER_META[modalLocationTarget.type]
-        ? MAP_MARKER_META[modalLocationTarget.type].emoji
-        : "📍";
-      const photo = target.photo_url || target.image;
-      mapPickerContextEl.innerHTML = `
-            ${photo ? `<img src="${escapeHtml(photo)}" alt="" style="width:36px;height:36px;border-radius:8px;object-fit:cover;flex:0 0 auto;" />` : ""}
-            <span style="font-weight:600;">${emoji} ${escapeHtml(target.name)}</span>
-            <span style="color:#999;">${target.location ? escapeHtml(target.location) : target.lat != null ? "Ubicación actual en el mapa" : "Sin ubicación todavía"}</span>
-          `;
+      mapPickerContextEl.innerHTML = contextHtml;
       mapPickerContextEl.style.display = "flex";
     }
   } else if (context === "modalItemExtra" && modalExtraLocationTarget) {
-    const dataArr =
-      modalExtraLocationTarget.type === "person" ? personsData : petsData;
-    const target = dataArr.find((i) => i.id === modalExtraLocationTarget.id);
+    const { target, contextHtml } = mapPickerContextInfo(
+      modalExtraLocationTarget,
+      "Marca otra ubicación donde pudo haber sido visto/a",
+    );
     existingLat = null;
     existingLng = null;
     if (target) {
-      const emoji = MAP_MARKER_META[modalExtraLocationTarget.type]
-        ? MAP_MARKER_META[modalExtraLocationTarget.type].emoji
-        : "📍";
-      const photo = target.photo_url || target.image;
-      mapPickerContextEl.innerHTML = `
-            ${photo ? `<img src="${escapeHtml(photo)}" alt="" style="width:36px;height:36px;border-radius:8px;object-fit:cover;flex:0 0 auto;" />` : ""}
-            <span style="font-weight:600;">${emoji} ${escapeHtml(target.name)}</span>
-            <span style="color:#999;">Marca otra ubicación donde pudo haber sido visto/a</span>
-          `;
+      mapPickerContextEl.innerHTML = contextHtml;
       mapPickerContextEl.style.display = "flex";
     }
   }
