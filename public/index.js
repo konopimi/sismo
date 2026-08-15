@@ -113,6 +113,17 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// Helper para copiar al portapapeles con feedback visual
+function copyWithFeedback(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const original = btn.textContent;
+    btn.textContent = "✅ ¡Copiado!";
+    setTimeout(() => { btn.textContent = original; }, 2000);
+  }).catch(() => {
+    alert("No se pudo copiar. Intenta seleccionar el texto manualmente.");
+  });
+}
+
 // Factory para previsualización de foto (archivo + URL)
 function setupPhotoPreview({ fileInput, urlInput, previewEl, labelEl, placeholderText, urlPreviewEl }) {
   fileInput.addEventListener("change", function() {
@@ -429,35 +440,15 @@ async function uploadPersonPhoto(personId, file) {
 // ================================================================
 //  COPIAR LINK
 // ================================================================
-document.getElementById("copyLinkBtn").addEventListener("click", async () => {
-  const url = "https://sismoinfo.co";
-  try {
-    await navigator.clipboard.writeText(url);
-    const btn = document.getElementById("copyLinkBtn");
-    const original = btn.textContent;
-    btn.textContent = "✅ ¡Copiado!";
-    setTimeout(() => {
-      btn.textContent = original;
-    }, 2000);
-  } catch {
-    alert("No se pudo copiar. Intenta seleccionar el texto manualmente.");
-  }
+document.getElementById("copyLinkBtn").addEventListener("click", () => {
+  copyWithFeedback(document.getElementById("copyLinkBtn"), "https://sismoinfo.co");
 });
 
-async function copyItemLink(id, type, btn) {
+function copyItemLink(id, type, btn) {
   const url = new URL(window.location);
   url.searchParams.set("id", id);
   url.searchParams.set("type", type);
-  try {
-    await navigator.clipboard.writeText(url.toString());
-    const original = btn.textContent;
-    btn.textContent = "✅ ¡Copiado!";
-    setTimeout(() => {
-      btn.textContent = original;
-    }, 2000);
-  } catch {
-    alert("No se pudo copiar. Intenta seleccionar el texto manualmente.");
-  }
+  copyWithFeedback(btn, url.toString());
 }
 
 // ================================================================
@@ -1256,7 +1247,7 @@ function openModalForItem(item, type) {
             <div style="color:#999;margin-bottom:6px;">📍 Otras ubicaciones posibles</div>
             <button type="button" class="btn-small" id="modalAddExtraLocationBtn" style="margin-left:auto;">Otra ubicación +</button>
           </div>
-          ${hasLoc ? `<div id="modalMiniMapContainer" style="height:min(60vh,600px);border-radius:10px; margin-bottom:10px; overflow:hidden;"></div>` : ""}
+          ${hasLoc ? `<div id="modalMiniMapContainer" style="height:min(60vh,600px);margin-bottom:10px; overflow:hidden;"></div>` : ""}
             <div id="modalExtraLocationsContainer" style="margin-bottom:6px;"></div>
           ${hasLoc
         ? `
@@ -1328,7 +1319,7 @@ function openModalForItem(item, type) {
     }
     modalBody.innerHTML = `
           ${imagesHtml}
-          ${hasLoc ? `<div id="modalMiniMapContainer" style="height:min(60vh,600px); border-radius:10px; margin-bottom:10px; overflow:hidden;"></div>` : ""}
+          ${hasLoc ? `<div id="modalMiniMapContainer" style="height:min(60vh,600px);margin-bottom:10px; overflow:hidden;"></div>` : ""}
           <div style="color:#888; margin-bottom:8px;">
             ${hasLoc
         ? `📐 ${locationLinksHtml(item.lat, item.lng)}`
