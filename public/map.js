@@ -352,7 +352,6 @@ function renderMapMarkers() {
                 font-size:13px;
                 line-height:1;
                 white-space:nowrap;
-                border:2px solid rgba(255,255,255,0.6);
                 box-shadow:0 2px 6px rgba(0,0,0,0.4);
               ">${markerContent}</div>`,
           iconSize: [34, 28],
