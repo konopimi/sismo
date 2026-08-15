@@ -6,25 +6,27 @@ let cityMarkersLayer = null;
 let mapMarkersLayer = null;
 let heatmapLayer = null;
 
-const MAP_MARKER_META = {
-  person: {
-    emoji: "🫂",
-    data: () => personsData,
-    tabArgs: () => [tabPersonasBtn, tabPersonas, "person"],
-  },
-  pet: {
-    emoji: "🐕",
-    data: () => petsData,
-    tabArgs: () => [tabPetsBtn, tabPets, "pet"],
-  },
-  building: {
-    emoji: "🏢",
-    data: () => buildingsData,
-    tabArgs: () => [tabEdificiosBtn, tabEdificios, "building"],
-  },
-};
+// TYPE_REGISTRY is defined in index.js and exposed on window.
+// We derive MAP_MARKER_META and MAP_SIDEBAR_EMOJI from it.
+const TYPE_REGISTRY = window.TYPE_REGISTRY || {};
 
-const MAP_SIDEBAR_EMOJI = { person: "🫂", pet: "🐕" };
+const MAP_MARKER_META = {};
+for (const [type, meta] of Object.entries(TYPE_REGISTRY)) {
+  if (meta.data && meta.emoji) {
+    MAP_MARKER_META[type] = {
+      emoji: meta.emoji,
+      data: meta.data,
+      tabArgs: () => [meta.btn, meta.panel, type],
+    };
+  }
+}
+
+const MAP_SIDEBAR_EMOJI = {};
+for (const [type, meta] of Object.entries(TYPE_REGISTRY)) {
+  if (meta.emoji && meta.data) {
+    MAP_SIDEBAR_EMOJI[type] = meta.emoji;
+  }
+}
 
 // Which marker types are currently visible on the map. Empty set = all.
 const mapTypeFilter = new Set(["person", "pet", "building"]);

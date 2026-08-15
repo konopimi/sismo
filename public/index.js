@@ -62,6 +62,75 @@ const tabMap = {
     panel: document.getElementById("tabSismos"),
   },
 };
+
+// ================================================================
+//  TYPE REGISTRY — single source of truth for all entity type metadata
+//  (data array, emoji, DOM refs, API type, create title, render fn)
+//  Exposed on window so map.js can also use it.
+// ================================================================
+const TYPE_REGISTRY = {
+  person: {
+    data: () => personsData,
+    emoji: "🫂",
+    btn: tabPersonasBtn,
+    panel: tabPersonas,
+    apiType: "disappeared",
+    createTitle: "Crear persona",
+    renderFn: () => render,
+  },
+  pet: {
+    data: () => petsData,
+    emoji: "🐕",
+    btn: tabPetsBtn,
+    panel: tabPets,
+    apiType: "pets",
+    createTitle: "Crear mascota",
+    renderFn: () => renderP,
+  },
+  building: {
+    data: () => buildingsData,
+    emoji: "🏢",
+    btn: tabEdificiosBtn,
+    panel: tabEdificios,
+    apiType: "buildings",
+    createTitle: "Crear ubicación",
+    renderFn: () => renderB,
+  },
+  anuncio: {
+    data: () => anunciosData,
+    emoji: "📢",
+    btn: tabAnunciosBtn,
+    panel: tabAnuncios,
+    apiType: "anuncios",
+    createTitle: "Crear anuncio",
+    renderFn: () => renderA,
+  },
+  colaborador: {
+    data: () => colabData,
+    emoji: "🤝",
+    btn: tabColabBtn,
+    panel: tabColab,
+    apiType: "collaborators",
+    createTitle: "Colaborar",
+    renderFn: () => renderColab,
+  },
+  map: {
+    btn: tabMapBtn,
+    panel: tabMapPanel,
+    renderFn: () => {},
+  },
+  wiki: {
+    btn: wikiBtn,
+    panel: tabWiki,
+    renderFn: () => {},
+  },
+  sismos: {
+    btn: tabSismosBtn,
+    panel: tabSismos,
+    renderFn: () => {},
+  },
+};
+window.TYPE_REGISTRY = TYPE_REGISTRY;
 // Coordenadas de ciudades principales de Colombia
 // (Agrega más ciudades según necesites)
 let cityCoordinates = {};
@@ -564,19 +633,8 @@ function switchTab(activeBtn, activePanel, tabType) {
   // Reset filters for the incoming tab (mirrors search reset on tab switch).
   if (tabType && filterState[tabType]) resetFilters(tabType);
 
-  // Lookup table for the render function of each tab. Tabs with side
-  // effects (map, sismos) still need their own branch below.
-  const RENDER_FN_BY_TAB = {
-    person: render,
-    pet: renderP,
-    building: renderB,
-    anuncio: renderA,
-    colaborador: renderColab,
-    map: () => {},
-    wiki: () => {},
-    sismos: () => {},
-  };
-  currentRenderFn = RENDER_FN_BY_TAB[tabType] || (() => {});
+  // Render function from TYPE_REGISTRY (single source of truth).
+  currentRenderFn = TYPE_REGISTRY[tabType]?.renderFn || (() => {});
 
   // Side effects specific to certain tabs.
   if (tabType === "map") {
@@ -641,13 +699,11 @@ const crearModal = document.getElementById("crearModal");
 const crearModalTitle = document.getElementById("crearModalTitle");
 const crearFormWraps = crearModal.querySelectorAll(".crear-form-wrap");
 
-const CREAR_META = {
-  person: { title: "Crear persona" },
-  pet: { title: "Crear mascota" },
-  building: { title: "Crear ubicación" },
-  anuncio: { title: "Crear anuncio" },
-  colaborador: { title: "Colaborar" },
-};
+// CREAR_META derived from TYPE_REGISTRY
+const CREAR_META = {};
+for (const [type, meta] of Object.entries(TYPE_REGISTRY)) {
+  if (meta.createTitle) CREAR_META[type] = { title: meta.createTitle };
+}
 
 const crearModalShell = Modal({ id: "crearModal" });
 
@@ -1054,12 +1110,7 @@ function initModalMiniMap(lat, lng) {
 
 // Data array for a given item type (used by the random-jump button).
 function dataForType(type) {
-  if (type === "person") return personsData;
-  if (type === "pet") return petsData;
-  if (type === "building") return buildingsData;
-  if (type === "colaborador") return colabData;
-  if (type === "anuncio") return anunciosData;
-  return [];
+  return TYPE_REGISTRY[type]?.data?.() || [];
 }
 
 // Open the modal for a random item of the same type (excludes current id).
