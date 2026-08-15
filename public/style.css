@@ -1091,4 +1091,66 @@ textarea {
     transform: scale(1);
   }
 }
+
+/* ===== LISTA TEXTO DE SISMOS (fallback sin ECharts) ===== */
+.sismos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.sismo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+}
+
+.sismo-row .mag {
+  min-width: 42px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 16px;
+  border-radius: 6px;
+  padding: 2px 0;
+}
+
+.sismo-row .mag.m0 { background: #74b9ff; color: #0f1115; }
+.sismo-row .mag.m4 { background: #fdcb6e; color: #0f1115; }
+.sismo-row .mag.m5 { background: #e17055; color: #fff; }
+.sismo-row .mag.m6 { background: #d63031; color: #fff; }
+
+.sismo-row .info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sismo-row .place {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sismo-row .meta {
+  display: block;
+  font-size: 12px;
+  color: #999;
+  margin-top: 2px;
+}
+
+.sismo-row a {
+  color: #74b9ff;
+  text-decoration: none;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.sismo-row a:hover {
+  text-decoration: underline;
 }
