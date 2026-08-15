@@ -8,7 +8,6 @@ const PORT = process.env.PORT || 3000;
 const DB_PATH = process.env.DB_PATH || "/opt/sismo-api/data.db";
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public"));
 const db = new Database(DB_PATH);
 db.pragma("journal_mode = WAL");
 // --- Create tables ---
@@ -804,6 +803,8 @@ app.get("/api/earthquakes", async (req, res) => {
     res.status(500).json({ error: "No se pudo obtener la data sísmica" });
   }
 });
+// Static files AFTER all API routes so /api/* is never intercepted
+app.use(express.static("public"));
 app.listen(PORT, () => {
   console.log(`sismo-api listening on :${PORT}`);
 });
