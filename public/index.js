@@ -633,7 +633,10 @@ document
   .getElementById("crear")
   .addEventListener("click", () => openCrearModalForActiveTab());
 // ================================================================
-//  MODAL
+//  MODAL (detail)
+//  Backed by the reusable Modal shell (modal.js). openModalForItem and
+//  closeModal stay as globals because map.js and generated onclick
+//  strings call them directly.
 // ================================================================
 const modal = document.getElementById("modal");
 const modalTitle = document.getElementById("modalTitle");
@@ -641,14 +644,13 @@ const modalStatus = document.getElementById("modalStatus");
 const modalMeta = document.getElementById("modalMeta");
 const modalBody = document.getElementById("modalBody");
 const modalActions = document.getElementById("modalActions");
-const modalClose = document.getElementById("modalClose");
 
 let currentItemId = null;
 let currentItemType = null; // modal type: "person" | "pet" | "building" | "colaborador" | "anuncio"
 let currentCommentType = null; // API comment type: "disappeared" | "pets" | "buildings" | "collaborators" | "anuncios"
 
-function closeModal() {
-  modal.classList.remove("open");
+// Cleanup performed every time the detail modal closes.
+function resetDetailModal() {
   modalTitle.textContent = "";
   modalStatus.innerHTML = "";
   modalMeta.innerHTML = "";
@@ -669,19 +671,22 @@ function closeModal() {
   window.history.replaceState({}, "", url);
 }
 
-modalClose.addEventListener("click", closeModal);
+const detailModal = Modal({ id: "modal", onClose: resetDetailModal });
+
+function closeModal() {
+  detailModal.close();
+}
+
 const modalRandom = document.getElementById("modalRandom");
 modalRandom.addEventListener("click", () => {
   if (currentItemType && currentItemId)
     showRandomItem(currentItemType, currentItemId);
 });
-modal.addEventListener("click", (e) => {
-  if (e.target === modal) closeModal();
-});
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
+  // Detail modal is handled by the Modal shell (modal.js).
+  // These two remain until they migrate to the shell.
   if (crearModal.classList.contains("open")) closeCrearModal();
-  if (modal.classList.contains("open")) closeModal();
   if (mapModal.classList.contains("open")) closeMapPicker();
 });
 
@@ -1087,7 +1092,7 @@ function openModalForItem(item, type) {
             <button class="btn-small btn-share" onclick="shareAnuncio('${item.id}'); closeModal();">📤 Compartir</button>
           `;
     commentsContainer.style.display = "";
-    modal.classList.add("open");
+    detailModal.open();
     loadComments(item.id, "anuncios");
 
     // Subir fotos desde el modal (clonar input para limpiar listeners previos)
@@ -1421,7 +1426,7 @@ function openModalForItem(item, type) {
   modalActions.innerHTML = actionsHtml;
 
   // --- Abrir modal y actualizar URL ---
-  modal.classList.add("open");
+  detailModal.open();
   const url = new URL(window.location);
   url.searchParams.set("id", item.id);
   url.searchParams.set("type", type);

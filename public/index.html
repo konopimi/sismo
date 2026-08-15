@@ -486,21 +486,21 @@
       </div>
     </div>
   </div>
-  <!-- ===== MODAL ===== -->
+  <!-- ===== MODAL (detail) ===== -->
   <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal-content">
 
-      <div class="modal-header">
+      <div class="modal-header" data-modal-header>
         <button class="modal-random" id="modalRandom" type="button" aria-label="Ver otro al azar"
           title="Ver otro al azar">🎲</button>
 
-        <div id="modalTitle" style="flex:1;etxt-transform:uppercase;"></div>
-        <button class=" modal-close" id="modalClose" aria-label="Cerrar">
+        <div id="modalTitle" style="flex:1;text-transform:uppercase;"></div>
+        <button class="modal-close" id="modalClose" data-modal-close aria-label="Cerrar">
           ✕
         </button>
       </div>
-      <div style="flex:1;padding:3px;display:flex;flex-direction:column;width:100%;">
-        <div class=" modal-status" id="modalStatus" style="margin-left:auto;">
+      <div data-modal-body style="flex:1;padding:3px;display:flex;flex-direction:column;width:100%;">
+        <div class="modal-status" id="modalStatus" style="margin-left:auto;">
         </div>
         <div id="modalMeta" class="modal-meta">
         </div>
@@ -515,7 +515,7 @@
           </form>
         </div>
       </div>
-      <div id="modalActions" class="modal-actions"></div>
+      <div id="modalActions" class="modal-actions" data-modal-footer></div>
     </div>
   </div>
   <div id="mapModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="mapModalTitle">
