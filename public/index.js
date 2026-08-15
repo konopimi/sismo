@@ -135,6 +135,99 @@ function resolveApiBase() {
 const API_BASE = resolveApiBase();
 window.API_BASE = API_BASE;
 
+// ================================================================
+//  AUTH (login de colaboradores)
+//  Token HMAC firmado por el server, guardado en localStorage.
+// ================================================================
+const AUTH_TOKEN_KEY = "sismo_auth_token";
+
+function getAuthToken() {
+  return localStorage.getItem(AUTH_TOKEN_KEY);
+}
+function setAuthToken(t) {
+  localStorage.setItem(AUTH_TOKEN_KEY, t);
+}
+function clearAuthToken() {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+}
+
+async function authFetch(url, opts = {}) {
+  const token = getAuthToken();
+  if (token) {
+    opts.headers = { ...(opts.headers || {}), Authorization: `Bearer ${token}` };
+  }
+  const res = await fetch(url, opts);
+  if (res.status === 401) {
+    clearAuthToken();
+    showLoginForm();
+  }
+  return res;
+}
+
+function showLoginForm() {
+  const loginForm = document.getElementById("loginForm");
+  const chatContainer = document.getElementById("chatContainer");
+  if (loginForm) loginForm.style.display = "flex";
+  if (chatContainer) chatContainer.style.display = "none";
+  window.currentUser = null;
+}
+
+function showChat() {
+  const loginForm = document.getElementById("loginForm");
+  const chatContainer = document.getElementById("chatContainer");
+  if (loginForm) loginForm.style.display = "none";
+  if (chatContainer) {
+    chatContainer.style.display = "flex";
+    chatContainer.innerHTML = `<div style="padding:20px;">Conectado como ${escapeHtml(window.currentUser?.name || "")}</div>`;
+  }
+}
+
+async function attemptLogin() {
+  const identifier = document.getElementById("loginIdentifier")?.value.trim();
+  const password = document.getElementById("loginPassword")?.value;
+  const errEl = document.getElementById("loginError");
+  if (errEl) errEl.textContent = "";
+  if (!identifier || !password) {
+    if (errEl) errEl.textContent = "Ingresa usuario y contraseña";
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (errEl) errEl.textContent = data.error || "Error al entrar";
+      return;
+    }
+    setAuthToken(data.token);
+    window.currentUser = data.user;
+    showChat();
+  } catch (e) {
+    if (errEl) errEl.textContent = "Error de red";
+  }
+}
+
+(async function initAuth() {
+  const loginBtn = document.getElementById("loginBtn");
+  if (loginBtn) loginBtn.addEventListener("click", attemptLogin);
+  const token = getAuthToken();
+  if (!token) return showLoginForm();
+  try {
+    const res = await authFetch(`${API_BASE}/auth/me`);
+    if (res.ok) {
+      window.currentUser = await res.json();
+      showChat();
+    } else {
+      showLoginForm();
+    }
+  } catch {
+    showLoginForm();
+  }
+})();
+
 const CLOUDINARY_CLOUD_NAME = "snaspwdz";
 const CLOUDINARY_UPLOAD_PRESET = "sismopinto";
 
@@ -2626,20 +2719,34 @@ formColab.addEventListener("submit", async (e) => {
   e.preventDefault();
   const name = nameInputColab.value.trim();
   if (!name) return;
-  await fetch(`${API_BASE}/collaborators`, {
+  const email = document.getElementById("emailInputColab")?.value.trim() || null;
+  const password = document.getElementById("passwordInputColab")?.value || null;
+  const body = {
+    name,
+    skill: skillInputColab.value.trim(),
+    contact: contactInputColab.value.trim(),
+    city: cityInputColab.value.trim(),
+  };
+  if (email) body.email = email;
+  if (password) body.password = password;
+  const res = await fetch(`${API_BASE}/collaborators`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name,
-      skill: skillInputColab.value.trim(),
-      contact: contactInputColab.value.trim(),
-      city: cityInputColab.value.trim(),
-    }),
+    body: JSON.stringify(body),
   });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    alert(data.error || "Error al registrarse");
+    return;
+  }
   nameInputColab.value = "";
   skillInputColab.value = "";
   contactInputColab.value = "";
   cityInputColab.value = "";
+  const emailEl = document.getElementById("emailInputColab");
+  const passEl = document.getElementById("passwordInputColab");
+  if (emailEl) emailEl.value = "";
+  if (passEl) passEl.value = "";
   loadListColab();
 });
 

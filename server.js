@@ -3,6 +3,7 @@
 import express from "express";
 import cors from "cors";
 import Database from "better-sqlite3";
+import crypto from "crypto";
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_PATH = process.env.DB_PATH || "/opt/sismo-api/data.db";
@@ -14,6 +15,57 @@ function requireAdmin(req, res, next) {
   if (!process.env.ADMIN_KEY || req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
     return res.status(403).json({ error: "forbidden" });
   }
+  next();
+}
+
+// ========== Auth (zero deps: Node built-in crypto) ==========
+const AUTH_SECRET = process.env.AUTH_SECRET || crypto.randomBytes(32).toString("hex");
+const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1 };
+const SCRYPT_KEYLEN = 32;
+const TOKEN_TTL_MS = 15 * 24 * 60 * 60 * 1000; // 15 days
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16);
+  const hash = crypto.scryptSync(password, salt, SCRYPT_KEYLEN, SCRYPT_PARAMS);
+  return `scrypt$${salt.toString("hex")}$${hash.toString("hex")}`;
+}
+
+function verifyPassword(password, stored) {
+  if (!stored || typeof stored !== "string") return false;
+  const parts = stored.split("$");
+  if (parts.length !== 3 || parts[0] !== "scrypt") return false;
+  const salt = Buffer.from(parts[1], "hex");
+  const hash = Buffer.from(parts[2], "hex");
+  const test = crypto.scryptSync(password, salt, SCRYPT_KEYLEN, SCRYPT_PARAMS);
+  return crypto.timingSafeEqual(hash, test);
+}
+
+function createToken(userId) {
+  const ts = Date.now();
+  const payload = `${userId}.${ts}`;
+  const sig = crypto.createHmac("sha256", AUTH_SECRET).update(payload).digest("hex");
+  return `${payload}.${sig}`;
+}
+
+function verifyToken(token) {
+  if (!token || typeof token !== "string") return null;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const [userId, tsStr, sig] = parts;
+  const ts = parseInt(tsStr, 10);
+  if (!Number.isFinite(ts)) return null;
+  if (Date.now() - ts > TOKEN_TTL_MS) return null; // expired
+  const expected = crypto.createHmac("sha256", AUTH_SECRET).update(`${userId}.${ts}`).digest("hex");
+  if (sig.length !== expected.length) return null;
+  if (!crypto.timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(expected, "hex"))) return null;
+  return userId;
+}
+
+function requireAuth(req, res, next) {
+  const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  const userId = verifyToken(token);
+  if (!userId) return res.status(401).json({ error: "unauthorized" });
+  req.userId = userId;
   next();
 }
 
@@ -204,6 +256,13 @@ try {
 } catch (e) { }
 try {
   db.exec("ALTER TABLE anuncios ADD COLUMN title TEXT");
+} catch (e) { }
+// Auth columns for collaborators (email + password hash)
+try {
+  db.exec("ALTER TABLE collaborators ADD COLUMN email TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE collaborators ADD COLUMN password_hash TEXT");
 } catch (e) { }
 // ========== Comentarios ==========
 app.get("/api/comments", (req, res) => {
@@ -683,7 +742,7 @@ app.get("/api/collaborators", (req, res) => {
   res.json(rows);
 });
 app.post("/api/collaborators", (req, res) => {
-  const { name, skill, contact, city } = req.body || {};
+  const { name, skill, contact, city, email, password } = req.body || {};
   if (!name || !name.trim()) {
     return res.status(400).json({ error: "name is required" });
   }
@@ -692,17 +751,79 @@ app.post("/api/collaborators", (req, res) => {
   const sk = skill && skill.trim() ? skill.trim() : null;
   const ct = contact && contact.trim() ? contact.trim() : null;
   const cty = city && city.trim() ? city.trim() : null;
+
+  // Email optional; if provided, normalize + check uniqueness
+  let emailVal = null;
+  if (email && email.trim()) {
+    emailVal = email.trim().toLowerCase();
+    const exists = db.prepare("SELECT id FROM collaborators WHERE email = ?").get(emailVal);
+    if (exists) return res.status(409).json({ error: "email already registered" });
+  }
+
+  // Password optional; if provided, hash it
+  let passwordHash = null;
+  if (password) {
+    if (password.length < 6) return res.status(400).json({ error: "password must be at least 6 chars" });
+    passwordHash = hashPassword(password);
+  }
+
   db.prepare(
-    "INSERT INTO collaborators (id, name, skill, contact, city, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-  ).run(finalId, name.trim(), sk, ct, cty, createdAt);
+    "INSERT INTO collaborators (id, name, skill, contact, city, email, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+  ).run(finalId, name.trim(), sk, ct, cty, emailVal, passwordHash, createdAt);
   res.status(201).json({
     id: finalId,
     name: name.trim(),
     skill: sk,
     contact: ct,
     city: cty,
+    email: emailVal,
     created_at: createdAt,
   });
+});
+// Authorize a volunteer: set email + provisional password (admin only)
+app.post("/api/collaborators/:id/authorize", requireAdmin, (req, res) => {
+  const { email, password } = req.body || {};
+  if (!email || !email.trim()) return res.status(400).json({ error: "email is required to authorize" });
+  if (!password || password.length < 6) return res.status(400).json({ error: "password must be at least 6 chars" });
+
+  const emailVal = email.trim().toLowerCase();
+  const dup = db.prepare("SELECT id FROM collaborators WHERE email = ? AND id != ?").get(emailVal, req.params.id);
+  if (dup) return res.status(409).json({ error: "email already in use" });
+
+  const result = db.prepare("UPDATE collaborators SET email = ?, password_hash = ? WHERE id = ?")
+    .run(emailVal, hashPassword(password), req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.json({ ok: true });
+});
+// Admin password reset
+app.post("/api/collaborators/:id/reset-password", requireAdmin, (req, res) => {
+  const { password } = req.body || {};
+  if (!password || password.length < 6) return res.status(400).json({ error: "password must be at least 6 chars" });
+  const result = db.prepare("UPDATE collaborators SET password_hash = ? WHERE id = ?")
+    .run(hashPassword(password), req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.json({ ok: true });
+});
+// ========== Auth endpoints ==========
+app.post("/api/auth/login", (req, res) => {
+  const { identifier, password } = req.body || {};
+  if (!identifier || !password) return res.status(400).json({ error: "identifier and password are required" });
+
+  const id = identifier.trim().toLowerCase();
+  const user = db.prepare(
+    "SELECT id, name, email, password_hash FROM collaborators WHERE LOWER(email) = ? OR LOWER(name) = ?",
+  ).get(id, id);
+
+  if (!user || !verifyPassword(password, user.password_hash)) {
+    return res.status(401).json({ error: "invalid credentials" });
+  }
+  const token = createToken(user.id);
+  res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+});
+app.get("/api/auth/me", requireAuth, (req, res) => {
+  const user = db.prepare("SELECT id, name, email, skill, contact, city FROM collaborators WHERE id = ?").get(req.userId);
+  if (!user) return res.status(404).json({ error: "not found" });
+  res.json(user);
 });
 app.delete("/api/collaborators/:id", requireAdmin, (req, res) => {
   const result = db
