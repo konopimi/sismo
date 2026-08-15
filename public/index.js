@@ -2234,46 +2234,50 @@ const fileLabelA = document.getElementById("fileLabelA");
 const photoPreviewA = document.getElementById("photoPreviewA");
 const urlPreviewA = document.getElementById("urlPreviewA");
 
-// Función para subir foto de anuncio a Cloudinary
-async function uploadAnuncioPhoto(anuncioId, file) {
+// Sube un único archivo a Cloudinary y devuelve su secure_url (o null).
+async function uploadToCloudinary(file) {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-  try {
-    const res = await fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-      { method: "POST", body: formData },
-    );
-    const data = await res.json();
-    if (!data.secure_url) throw new Error("No se obtuvo secure_url");
-    await fetch(`${API_BASE}/anuncios/${anuncioId}/photo`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ photo_url: data.secure_url }),
-    });
-    return data.secure_url;
-  } catch (err) {
-    alert(
-      "El anuncio se guardó, pero la foto no se pudo subir. Intenta agregarla de nuevo abriendo el anuncio.",
-    );
-    console.error(err);
-    return null;
-  }
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    { method: "POST", body: formData },
+  );
+  const data = await res.json();
+  if (!data.secure_url) throw new Error("No se obtuvo secure_url");
+  return data.secure_url;
 }
 
-// Previsualización de archivo para anuncios
+// Sube varios archivos a Cloudinary y devuelve un array de URLs (ignora fallos).
+async function uploadAnuncioPhotos(files) {
+  const urls = [];
+  for (const file of files) {
+    try {
+      const url = await uploadToCloudinary(file);
+      if (url) urls.push(url);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  return urls;
+}
+
+// Previsualización de archivo para anuncios (soporta múltiples)
 photoInputA.addEventListener("change", function() {
   if (photoPreviewA.src) {
     URL.revokeObjectURL(photoPreviewA.src);
     photoPreviewA.src = "";
   }
   if (this.files.length > 0) {
-    fileLabelA.textContent = this.files[0].name;
+    fileLabelA.textContent =
+      this.files.length === 1
+        ? this.files[0].name
+        : `${this.files.length} fotos seleccionadas`;
     const objectUrl = URL.createObjectURL(this.files[0]);
     photoPreviewA.src = objectUrl;
     photoPreviewA.style.display = "inline-block";
   } else {
-    fileLabelA.textContent = "Sube una foto";
+    fileLabelA.textContent = "Sube una o más fotos";
     photoPreviewA.style.display = "none";
     photoPreviewA.src = "";
   }
@@ -2358,15 +2362,26 @@ formA.addEventListener("submit", async (e) => {
   const text = anuncioInput.value.trim();
   const image = imageInputA.value.trim();
   if (!text) return;
+
+  // Subir todas las fotos seleccionadas a Cloudinary primero.
+  const files = Array.from(photoInputA.files || []);
+  const uploadedUrls = files.length ? await uploadAnuncioPhotos(files) : [];
+
+  // Construir la galería: URL principal (si hay) + fotos subidas.
+  const images = [];
+  if (image) images.push(image);
+  images.push(...uploadedUrls);
+
   const payload = { text };
   if (image) payload.image = image;
+  if (images.length) payload.images = images;
 
   const res = await fetch(`${API_BASE}/anuncios`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const created = await res.json();
+  await res.json();
 
   anuncioInput.value = "";
   imageInputA.value = "";
@@ -2374,18 +2389,13 @@ formA.addEventListener("submit", async (e) => {
     urlPreviewA.style.display = "none";
     urlPreviewA.src = "";
   }
-
-  const file = photoInputA.files[0];
   if (photoPreviewA.src) {
     URL.revokeObjectURL(photoPreviewA.src);
     photoPreviewA.src = "";
     photoPreviewA.style.display = "none";
   }
   photoInputA.value = "";
-  fileLabelA.textContent = "Sube una foto";
-  if (file && created.id) {
-    await uploadAnuncioPhoto(created.id, file);
-  }
+  fileLabelA.textContent = "Sube una o más fotos";
 
   loadListA();
   closeCrearModal();
