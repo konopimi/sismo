@@ -1,0 +1,77 @@
+{
+  "event": "Colombia earthquake - August 2026",
+  "epicenter": "San José del Palmar, Chocó",
+  "magnitude": 7.4,
+  "date": "2026-08-10",
+  "last_updated": "2026-08-12",
+  "platforms": [
+    {
+      "name": "Colombia Te Busca",
+      "url": "https://colombiatebusca.com/",
+      "type": "citizen-run",
+      "description": "Main citizen-run hub (~3,300-3,900 reports). Search by name, ID, code, location; includes 'Terremoto' category. Voluntary, non-profit.",
+      "notes": "Does not replace authorities, judicial bodies, rescue agencies, or official emergency lines."
+    },
+    {
+      "name": "SismoInfo.co",
+      "url": "http://sismoinfo.co",
+      "type": "citizen-run",
+      "description": "Citizen app with map; sections for people, pets, places, announcements, collaborators.",
+      "notes": "Links to colombiatebusca.com. Admin contact: +57 3153410282, IG: @neokpm"
+    },
+    {
+      "name": "Asocapitales tool",
+      "url": "https://www.asocapitales.co/",
+      "type": "official",
+      "description": "Emergency digital tool by Asociación Colombiana de Ciudades Capitales. Integrated with Colombia Te Busca; indicators for registered/found/to-be-located.",
+      "notes": "Launched 2026-08-11."
+    },
+    {
+      "name": "Cruz Roja Colombiana",
+      "url": "https://www.cruzrojacolombiana.org/",
+      "type": "official",
+      "description": "Official humanitarian channel with WhatsApp lines for missing persons reports.",
+      "phone": "132"
+    },
+    {
+      "name": "Registro Nacional de Desaparecidos (Medicina Legal)",
+      "url": "https://www.medicinalegal.gov.co/",
+      "type": "official",
+      "description": "Official national registry of missing persons maintained by Instituto Nacional de Medicina Legal y Ciencias Forenses."
+    },
+    {
+      "name": "Desaparecidos Terremoto Venezuela",
+      "url": "https://desaparecidosterremotovenezuela.com/",
+      "type": "citizen-run",
+      "description": "Venezuelan citizen platform (same model as Colombia Te Busca). Relevant for cross-border missing persons.",
+      "notes": "Created by volunteers; donations fund the initiative's operations."
+    }
+  ],
+  "emergency_phone_lines": [
+    {
+      "service": "Policía Nacional",
+      "number": "112"
+    },
+    {
+      "service": "Cruz Roja Colombiana",
+      "number": "132"
+    },
+    {
+      "service": "Defensa Civil",
+      "number": "144"
+    },
+    {
+      "service": "Bomberos",
+      "number": "119"
+    },
+    {
+      "service": "General emergencies",
+      "number": "123"
+    }
+  ],
+  "authoritative_sources": [
+    "UNGRD (Unidad Nacional para la Gestión del Riesgo de Desastres)",
+    "Cruz Roja Colombiana"
+  ],
+  "disclaimer": "Situation is evolving rapidly; figures change hourly. Citizen sites are the most complete lists; official sources (UNGRD, Cruz Roja) are authoritative for confirmed data."
+}

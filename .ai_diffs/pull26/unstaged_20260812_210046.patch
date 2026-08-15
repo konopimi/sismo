@@ -1,0 +1,112 @@
+diff --git a/public/index.html b/public/index.html
+index 50e64aa..af4ba23 100644
+--- a/public/index.html
++++ b/public/index.html
+@@ -934,6 +934,91 @@
+     <div id="map" style=""></div>
+   </div>
+ 
++  <!-- ===== PANEL WIKI ===== -->
++  <div id="tabWiki" class="tab-panel">
++    <div class="wiki">
++      <details open>
++        <summary>📞 Líneas de emergencia</summary>
++        <div class="wiki-body">
++          <p><b>123</b> — Emergencias / Policía</p>
++          <p><b>119</b> — Cruz Roja / Ambulancia</p>
++          <p><b>132</b> — Bomberos</p>
++          <p><b>165</b> — Línea de atención sismos (Colombia)</p>
++          <p><b>141</b> — Fijación telefónica de personas desaparecidas</p>
++        </div>
++      </details>
++
++      <details>
++        <summary>🫂 Qué hacer si una persona desaparece</summary>
++        <div class="wiki-body">
++          <ol>
++            <li>Reporta inmediatamente en la pestaña <b>Personas</b> de esta app.</li>
++            <li>Llama al <b>123</b> y a la línea <b>141</b> para fijar el reporte.</li>
++            <li>Reúne una foto reciente y datos: nombre, edad, vestimenta, última ubicación.</li>
++            <li>Comparte el enlace del reporte por WhatsApp y redes.</li>
++            <li>Acude a la fiscalía o comisaría más cercana con el reporte.</li>
++          </ol>
++        </div>
++      </details>
++
++      <details>
++        <summary>🐕 Qué hacer si pierdes tu mascota</summary>
++        <div class="wiki-body">
++          <ol>
++            <li>Reporta en la pestaña <b>Mascotas</b> con foto y última ubicación.</li>
++            <li>Busca en un radio de 1 km; deja prendas con tu olor en el lugar.</li>
++            <li>Pega carteles en veterinarias, tiendas y parques cercanos.</li>
++            <li>Publica en grupos locales de Facebook y WhatsApp.</li>
++          </ol>
++        </div>
++      </details>
++
++      <details>
++        <summary>🏢 Cómo reportar el estado de un edificio</summary>
++        <div class="wiki-body">
++          <p>Usa la pestaña <b>Lugar</b> y marca el estado:</p>
++          <ul>
++            <li><b>Seguro</b> — sin daños visibles, habitable.</li>
++            <li><b>Dañado</b> — grietas o daños parciales, requiere revisión.</li>
++            <li><b>Colapsado</b> — estructura comprometida, NO ingresar.</li>
++          </ul>
++        </div>
++      </details>
++
++      <details>
++        <summary>🛡️ Durante un sismo</summary>
++        <div class="wiki-body">
++          <ul>
++            <li><b>Agáchate, cubrete, agárrate.</b> Mantente bajo una mesa resistente.</li>
++            <li>Aleja de ventanas, espejos y objetos que puedan caer.</li>
++            <li>Si estás en la calle, busca un espacio abierto lejos de edificios.</li>
++            <li>No uses ascensores. Si estás en uno, sal en el primer piso seguro.</li>
++          </ul>
++        </div>
++      </details>
++
++      <details>
++        <summary>📦 Kit de emergencia recomendado</summary>
++        <div class="wiki-body">
++          <ul>
++            <li>Agua (4 L por persona por día) y alimentos no perecederos.</li>
++            <li>Botiquín de primeros auxilios y medicamentos básicos.</li>
++            <li>Linterna, pilas, radio a batería.</li>
++            <li>Copias de documentos en bolsa impermeable.</li>
++            <li>Cargador portátil para el celular.</li>
++          </ul>
++        </div>
++      </details>
++
++      <details>
++        <summary>🤝 Cómo colaborar</summary>
++        <div class="wiki-body">
++          <p>Únete en la pestaña <b>Voluntad</b> indicando cómo puedes ayudar: transporte, primeros auxilios, albergue, búsqueda, etc.</p>
++        </div>
++      </details>
++    </div>
++  </div>
++
+   <!-- ===== CREAR MODAL (all creation forms) ===== -->
+   <div id="crearModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="crearModalTitle">
+     <div class="modal-content" style="max-width:560px; max-height:90vh;">
+@@ -3009,7 +3094,6 @@ style="${isCano && 'color:teal;'}"
+       renderCityMarkers();
+       renderMapMarkers();
+     }
+-    }
+ 
+     function destroyMap() {
+       if (window.map) {
+@@ -3024,7 +3108,6 @@ style="${isCano && 'color:teal;'}"
+     function initMap() {
+ 
+     let cityMarkersLayer = null;
+-
+     function renderCityMarkers() {
+       if (!window.map || cityMarkersLayer) return; // solo una vez
+       cityMarkersLayer = L.layerGroup().addTo(window.map);

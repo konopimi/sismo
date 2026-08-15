@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SISMOINFO.CO</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Leaflet CSS y JS para el mapa -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet.markercluster plugin -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <!-- Leaflet.heat plugin -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <!-- ECharts -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+</head>
+
+<body>
+  <!-- ===== HEADER ===== -->
+  <div class="top-bar" style="display: flex; align-items: center">
+    <img src="logo.png" style="
+          max-height: 30px;
+          margin-right: 13px;
+          transform: scale(162%) translate(-5px, 3px);
+          z-index: 999;
+        " />
+    <b style="flex: 1; font-size: 110%"><span style="color: #fcd116">SISMO</span><span
+        style="color: #3a5dc5">INFO</span><span style="color: #ce1126">.CO</span>
+    </b>
+    <button id="copyLinkBtn">🔗 <span class="tab-label">LINK</span></button>
+    <button id="shareAppBtn">📤 <span class="tab-label">Compartir</span></button>
+    <!-- <div id="apiTargetToggle" style="display:none;margin-left:auto;"> -->
+    <!-- <button type="button" id="apiTargetRemote" class="btn-small" style="border-radius: 6px 0 0 6px;">🌏 </button> -->
+    <!-- <button type="button" id="apiTargetLocal" class="btn-small" style="border-radius: 0 6px 6px 0;">🖥️ </button> -->
+    <!-- </div> -->
+  </div>
+  <div style="display: none; padding: 5px">
+    <div>+57 3153410282 @neokpm</div>
+    <a style="
+          margin-left: auto;
+          border-radius: 5px;
+          padding: 3px;
+          background: rgb(200, 200, 200);
+        " href="https://colombiatebusca.com/">
+      https://colombiatebusca.com/</a>
+  </div>
+  <!-- ===== DRIVER (TABS + SEARCH) ===== -->
+  <!-- ===== PANEL PERSONAS ===== -->
+  <div id="tabPersonas" class="tab-panel active">
+    <div class="tool-bar">
+      <div class="filter-row" data-tab="person">
+        <button id="crear-top" class="crear-btn" onclick="openCrearModal('person')">
+          🫂 NUEVO
+        </button>
+        <div class="filter-pills">
+          <button class="filter-pill active" data-status="">Todo</button>
+          <button class="filter-pill" data-status="desaparecido">Desap.</button>
+          <button class="filter-pill" data-status="encontrado">Encont.</button>
+          <button class="filter-pill" data-status="angel">👼</button>
+        </div>
+        <select class="filter-select" data-filter="city">
+          <option value="">📍</option>
+        </select>
+      </div>
+    </div>
+    <div id="list" class="list"></div>
+  </div>
+  <!-- ===== PANEL MASCOTAS ===== -->
+  <div id="tabPets" class="tab-panel">
+    <div class="tool-bar">
+      <div class="filter-row" data-tab="pet">
+
+        <button id="crear-top" class="crear-btn" onclick="openCrearModal('pet')">
+          🐾 NUEVO
+        </button>
+        <div class="filter-pills">
+          <button class="filter-pill active" data-status="">Todos</button>
+          <button class="filter-pill" data-status="desaparecido">Desaparecido</button>
+          <button class="filter-pill" data-status="encontrado">Encontrado</button>
+        </div>
+        <select class="filter-select" data-filter="city">
+          <option value="">📍 TODAS</opton>
+        </select>
+      </div>
+    </div>
+    <div id="listP" class="list"></div>
+  </div>
+  <!-- ===== PANEL EDIFICIOS ===== -->
+  <div id="tabEdificios" class="tab-panel">
+    <div class="tool-bar">
+      <div class="filter-row" data-tab="building">
+        <button id="crear-top" class="crear-btn" onclick="openCrearModal('building')">
+          📍 CREAR UBICACIÓN
+        </button>
+        <div class="filter-pills">
+          <button class="filter-pill active" data-status="">Todos</button>
+          <button class="filter-pill" data-status="seguro">🫶 Seguro</button>
+          <button class="filter-pill" data-status="danado">⚠️ Dañado</button>
+          <button class="filter-pill" data-status="colapsado">💥 Colapsado</button>
+        </div>
+        <select class="filter-select" data-filter="city">
+          <option value="">📍 TODAS</option>
+        </select>
+      </div>
+    </div>
+    <div id="listB" class="list"></div>
+  </div>
+  <!-- ===== PANEL ANUNCIOS ===== -->
+  <div id="tabAnuncios" class="tab-panel">
+    <div class="tool-bar">
+      <!-- Anuncios are free-text only; no filters beyond search. -->
+      <button id="crear-top" class="crear-btn" onclick="openCrearModal('anuncio')">
+        📣 CREAR ANUNCIO
+      </button>
+    </div>
+    <div id="listA" class="list"></div>
+  </div>
+  <!-- ===== PANEL COLABORADORES ===== -->
+  <div id="tabColab" class="tab-panel">
+    <div class="tool-bar">
+      <div class="filter-row" data-tab="colaborador">
+        <select class="filter-select" data-filter="city">
+          <option value="">📍 TODAS</option>
+        </select>
+      </div>
+      <button id="crear-top" class="crear-btn" onclick="openCrearModal('colaborador')">
+        🤝 COLABORAR
+      </button>
+    </div>
+    <div id="listColab" class="list"></div>
+  </div>
+  <!-- ===== PANEL MAPA ===== -->
+  <div id="tabMapPanel" class="tab-panel" style="position: relative">
+    <div>
+      <!-- <label for="citySelectorMap" style="color:#ccc; margin-right:8px;">Ir a ciudad:</label> -->
+      <div style="
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: right;
+            gap: 10px;
+            z-index: 999;
+          ">
+        <select id="citySelectorMap" style="
+              padding: 8px 12px;
+              border-radius: 8px;
+              border: 1px solid #333;
+              background: rgba(10, 10, 10, 0.8);
+              color: #eaeaea;
+              min-width: 150px;
+            ">
+          <option value="">-- 📍 IR A --</option>
+        </select>
+        <div id="mapTypeFilter" style="
+              display: flex;
+              /* flex-direction: column; */
+              gap: 4px;
+              background: rgba(10, 10, 10, 0.1);
+              /* padding: 6px; */
+              border-radius: 8px;
+              border: 1px solid rgba(127, 127, 127, 0.6);
+            ">
+          <button class="filter-pill active" data-map-type="person">🫂</button>
+          <button class="filter-pill active" data-map-type="pet">🐕</button>
+          <button class="filter-pill active" data-map-type="building">🏢</button>
+        </div>
+        <div style="
+              background: rgba(10, 10, 10, 0.8);
+              padding: 3px 5px;
+              border-radius: 5px;
+              border: 1px solid rgba(127, 127, 127, 0.6);
+              margin-left: auto;
+              margin-bottom: 6px;
+            ">
+          <label style="
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                cursor: pointer;
+              ">
+            <span style="font-size: 0.75rem; color: #ccc">Mapa de calor 🔥
+            </span>
+            <input type="checkbox" id="heatmapToggle" onchange="toggleHeatmap(this.checked)" />
+          </label>
+        </div>
+      </div>
+    </div>
+    <div id="map" style="
+          height: 100vh;
+          height: 100dvh;
+          width: 100%;
+          z-index: 1;
+          position:relative;
+        ">
+
+      <div id="mapSidebar" class="map-sidebar">
+        <div class="map-sidebar-title">🫂 Personas · 🐕 Mascotas</div>
+        <div id="mapSidebarList" class="map-sidebar-list"></div>
+
+      </div>
+
+      <div id="offscreenArrows"></div>
+
+    </div>
+  </div>
+  <!-- ===== PANEL SISMOS ===== -->
+  <div id="tabSismos" class="tab-panel">
+    <div style="padding: 10px;">
+      <div id="sismoAlert" class="alerta" style="margin-bottom:15px;">
+        <div><strong>Último sismo:</strong> <span id="ultimoLugar">Cargando...</span></div>
+        <div><span id="ultimoMag" style="font-size:28px;font-weight:bold;">--</span> <span id="ultimoHora" style="margin-left:10px;color:#555;"></span></div>
+      </div>
+      <div id="sismoChart" style="width:100%;height:400px;background:#fff;border-radius:12px;border:1px solid #e9ecef;"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:14px;color:#777;">
+        <span>Fuente: USGS | Actualización cada 10s</span>
+        <span id="totalSismos">0 sismos</span>
+      </div>
+    </div>
+  </div>
+  <!-- ===== PANEL WIKI ===== -->
+  <div id="tabWiki" class="tab-panel">
+    <div class="wiki">
+      <details open>
+        <summary>📞 Líneas de emergencia</summary>
+        <div class="wiki-body">
+          <p><b>123</b> — Emergencias / Policía</p>
+          <p><b>119</b> — Cruz Roja / Ambulancia</p>
+          <p><b>132</b> — Bomberos</p>
+          <p><b>165</b> — Línea de atención sismos (Colombia)</p>
+          <p><b>141</b> — Fijación telefónica de personas desaparecidas</p>
+        </div>
+      </details>
+      <details>
+        <summary>🫂 Qué hacer si una persona desaparece</summary>
+        <div class="wiki-body">
+          <ol>
+            <li>
+              Reporta inmediatamente en la pestaña <b>Personas</b> de esta
+              app.
+            </li>
+            <li>
+              Llama al <b>123</b> y a la línea <b>141</b> para fijar el
+              reporte.
+            </li>
+            <li>
+              Reúne una foto reciente y datos: nombre, edad, vestimenta,
+              última ubicación.
+            </li>
+            <li>Comparte el enlace del reporte por WhatsApp y redes.</li>
+            <li>
+              Acude a la fiscalía o comisaría más cercana con el reporte.
+            </li>
+          </ol>
+        </div>
+      </details>
+      <details>
+        <summary>🐕 Qué hacer si pierdes tu mascota</summary>
+        <div class="wiki-body">
+          <ol>
+            <li>
+              Reporta en la pestaña <b>Mascotas</b> con foto y última
+              ubicación.
+            </li>
+            <li>
+              Busca en un radio de 1 km; deja prendas con tu olor en el lugar.
+            </li>
+            <li>
+              Pega carteles en veterinarias, tiendas y parques cercanos.
+            </li>
+            <li>Publica en grupos locales de Facebook y WhatsApp.</li>
+          </ol>
+        </div>
+      </details>
+      <details>
+        <summary>🏢 Cómo reportar el estado de un edificio</summary>
+        <div class="wiki-body">
+          <p>Usa la pestaña <b>Lugar</b> y marca el estado:</p>
+          <ul>
+            <li><b>Seguro</b> — sin daños visibles, habitable.</li>
+            <li>
+              <b>Dañado</b> — grietas o daños parciales, requiere revisión.
+            </li>
+            <li><b>Colapso</b> — estructura comprometida, NO ingresar.</li>
+          </ul>
+        </div>
+      </details>
+      <details>
+        <summary>🛡️ Durante un sismo</summary>
+        <div class="wiki-body">
+          <ul>
+            <li>
+              <b>Agáchate, cubrete, agárrate.</b> Mantente bajo una mesa
+              resistente.
+            </li>
+            <li>Aleja de ventanas, espejos y objetos que puedan caer.</li>
+            <li>
+              Si estás en la calle, busca un espacio abierto lejos de
+              edificios.
+            </li>
+            <li>
+              No uses ascensores. Si estás en uno, sal en el primer piso
+              seguro.
+            </li>
+          </ul>
+        </div>
+      </details>
+      <details>
+        <summary>📦 Kit de emergencia recomendado</summary>
+        <div class="wiki-body">
+          <ul>
+            <li>
+              Agua (4 L por persona por día) y alimentos no perecederos.
+            </li>
+            <li>Botiquín de primeros auxilios y medicamentos básicos.</li>
+            <li>Linterna, pilas, radio a batería.</li>
+            <li>Copias de documentos en bolsa impermeable.</li>
+            <li>Cargador portátil para el celular.</li>
+          </ul>
+        </div>
+      </details>
+      <details>
+        <summary>🤝 Cómo colaborar</summary>
+        <div class="wiki-body">
+          <p>
+            Únete en la pestaña <b>Voluntad</b> indicando cómo puedes ayudar:
+            transporte, primeros auxilios, albergue, búsqueda, etc.
+          </p>
+        </div>
+      </details>
+    </div>
+  </div>
+  <!-- ===== CREAR MODAL (all creation forms) ===== -->
+  <div id="crearModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="crearModalTitle">
+    <div class="modal-content" style="max-width: 560px; max-height: 90vh">
+      <div class="modal-header">
+        <h2 id="crearModalTitle">Crear</h2>
+        <button class="modal-close" id="crearModalClose" aria-label="Cerrar">
+          🗑️
+        </button>
+      </div>
+      <div class="modal-divider"></div>
+      <!-- PERSONA -->
+      <div class="crear-form-wrap" data-type="person">
+        <form id="addForm">
+          <input type="text" id="nameInput" placeholder="Nombre de la persona" required />
+          <input type="text" id="locationInput" placeholder="Ubicación (opcional)" />
+          <select id="cityInput">
+            <option value="">Ciudad</option>
+          </select>
+          <button type="button" id="gpsBtn" class="gps-btn" title="Usar mi ubicación">
+            📍
+          </button>
+          <span id="locationDisplay" style="font-size: 62%; color: #666; min-width: 120px"></span>
+          <div style="min-width: 100%">
+            🖼️ Dos opciones (URL o Subir imagen)
+            <br />
+            <input type="text" id="imageInput" placeholder="URL de imagen (opcional)" />
+            <img id="urlPreview" class="photo-preview" style="display: none" alt="Vista previa URL" />
+            <label class="custom-file-upload">
+              📷 Subir foto
+              <input type="file" id="photoInput" accept="image/*" />
+            </label>
+            <span class="file-name" id="fileLabel">Sube una foto</span>
+            <img id="photoPreview" class="photo-preview" style="display: none" alt="Vista previa" />
+          </div>
+          <button type="submit">Reportar</button>
+        </form>
+      </div>
+      <!-- MASCOTA -->
+      <div class="crear-form-wrap" data-type="pet">
+        <form id="addFormP">
+          <input type="text" id="nameInputP" placeholder="Nombre de la mascota" required />
+          <div style="display: flex; gap: 5px; width: 100%">
+            <button type="button" id="gpsBtnP" class="gps-btn" title="Usar mi ubicación">
+              📍
+            </button>
+            <input type="text" id="locationInputP" placeholder="Ubicación (opcional)" style="flex: 1" />
+            <select id="cityInputP">
+              <option value="">Ciudad</option>
+            </select>
+          </div>
+          <div id="locationDisplayP" style="font-size: 0.8rem; color: #666; min-width: 120px"></div>
+          <div style="min-width: 100%">
+            🖼️ Dos opciones (URL o Subir imagen)
+            <br />
+            <input type="text" id="imageInputP" placeholder="URL de imagen (opcional)" />
+            <img id="urlPreviewP" class="photo-preview" style="display: none" alt="Vista previa URL" />
+            <label class="custom-file-upload">
+              📷 Subir foto
+              <input type="file" id="photoInputP" accept="image/*" />
+            </label>
+            <span class="file-name" id="fileLabelP">Sube una foto</span>
+            <img id="photoPreviewP" class="photo-preview" style="display: none" alt="Vista previa" />
+          </div>
+          <button type="submit">Reportar</button>
+        </form>
+      </div>
+      <!-- UBICACIÓN / EDIFICIO -->
+      <div class="crear-form-wrap" data-type="building">
+        <form id="addFormB">
+          <input type="text" id="nameInputB" placeholder="Nombre o dirección del edificio" required />
+          <input type="text" id="locationInputB" placeholder="Ubicación (opcional)" />
+          <select id="cityInputB">
+            <option value="">Ciudad</option>
+          </select>
+          <button type="button" id="gpsBtnB" class="gps-btn" title="Usar mi ubicación">
+            📍
+          </button>
+          <span id="locationDisplayB" style="font-size: 62%; color: #666; min-width: 120px"></span>
+          <div style="min-width: 100%">
+            🖼️ Dos opciones (URL o Subir imagen)
+            <br />
+            <input type="text" id="imageInputB" placeholder="URL de imagen (opcional)" />
+            <img id="urlPreviewB" class="photo-preview" style="display: none" alt="Vista previa URL" />
+            <label class="custom-file-upload">
+              📷 Subir foto
+              <input type="file" id="photoInputB" accept="image/*" />
+            </label>
+            <span class="file-name" id="fileLabelB">Sube una foto</span>
+            <img id="photoPreviewB" class="photo-preview" style="display: none" alt="Vista previa" />
+          </div>
+          <button type="submit">Reportar</button>
+        </form>
+      </div>
+      <!-- ANUNCIO -->
+      <div class="crear-form-wrap" data-type="anuncio">
+        <form id="addFormA" style="flex-direction: column; align-items: stretch">
+          <textarea id="anuncioInput" rows="3" placeholder="Escribe un anuncio..." required style="
+                padding: 12px;
+                border-radius: 8px;
+                border: 1px solid #333;
+                background: #1a1d24;
+                color: #eaeaea;
+                resize: vertical;
+                min-height: 80px;
+                font-family: inherit;
+                width: 100%;
+                margin-bottom: 8px;
+              "></textarea>
+          <div style="min-width: 100%">
+            🖼️ Dos opciones (URL o Subir imagen)
+            <br />
+            <input type="text" id="imageInputA" placeholder="URL de imagen (opcional)" />
+            <img id="urlPreviewA" class="photo-preview" style="display: none" alt="Vista previa URL" />
+            <label class="custom-file-upload">
+              📷 Subir foto
+              <input type="file" id="photoInputA" accept="image/*" />
+            </label>
+            <span class="file-name" id="fileLabelA">Sube una foto</span>
+            <img id="photoPreviewA" class="photo-preview" style="display: none" alt="Vista previa" />
+          </div>
+          <button type="submit" style="width: 100%">Publicar</button>
+        </form>
+      </div>
+      <!-- COLABORADOR -->
+      <div class="crear-form-wrap" data-type="colaborador">
+        <form id="addFormColab">
+          <input type="text" id="nameInputColab" placeholder="Nombre" required />
+          <input type="text" id="skillInputColab"
+            placeholder="¿Cómo puedes ayudar? (ej: transporte, primeros auxilios)" />
+          <input type="text" id="contactInputColab" placeholder="Contacto (teléfono/WhatsApp, opcional)" />
+          <select id="cityInputColab">
+            <option value="">Ciudad</option>
+          </select>
+          <button type="submit">Unirme</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <!-- ===== MODAL ===== -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <button class="modal-random" id="modalRandom" type="button" aria-label="Ver otro al azar"
+          title="Ver otro al azar">🎲</button>
+
+        <div id="modalTitle" style="flex:1;etxt-transform:uppercase;"></div>
+        <button class=" modal-close" id="modalClose" aria-label="Cerrar">
+          ✕
+        </button>
+      </div>
+      <div style="flex:1;padding:3px;display:flex;flex-direction:column;width:100%;">
+        <div class=" modal-status" id="modalStatus" style="margin-left:auto;">
+        </div>
+        <div id="modalMeta" class="modal-meta">
+        </div>
+        <div class="modal-divider"></div>
+        <div id="modalBody"></div>
+        <div class="modal-divider"></div>
+        <div id="commentsContainer">
+          <div id="commentsList"></div>
+          <form id="commentForm" style="display:flex;flex-direction:column;">
+            <textarea id="commentInput" rows="2" placeholder="Escribe un comentario..." required></textarea>
+            <button type="submit">Comentar</button>
+          </form>
+        </div>
+      </div>
+      <div id="modalActions" class="modal-actions"></div>
+    </div>
+  </div>
+  <div id="mapModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="mapModalTitle">
+    <div class="modal-content">
+      <button class="modal-close" id="mapModalClose" aria-label="Cerrar">
+        ✕
+      </button>
+      <h2 id="mapModalTitle">Marca la ubicación</h2>
+      <div id="mapPickerContext" style="display: none"></div>
+      <div style="position: relative; margin-bottom: 10px">
+        <input type="text" id="mapSearchInput" placeholder="🔍 Buscar dirección o lugar..." style="
+              width: 100%;
+              padding: 10px;
+              border-radius: 8px;
+              border: 1px solid #333;
+              background: #1a1d24;
+              color: #eaeaea;
+            " />
+        <div id="mapSearchResults" style="
+              display: none;
+              position: absolute;
+              top: 100%;
+              left: 0;
+              right: 0;
+              background: #1a1d24;
+              border: 1px solid #333;
+              border-radius: 8px;
+              margin-top: 4px;
+              z-index: 2000;
+              max-height: 220px;
+              overflow-y: auto;
+            "></div>
+      </div>
+      <div style="display: flex; gap: 8px; margin-bottom: 10px;>
+        <input type=" number" id="mapPickerLatInput" step="any" placeholder="Latitud" style="
+              flex: 1 1 120px;
+              padding: 10px;
+              border-radius: 8px;
+              border: 1px solid #333;
+              background: #1a1d24;
+              color: #eaeaea;
+            " />
+      <input type="number" id="mapPickerLngInput" step="any" placeholder="Longitud" style="
+              flex: 1 1 120px;
+              padding: 10px;
+              border-radius: 8px;
+              border: 1px solid #333;
+              background: #1a1d24;
+              color: #eaeaea;
+            " />
+      <button type="button" id="mapPickerGoBtn">
+        Ir
+      </button>
+    </div>
+    <div id="mapPickerContainer"></div>
+    <div class="modal-actions">
+      <button type="button" id="mapPickerConfirm">
+        📍 Usar esta ubicación
+      </button>
+    </div>
+  </div>
+  </div>
+  <div id="driver" style="">
+    <div id="searchBar" class="search-row">
+      <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
+    </div>
+    <div class="tabs">
+      <button id="crear" style="
+            border: 2px solid palegoldenrod;
+            background: teal;
+            color: palegoldenrod;
+          ">
+        <b>NUEVO</b>
+      </button>
+      <button class="tab-btn active" id="tabPersonasBtn">
+        🫂 <span class="tab-label">Personas</span><span class="n">0</span>
+      </button>
+      <button class="tab-btn" id="tabPetsBtn">
+        🐕 <span class="tab-label">Mascotas</span><span class="n">0</span>
+      </button>
+      <button class="tab-btn" id="tabEdificiosBtn">
+        🏢 <span class="tab-label">Lugar</span><span class="n">0</span>
+      </button>
+      <button class="tab-btn" id="tabAnunciosBtn">
+        📣 <span class="tab-label">Anuncios</span><span class="n">0</span>
+      </button>
+      <button class="tab-btn" id="tabColabBtn">
+        🤝 <span class="tab-label">Voluntad</span><span class="n">0</span>
+      </button>
+      <button class="tab-btn" id="tabMapBtn">🗺️ <span class="tab-label">Mapa</span></button>
+      <button class="tab-btn" id="tabSismosBtn">📊 <span class="tab-label">Sismos</span><span class="n">0</span></button>
+      <button class="tab-btn" id="wikiBtn">📚 <span class="tab-label">WIKI</span></button>
+    </div>
+  </div>
+  <script src="map.js"></script>
+  <script src="index.js"></script>
+</body>
+
+</html>

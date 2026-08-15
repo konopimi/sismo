@@ -1,0 +1,437 @@
+diff --git a/public/index.html b/public/index.html
+index 5e9c998..399de2c 100644
+--- a/public/index.html
++++ b/public/index.html
+@@ -16,13 +16,14 @@
+     body {
+       margin: 0;
+       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
++      ont-size: 0.62rem;
+       background: #0f1115;
+       color: #eaeaea;
+       overflow-y: scroll;
+     }
+ 
+     h1 {
+-      font-size: 1rem;
++      /* font-size: 1rem; */
+       margin: 0 0 5px 0;
+     }
+ 
+@@ -37,6 +38,11 @@
+       border: 1px solid #333;
+     }
+ 
++    .top-bar {
++      background: rgba(127, 127, 127, 0.62);
++      border-bottom: rgb(127, 127, 127);
++    }
++
+     .crear {
+       border: 1px solid gray;
+       padding: 8px 10px;
+@@ -58,7 +64,7 @@
+       flex: 1 1 150px;
+       min-width: 120px;
+       padding: 10px 12px;
+-      font-size: 0.95rem;
++      /* font-size: 0.95rem; */
+       border-radius: 8px;
+       border: 1px solid #333;
+       background: #1a1d24;
+@@ -83,7 +89,7 @@
+       border-radius: 8px;
+       padding: 10px 16px;
+       cursor: pointer;
+-      font-size: 0.95rem;
++      /* font-size: 0.95rem; */
+       transition: background 0.15s;
+     }
+ 
+@@ -100,7 +106,7 @@
+       color: #ddd;
+       border-radius: 8px;
+       cursor: pointer;
+-      font-size: 0.95rem;
++      /* font-size: 0.95rem; */
+       transition: background 0.15s;
+       border: 1px solid #444;
+       flex: 0 0 auto;
+@@ -126,7 +132,7 @@
+     .file-name {
+       display: none;
+       color: #999;
+-      font-size: 0.85rem;
++      /* font-size: 0.85rem; */
+       margin-left: 6px;
+       flex: 1 1 120px;
+       min-width: 80px;
+@@ -136,25 +142,39 @@
+     /* ===== TABS ===== */
+     .tabs {
+       display: flex;
++      gap: 5px;
+       flex-wrap: wrap;
+-      gap: 8px;
+-      margin-bottom: 16px;
+-      flex-wrap: wrap;
++      align-items: center;
++      justify-content: center;
+     }
+ 
+-    .tab-btn {
+-      flex: 1;
++    button {
++
+       min-width: 80px;
+-      padding: 10px;
+-      border: none;
++      padding: 5px;
+       border-radius: 8px;
++      border: 2px solid rgba(127, 127, 127, 0.62);
+       background: #1a1d24;
+       color: #888;
+-      font-size: 0.95rem;
++      /* font-size: 0.95rem; */
+       cursor: pointer;
+       transition: background 0.15s;
+     }
+ 
++    .tab-btn {
++      /* flex: 1; */
++      /* min-width: 80px; */
++      /* padding: 5px; */
++      /* border-radius: 8px; */
++      /* border: 2px solid rgba(127, 127, 127, 0.62); */
++      /* background: #1a1d24; */
++      /* color: #888; */
++      /* /* font-size: 0.95rem; */
++      */
++      /* cursor: pointer; */
++      /* transition: background 0.15s; */
++    }
++
+     .tab-btn.active {
+       background: #d64545;
+       color: white;
+@@ -163,7 +183,7 @@
+     /* live count badge on category tabs */
+     .tab-btn .n {
+       font-family: ui-monospace, monospace;
+-      font-size: 0.68rem;
++      /* font-size: 0.68rem; */
+       font-weight: 700;
+       padding: 1px 6px;
+       margin-left: 5px;
+@@ -194,7 +214,7 @@
+     .search-row input[type="search"] {
+       width: 100%;
+       padding: 12px;
+-      font-size: 1rem;
++      /* font-size: 1rem; */
+       border-radius: 8px;
+       border: 1px solid #333;
+       background: #1a1d24;
+@@ -254,11 +274,11 @@
+ 
+     .card .name {
+       font-weight: 600;
+-      font-size: 1.05rem;
++      /* font-size: 1.05rem; */
+     }
+ 
+     .card .meta {
+-      font-size: 0.8rem;
++      /* font-size: 0.8rem; */
+       color: #999;
+     }
+ 
+@@ -277,14 +297,14 @@
+       overflow-wrap: break-word;
+       font-family: inherit;
+       margin: 0;
+-      font-size: 1.05rem;
++      /* font-size: 1.05rem; */
+       font-weight: 600;
+       color: #eaeaea;
+     }
+ 
+     .btn-small {
+       padding: 8px 12px;
+-      font-size: 0.85rem;
++      /* font-size: 0.85rem; */
+       border-radius: 6px;
+       border: none;
+       cursor: pointer;
+@@ -353,7 +373,7 @@
+     .map-search-result {
+       padding: 8px 10px;
+       cursor: pointer;
+-      font-size: 0.85rem;
++      /* font-size: 0.85rem; */
+       border-bottom: 1px solid #2a2e36;
+     }
+ 
+@@ -381,7 +401,7 @@
+       border-radius: 8px;
+       padding: 6px 10px;
+       margin-bottom: 6px;
+-      font-size: 0.85rem;
++      /* font-size: 0.85rem; */
+       flex-wrap: wrap;
+     }
+ 
+@@ -393,7 +413,7 @@
+       justify-content: space-between;
+       align-items: center;
+       gap: 8px;
+-      font-size: 0.88rem;
++      /* font-size: 0.88rem; */
+     }
+ 
+     .nearby-item:hover {
+@@ -402,7 +422,7 @@
+ 
+     .nearby-item .nearby-dist {
+       color: #888;
+-      font-size: 0.78rem;
++      /* font-size: 0.78rem; */
+       flex: 0 0 auto;
+     }
+ 
+@@ -413,7 +433,7 @@
+       border-radius: 8px;
+       padding: 8px 10px;
+       margin-bottom: 10px;
+-      font-size: 0.9rem;
++      /* font-size: 0.9rem; */
+     }
+ 
+     .btn-share {
+@@ -427,7 +447,7 @@
+ 
+     /* ===== STATUS TAGS ===== */
+     .status-tag {
+-      font-size: 0.7rem;
++      /* font-size: 0.7rem; */
+       text-transform: uppercase;
+       padding: 2px 10px;
+       border-radius: 4px;
+@@ -537,7 +557,7 @@
+       width: 34px;
+       height: 34px;
+       border-radius: 50%;
+-      font-size: 18px;
++      /* font-size: 18px; */
+       cursor: pointer;
+       line-height: 1;
+       display: flex;
+@@ -553,7 +573,7 @@
+ 
+     .modal-content h2 {
+       margin: 0 0 6px 0;
+-      font-size: 1.4rem;
++      /* font-size: 1.4rem; */
+       padding-right: 30px;
+       word-break: break-word;
+     }
+@@ -564,7 +584,7 @@
+     }
+ 
+     .modal-meta {
+-      font-size: 0.9rem;
++      /* font-size: 0.9rem; */
+       color: #aaa;
+       margin-bottom: 4px;
+       line-height: 1.6;
+@@ -607,7 +627,7 @@
+       flex: 1;
+       min-width: 80px;
+       padding: 10px 12px;
+-      font-size: 0.9rem;
++      /* font-size: 0.9rem; */
+       text-align: center;
+     }
+ 
+@@ -617,7 +637,7 @@
+     }
+ 
+     .comment-badge {
+-      font-size: 0.78rem;
++      /* font-size: 0.78rem; */
+       color: #9aa0a6;
+       margin-top: 4px;
+       overflow: hidden;
+@@ -648,7 +668,7 @@
+     }
+ 
+     .comment-item .comment-meta {
+-      font-size: 0.7rem;
++      /* font-size: 0.7rem; */
+       color: #888;
+     }
+ 
+@@ -667,7 +687,7 @@
+       color: #eaeaea;
+       min-width: 120px;
+       font-family: inherit;
+-      font-size: 0.95rem;
++      /* font-size: 0.95rem; */
+       resize: vertical;
+       min-height: 40px;
+     }
+@@ -688,12 +708,12 @@
+       }
+ 
+       .modal-content h2 {
+-        font-size: 1.2rem;
++        /* font-size: 1.2rem; */
+       }
+ 
+       .modal-actions button {
+         min-width: 60px;
+-        font-size: 0.8rem;
++        /* font-size: 0.8rem; */
+         padding: 8px 10px;
+       }
+ 
+@@ -713,26 +733,33 @@
+ <body>
+ 
+   <!-- ===== HEADER ===== -->
+-  <div style="padding: 5px">
+-    <button id="copyLinkBtn"
+-      style="margin-bottom: 5px; background: teal; border: none; padding: 10px 16px; border-radius: 8px; color: white; cursor: pointer;">
+-      <h2>🚨 SISMOINFO.CO (COPIAR LINK)</h2>
++  <div class="top-bar" style="display:flex;align-items: center;">
++    <div style="flex:1;">🚨SISMOINFO.CO</div>
++    <button id="copyLinkBtn">
++      🔗 LINK
+     </button>
+-    <div>ADMIN: +57 3153410282 IG:@neokpm</div>
+-    <br />
+-    <a style="background:rgb(200,200,200);" href="https://colombiatebusca.com/">https://colombiatebusca.com/</a>
+-    <div id="apiTargetToggle" style="display: none; margin-bottom: 5px;">
+-      <button type="button" id="apiTargetRemote" class="btn-small" style="border-radius: 6px 0 0 6px;">Remoto</button>
+-      <button type="button" id="apiTargetLocal" class="btn-small" style="border-radius: 0 6px 6px 0;">Local</button>
+-    </div>
+-    <button id="shareAppBtn" class="btn-share"
+-      style="margin-top: 5px; width: 100%; padding: 10px 16px; border-radius: 8px; border: none; color: white; cursor: pointer;">
+-      📤 Compartir app
++    <button id="shareAppBtn">
++      📤 Compartir
+     </button>
++
++    <!-- <div id="apiTargetToggle" style="display:none;margin-left:auto;"> -->
++    <!-- <button type="button" id="apiTargetRemote" class="btn-small" style="border-radius: 6px 0 0 6px;">🌏 </button> -->
++    <!-- <button type="button" id="apiTargetLocal" class="btn-small" style="border-radius: 0 6px 6px 0;">🖥️ </button> -->
++
++    <!-- </div> -->
++  </div>
++  <div style="display:none;padding:5px;">
++    <div>+57 3153410282 @neokpm</div>
++    <a style=" margin-left:auto;border-radius:5px;padding:3px;background:rgb(200,200,200);"
++      href="https://colombiatebusca.com/">
++      https://colombiatebusca.com/</a>
+   </div>
+ 
+   <!-- ===== DRIVER (TABS + SEARCH) ===== -->
+   <div id="driver" style="
++      display:flex;
++      flex-direction:column;
++      gap:10px;
+         padding: 5px;
+         position: sticky;
+         top: 0;
+@@ -743,12 +770,15 @@
+         z-index: 100;
+       ">
+     <div class="tabs">
++      <button id="crear" style="transform:translate(-3px,-3px);background:teal;color:palegoldenrod"><b>(+)
++          CREAR!!!</b></button>
+       <button class="tab-btn active" id="tabPersonasBtn">🫂 Personas</button>
+       <button class="tab-btn" id="tabPetsBtn">🐕 Mascotas</button>
+       <button class="tab-btn" id="tabEdificiosBtn">🏢 Lugar</button>
+       <button class="tab-btn" id="tabAnunciosBtn">📣 Anuncios</button>
+-      <button class="tab-btn" id="tabColabBtn">🤝 Colaboradores</button>
++      <button class="tab-btn" id="tabColabBtn">🤝 Voluntad</button>
+       <button class="tab-btn" id="tabMapBtn">🗺️ Mapa</button>
++      <button class="tab-btn" id="tabMapBtn">MÁS</button>
+     </div>
+ 
+     <div id="searchPerson" class="search-row">
+@@ -773,7 +803,7 @@
+           <option value="">Ciudad</option>
+         </select>
+         <button type="button" id="gpsBtn" class="gps-btn" title="Usar mi ubicación">📍</button>
+-        <span id="locationDisplay" style="font-size:0.8rem; color:#666; min-width:120px;"></span>
++        <span id="locationDisplay" style="font-size:62%; color:#666; min-width:120px;"></span>
+         <div style="min-width: 100%;">
+           🖼️ Dos opciones (URL o Subir imagen)
+           <br />
+@@ -841,7 +871,7 @@
+           <option value="">Ciudad</option>
+         </select>
+         <button type="button" id="gpsBtnB" class="gps-btn" title="Usar mi ubicación">📍</button>
+-        <span id="locationDisplayB" style="font-size:0.8rem; color:#666; min-width:120px;"></span>
++        <span id="locationDisplayB" style="font-size:62%; color:#666; min-width:120px;"></span>
+         <button type="submit">Reportar</button>
+       </form>
+     </div>
+@@ -855,7 +885,6 @@
+       <form id="addFormA" style="flex-direction:column; align-items:stretch;">
+         <textarea id="anuncioInput" rows="3" placeholder="Escribe un anuncio..." required style="
+               padding: 12px;
+-              font-size: 1rem;
+               border-radius: 8px;
+               border: 1px solid #333;
+               background: #1a1d24;
+@@ -900,7 +929,6 @@
+           border: 1px solid #333;
+           background: #1a1d24;
+           color: #eaeaea;
+-          font-size: 0.95rem;
+           min-width: 150px;
+         ">
+         <option value="">-- Seleccionar --</option>
+@@ -1774,11 +1802,11 @@
+       ${hasLoc ? `<div id="modalMiniMapContainer" style="height:min(60vh,600px);border-radius:10px; margin-bottom:10px; overflow:hidden;"></div>` : ""}
+       <button type="button" class="btn-small" id="modalSetLocationBtn" style="margin-bottom:10px;">📍 ${hasLoc ? "Cambiar ubicación" : "Agregar ubicación"}</button>
+       <div style="margin-bottom:14px;">
+-        <div style="color:#999; font-size:0.8rem; margin-bottom:6px;">📍 Otras ubicaciones posibles</div>
++        <div style="color:#999; margin-bottom:6px;">📍 Otras ubicaciones posibles</div>
+         <div id="modalExtraLocationsContainer" style="margin-bottom:6px;"></div>
+         <button type="button" class="btn-small" id="modalAddExtraLocationBtn">+ Agregar otra ubicación posible</button>
+       </div>
+-      <label style="display:block; font-size:0.8rem; color:#999; margin-bottom:4px;">${item.photo_url ? "Cambiar foto" : "Agregar foto"}</label>
++      <label style="display:block; color:#999; margin-bottom:4px;">${item.photo_url ? "Cambiar foto" : "Agregar foto"}</label>
+       <input type="file" accept="image/*" id="modalPhotoInput"
+         style="width:100%; padding:8px; border-radius:8px; border:1px solid #333; background:#1a1d24; color:#eaeaea;" />
+     `;
+@@ -1812,7 +1840,7 @@
+         const hasLoc = item.lat != null && item.lng != null;
+         modalBody.innerHTML = `
+           ${hasLoc ? `<div id="modalMiniMapContainer" style="height:min(60vh,600px); border-radius:10px; margin-bottom:10px; overflow:hidden;"></div>` : ""}
+-          <div style="color:#888; font-size:0.95rem; margin-bottom:8px;">
++          <div style="color:#888; margin-bottom:8px;">
+             ${hasLoc
+             ? `📐 ${locationLinksHtml(item.lat, item.lng)}`
+             : "Este lugar no tiene ubicación en el mapa todavía."}
+@@ -1820,7 +1848,7 @@
+           <button type="button" class="btn-small" id="modalSetLocationBtn">📍 ${hasLoc ? "Cambiar ubicación" : "Agregar ubicación"}</button>
+           ${hasLoc ? `
+             <div style="margin-top:14px;">
+-              <div style="color:#999; font-size:0.8rem; margin-bottom:6px;">📍 Items cercanos (menos de 1km)</div>
++              <div style="color:#999;  margin-bottom:6px;">📍 Items cercanos (menos de 1km)</div>
+               <div id="modalNearbyContainer">${nearbyItemsHtml(item.lat, item.lng, item.id, "building")}</div>
+             </div>
+           ` : ""}
+@@ -1843,7 +1871,7 @@
+         }
+         if (hasLoc) initModalMiniMap(item.lat, item.lng);
+       } else {
+-        modalBody.innerHTML = `<div style="color:#888; font-size:0.95rem;">Detalles del reporte</div>`;
++        modalBody.innerHTML = `<div style="color:#888;">Detalles del reporte</div>`;
+       }
+ 
+       // --- Acciones del modal (botones) ---

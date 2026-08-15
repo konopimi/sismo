@@ -1,0 +1,362 @@
+=== Commit e38e9febe491 ===
+Author: Miguel Pinto
+Date: Thu Aug 13 23:13:43 2026 -0500
+Subject: palegoldenrod
+---
+diff --git a/public/index.js b/public/index.js
+index e5b8596..56f343e 100644
+--- a/public/index.js
++++ b/public/index.js
+@@ -2095,6 +2095,7 @@ function tryOpenModalFromUrl() {
+     if (type === "person") switchTab(tabPersonasBtn, tabPersonas, "person");
+     else if (type === "pet") switchTab(tabPetsBtn, tabPets, "pet");
+     else if (type === "building") switchTab(tabEdificiosBtn, tabEdificios, "building");
++    else if (type === "colaborador") switchTab(tabColabBtn, tabColab, "colaborador");
+     setTimeout(() => {
+       openModalForItem(item, type);
+       modalOpenedFromUrl = true;
+
+
+=== Commit f587b649f82b ===
+Author: Miguel Pinto
+Date: Thu Aug 13 23:13:05 2026 -0500
+Subject: goldenrod
+---
+diff --git a/public/index.js b/public/index.js
+index 606a5a9..e5b8596 100644
+--- a/public/index.js
++++ b/public/index.js
+@@ -2085,6 +2085,7 @@ function tryOpenModalFromUrl() {
+   if (type === "person") dataArray = personsData;
+   else if (type === "pet") dataArray = petsData;
+   else if (type === "building") dataArray = buildingsData;
++  else if (type === "colaborador") dataArray = colabData;
+   else return true;
+ 
+   if (!dataArray || dataArray.length === 0) return false;
+
+
+=== Commit f0cc7511dcf7 ===
+Author: Miguel Pinto
+Date: Thu Aug 13 23:10:11 2026 -0500
+Subject: UI improvements
+---
+diff --git a/public/index.js b/public/index.js
+index 366f21c..606a5a9 100644
+--- a/public/index.js
++++ b/public/index.js
+@@ -1245,7 +1245,11 @@ function openModalForItem(item, type) {
+ 
+   // --- Cargar comentarios (solo si no es anuncio) ---
+   if (type !== "anuncio") {
+-    loadComments(item.id, type === "person" ? "disappeared" : type === "pet" ? "pets" : "buildings");
++    const commentType = type === "person" ? "disappeared"
++      : type === "pet" ? "pets"
++      : type === "colaborador" ? "collaborators"
++      : "buildings";
++    loadComments(item.id, commentType);
+   }
+ }
+ 
+
+
+=== Commit 3560217c7c4e ===
+Author: Miguel Pinto
+Date: Thu Aug 13 23:09:25 2026 -0500
+Subject: UI improvements
+---
+diff --git a/public/index.js b/public/index.js
+index 68665f9..366f21c 100644
+--- a/public/index.js
++++ b/public/index.js
+@@ -1204,7 +1204,7 @@ function openModalForItem(item, type) {
+ 
+   // --- Acciones del modal (botones) ---
+   let actionsHtml = "";
+-  if (type === "person" || type === "pet" || type === "building") {
++  if (type === "person" || type === "pet" || type === "building" || type === "colaborador") {
+     actionsHtml += `<button type="button" class="btn-small" onclick="copyItemLink('${item.id}','${type}', this)">🔗 Copiar enlace</button>`;
+   }
+   if (type === "person" || type === "pet") {
+@@ -1228,6 +1228,11 @@ function openModalForItem(item, type) {
+       actionsHtml +=
+         `<button class="btn-small btn-delete" onclick="removeB('${item.id}'); closeModal();">✕ Eliminar</button>`;
+     }
++  } else if (type === "colaborador") {
++    if (isLocalhost) {
++      actionsHtml +=
++        `<button class="btn-small btn-delete" onclick="removeColab('${item.id}'); closeModal();">✕ Eliminar</button>`;
++    }
+   }
+   modalActions.innerHTML = actionsHtml;
+ 
+
+
+=== Commit ec7c0d522f5e ===
+Author: Miguel Pinto
+Date: Thu Aug 13 23:07:00 2026 -0500
+Subject: crear
+---
+diff --git a/public/index.js b/public/index.js
+index 0070418..68665f9 100644
+--- a/public/index.js
++++ b/public/index.js
+@@ -1188,6 +1188,16 @@ function openModalForItem(item, type) {
+       });
+     }
+     if (hasLoc) initModalMiniMap(item.lat, item.lng);
++  } else if (type === "colaborador") {
++    const details = [];
++    if (item.skill) details.push(`<span>🛠️ <b>Cómo ayuda:</b> ${escapeHtml(item.skill)}</span>`);
++    if (item.contact) details.push(`<span>📞 <b>Contacto:</b> ${escapeHtml(item.contact)}</span>`);
++    if (item.city) details.push(`<span>📍 <b>Ciudad:</b> ${escapeHtml(item.city)}</span>`);
++    modalBody.innerHTML = `
++          <div style="display:flex;flex-direction:column;gap:10px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;font-size:0.95rem;">
++            ${details.join("")}
++          </div>
++        `;
+   } else {
+     modalBody.innerHTML = `<div style="color:#888;">Detalles del reporte</div>`;
+   }
+
+
+=== Commit 272d914d4ef9 ===
+Author: Miguel Pinto
+Date: Thu Aug 13 23:04:39 2026 -0500
+Subject: crear
+---
+diff --git a/public/index.js b/public/index.js
+index 39ec0cd..0070418 100644
+--- a/public/index.js
++++ b/public/index.js
+@@ -670,8 +670,8 @@ crearModal.addEventListener("click", (e) => {
+   if (e.target === crearModal) closeCrearModal();
+ });
+ 
+-// Top (+) CREAR!!! button: open modal for the currently active tab.
+-document.getElementById("crear").addEventListener("click", () => {
++function openCrearModal() {
++
+   const activeBtn = document.querySelector(".tab-btn.active");
+   let type = "person";
+   if (activeBtn) {
+@@ -683,8 +683,10 @@ document.getElementById("crear").addEventListener("click", () => {
+     // wiki tab has no creation form -> default to person
+   }
+   openCrearModal(type);
+-});
+-
++}
++// Top (+) CREAR!!! button: open modal for the currently active tab.
++document.getElementById("crear").addEventListener("click", () => openCrearModal());
++document.getElementById("crear-top").addEventListener("click", () => openCrearModal());
+ // ================================================================
+ //  MODAL
+ // ================================================================
+@@ -1700,7 +1702,7 @@ function buildingCardHtml(item) {
+   const statusClass = item.status || "seguro";
+   const statusLabel = item.status === "colapsado" ? "💥"
+     : item.status === "danado" ? "⚠️"
+-    : "🫶";
++      : "🫶";
+   let imgHtml = "";
+   if (item.image) {
+     imgHtml = `<img class="card-photo" src="${escapeHtml(item.image)}" alt="Imagen" />`;
+
+
+=== Commit 36d8ffed8e32 ===
+Author: Miguel Pinto
+Date: Thu Aug 13 22:53:34 2026 -0500
+Subject: [ai:auto:overflow] There's no click handler for colab cards to open the modal. That's a pre-existing gap (not something
+---
+diff --git a/public/index.js b/public/index.js
+index 7c78b06..39ec0cd 100644
+--- a/public/index.js
++++ b/public/index.js
+@@ -1912,6 +1912,8 @@ function updateTabCounts() {
+   set("tabColabBtn", colabData.length);
+ }
+ 
++const COLAB_PLACEHOLDER = "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.vecteezy.com%2Fsystem%2Fresources%2Fpreviews%2F021%2F548%2F095%2Fnon_2x%2Fdefault-profile-picture-avatar-user-avatar-icon-person-icon-head-icon-profile-picture-icons-default-anonymous-user-male-and-female-businessman-photo-placeholder-social-network-avatar-portrait-free-vector.jpg&f=1&nofb=1&ipt=621673f72ece5d2869a9051c758ecc2d3f48741320548453b28c17465f313244";
++
+ function colabCardHtml(item) {
+   const date = new Date(item.created_at).toLocaleString("es-CO", {
+     day: "2-digit", month: "2-digit",
+@@ -1921,23 +1923,32 @@ function colabCardHtml(item) {
+   if (item.city) metaParts.push(escapeHtml(item.city));
+   if (item.contact) metaParts.push(escapeHtml(item.contact));
+   metaParts.push(date);
++  const imgHtml = `<img style="opacity:0.62;" class="card-photo" src="${COLAB_PLACEHOLDER}" alt="Colaborador" />`;
+   return `
+-        <div class="card" data-id="${item.id}">
++        <div class="card" data-id="${item.id}" data-type="colaborador">
++<div style="padding:5px;background:rgba(127,127,127,0.38);border-bottom:2px solid rgba(127,127,127,0.62);">
++              <span class="name">${escapeHtml(item.name)}</span>
++</div>
+           <div class="card-main">
++          ${imgHtml}
+             <div class="card-inner">
++            <div style="display:flex;flex-direction:column;">
++<span class="status-tag">🤝</span>
++            </div >
+               <div class="info">
+-                <span class="name">🤝 ${escapeHtml(item.name)}</span>
+                 ${item.skill ? `<span class="meta">${escapeHtml(item.skill)}</span>` : ""}
+                 <span class="meta">${metaParts.join(" · ")}</span>
++                ${commentBadgeHtml(item)}
+               </div>
+-            </div>
+-            <div class="actions">
++
++<div class="actions">
+               ${isLocalhost
+       ? `<button class="btn-small btn-delete" onclick="removeColab('${item.id}')">✕</button>`
+       : ''}
+             </div>
+-          </div>
+-        </div>
++            </div>
++          </div >
++        </div >
+       `;
+ }
+ 
+
+
+=== Commit 00d221e278b6 ===
+Author: Miguel Pinto
+Date: Thu Aug 13 22:17:21 2026 -0500
+Subject: UI improvements
+---
+diff --git a/public/index.js b/public/index.js
+index 8efbff7..7c78b06 100644
+--- a/public/index.js
++++ b/public/index.js
+@@ -1685,7 +1685,7 @@ async function loadListB() {
+   }
+ }
+ 
+-const BUILDING_PLACEHOLDER = "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.vecteezy.com%2Fsystem%2Fresources%2Fpreviews%2F008%2F505%2F700%2Fnon_2x%2Fplaceholder-image-vector-design-illustration.jpg&f=1&nofb=1&ipt=placeholder";
++const BUILDING_PLACEHOLDER = "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.vecteezy.com%2Fsystem%2Fresources%2Fpreviews%2F077%2F676%2F103%2Fnon_2x%2Fsimple-rounded-image-placeholder-with-mountain-landscape-inside-icon-vector.jpg&f=1&nofb=1&ipt=90c0361e0c9755a3d22b949bed9e2588c3e34ea83dc3b27b43f316c5723c07cf";
+ 
+ function buildingCardHtml(item) {
+   const date = new Date(item.created_at).toLocaleString("es-CO", {
+
+
+=== Commit bf902f8f0587 ===
+Author: Miguel Pinto
+Date: Thu Aug 13 22:07:23 2026 -0500
+Subject: UI improvements
+---
+diff --git a/public/index.js b/public/index.js
+index 2c33fbc..8efbff7 100644
+--- a/public/index.js
++++ b/public/index.js
+@@ -1685,6 +1685,8 @@ async function loadListB() {
+   }
+ }
+ 
++const BUILDING_PLACEHOLDER = "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.vecteezy.com%2Fsystem%2Fresources%2Fpreviews%2F008%2F505%2F700%2Fnon_2x%2Fplaceholder-image-vector-design-illustration.jpg&f=1&nofb=1&ipt=placeholder";
++
+ function buildingCardHtml(item) {
+   const date = new Date(item.created_at).toLocaleString("es-CO", {
+     day: "2-digit", month: "2-digit",
+@@ -1695,20 +1697,33 @@ function buildingCardHtml(item) {
+   if (item.location) metaParts.push(escapeHtml(item.location));
+   if (item.lat != null && item.lng != null) metaParts.push(locationLinksHtml(item.lat, item.lng));
+   metaParts.push(date);
+-  // :
+   const statusClass = item.status || "seguro";
++  const statusLabel = item.status === "colapsado" ? "💥"
++    : item.status === "danado" ? "⚠️"
++    : "🫶";
++  let imgHtml = "";
++  if (item.image) {
++    imgHtml = `<img class="card-photo" src="${escapeHtml(item.image)}" alt="Imagen" />`;
++  } else {
++    imgHtml = `<img style="opacity:0.62;" class="card-photo" src="${BUILDING_PLACEHOLDER}" alt="Imagen" />`;
++  }
+   return `
+         <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
++<div style="padding:5px;background:rgba(127,127,127,0.38);border-bottom:2px solid rgba(127,127,127,0.62);">
++              <span class="name">${escapeHtml(item.name)}</span>
++</div>
+           <div class="card-main">
+-            <div style="padding:3px;"><span class="status-tag ${statusClass}">${item.status || "seguro"}</span></div>
++          ${imgHtml}
+             <div class="card-inner">
++            <div style="display:flex;flex-direction:column;">
++<span class="status-tag ${statusClass}">${statusLabel}</span>
++            </div >
+               <div class="info">
+-                <span class="name">${escapeHtml(item.name)}</span>
+                 <span class="meta">${metaParts.join(" · ")}</span>
+                 ${commentBadgeHtml(item)}
+               </div>
+-            </div>
+-            <div class="actions">
++
++<div class="actions">
+               <button class="btn-seguro${statusClass === "seguro" ? " btn-active" : ""}" ${statusClass === "seguro" ? "disabled" : ""} onclick="setStatusB('${item.id}','seguro')">🫶</button>
+               <button style="display:none;"class="btn-danado${statusClass === "danado" ? " btn-active" : ""}" ${statusClass === "danado" ? "disabled" : ""} onclick="setStatusB('${item.id}','danado')">Dañado</button>
+               <button class=" btn-colapsado${statusClass === "colapsado" ? " btn-active" : ""}" ${statusClass === "colapsado" ? "disabled" : ""} onclick="setStatusB('${item.id}','colapsado')">💥</button>
+@@ -1716,8 +1731,9 @@ function buildingCardHtml(item) {
+       ? `<button class="" onclick="removeB('${item.id}')">✕</button>`
+       : ''}
+             </div>
+-          </div>
+-        </div>
++            </div>
++          </div >
++        </div >
+       `;
+ }
+ 
+
+
+=== Commit c9b4ccfae7d0 ===
+Author: Miguel Pinto
+Date: Thu Aug 13 22:00:10 2026 -0500
+Subject: UI improvements
+---
+diff --git a/public/index.js b/public/index.js
+index 9b9b0e6..2c33fbc 100644
+--- a/public/index.js
++++ b/public/index.js
+@@ -1392,7 +1392,7 @@ function entityCardHtml(item, type, placeholderImg) {
+   }
+   const isCano = item.name.toLowerCase() == 'juan david cano';
+   return `
+-        <div class="card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="${type}" style="${isCano && 'background:lightblue;'}">
++        <div class="card ${found ? 'encontrado' : ''}" data-id="${item.id}" data-type="${type}" style="${isCano && 'background:lightblue;color:black;'}">
+ <div style="padding:5px;background:rgba(127,127,127,0.38);border-bottom:2px solid rgba(127,127,127,0.62);">
+               <span class="name"
+ style="${isCano && 'color:teal;'}"
+@@ -1401,12 +1401,12 @@ style="${isCano && 'color:teal;'}"
+           <div class="card-main">
+           ${imgHtml}
+             <div class="card-inner">
+-            <div style="display:flex;flex-direction:column;padding:3px;">
+-<span class="status-tag ${found ? 'encontrado' : ''}" style="${isCano && 'background:lightblue;'}">${isCano ? '👼' : item.status
++            <div style="display:flex;flex-direction:column;">
++<span class="status-tag ${found ? 'encontrado' : ''}" style="${isCano && 'background:lightblue;color:black;'}">${isCano ? '👼' : item.status
+     }</span >
+             </div >
+-              <div class="info">
+-                <span class="meta">${metaParts.join(" · ")}</span>
++              <div class="info" style="${isCano & 'color:black;'}">
++                <span class="meta" style="${isCano & 'color:black;'}">${metaParts.join(" · ")}</span>
+                 ${commentBadgeHtml(item)}
+               </div>
+ 
+@@ -1700,7 +1700,7 @@ function buildingCardHtml(item) {
+   return `
+         <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
+           <div class="card-main">
+-            <div><span class="status-tag ${statusClass}">${item.status || "seguro"}</span></div>
++            <div style="padding:3px;"><span class="status-tag ${statusClass}">${item.status || "seguro"}</span></div>
+             <div class="card-inner">
+               <div class="info">
+                 <span class="name">${escapeHtml(item.name)}</span>
+
+

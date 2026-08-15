@@ -1,0 +1,32 @@
+name: Auto Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Execute deployment script on Arch VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          # Remove the disable_host_key_checking line to fix the warning
+          script: |
+            echo "🚀 Starting deployment on Arch Linux..."
+
+            # Ensure git and rsync are available
+            if ! command -v git &> /dev/null || ! command -v rsync &> /dev/null; then
+              echo "Installing missing tools..."
+              sudo pacman -S --needed --noconfirm git rsync
+            fi
+
+            /opt/sismo-api/deploy_from_git.sh
+            echo "✅ Deployment finished successfully."
