@@ -60,6 +60,7 @@ db.exec(`
     text TEXT NOT NULL,
     image TEXT,
     photo_url TEXT,
+    images TEXT,
     created_at TEXT NOT NULL
   )
 `);
@@ -169,6 +170,9 @@ try {
 } catch (e) { }
 try {
   db.exec("ALTER TABLE anuncios ADD COLUMN photo_url TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE anuncios ADD COLUMN images TEXT");
 } catch (e) { }
 // ========== Comentarios ==========
 app.get("/api/comments", (req, res) => {
@@ -707,26 +711,82 @@ app.delete("/api/collaborators/:id", (req, res) => {
   res.status(204).end();
 });
 // ========== Anuncios ==========
+// Helper: parse the JSON `images` column into an array (or [] if null/invalid).
+function parseImages(raw) {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((u) => typeof u === "string" && u.trim()) : [];
+  } catch {
+    return [];
+  }
+}
+
 app.get("/api/anuncios", (req, res) => {
   const rows = db
-    .prepare("SELECT id, text, image, photo_url, created_at FROM anuncios ORDER BY RANDOM()")
+    .prepare("SELECT id, text, image, photo_url, images, created_at FROM anuncios ORDER BY RANDOM()")
     .all();
-  res.json(rows);
+  res.json(
+    rows.map((r) => ({ ...r, images: parseImages(r.images) })),
+  );
 });
 app.post("/api/anuncios", (req, res) => {
-  const { text, image } = req.body || {};
+  const { text, image, images } = req.body || {};
   if (!text || !text.trim()) {
     return res.status(400).json({ error: "text is required" });
   }
   const finalId = crypto.randomUUID();
   const createdAt = new Date().toISOString();
   const img = image && image.trim() ? image.trim() : null;
+  const imgs = Array.isArray(images)
+    ? images.filter((u) => typeof u === "string" && u.trim()).map((u) => u.trim())
+    : [];
+  // Ensure the main image is part of the gallery.
+  if (img && !imgs.includes(img)) imgs.unshift(img);
   db.prepare(
-    "INSERT INTO anuncios (id, text, image, created_at) VALUES (?, ?, ?, ?)",
-  ).run(finalId, text.trim(), img, createdAt);
-  res
-    .status(201)
-    .json({ id: finalId, text: text.trim(), image: img, created_at: createdAt });
+    "INSERT INTO anuncios (id, text, image, images, created_at) VALUES (?, ?, ?, ?, ?)",
+  ).run(finalId, text.trim(), img, JSON.stringify(imgs), createdAt);
+  res.status(201).json({
+    id: finalId,
+    text: text.trim(),
+    image: img,
+    images: imgs,
+    created_at: createdAt,
+  });
+});
+// Update main image and/or gallery for an anuncio.
+app.patch("/api/anuncios/:id", (req, res) => {
+  const { image, images } = req.body || {};
+  const existing = db
+    .prepare("SELECT id, image, images FROM anuncios WHERE id = ?")
+    .get(req.params.id);
+  if (!existing) return res.status(404).json({ error: "not found" });
+
+  const fields = [];
+  const values = [];
+
+  if (image !== undefined) {
+    const img = image && image.trim() ? image.trim() : null;
+    fields.push("image = ?");
+    values.push(img);
+  }
+  if (images !== undefined) {
+    const imgs = Array.isArray(images)
+      ? images.filter((u) => typeof u === "string" && u.trim()).map((u) => u.trim())
+      : [];
+    fields.push("images = ?");
+    values.push(JSON.stringify(imgs));
+  }
+  if (fields.length === 0) {
+    return res.status(400).json({ error: "no fields to update" });
+  }
+  values.push(req.params.id);
+  db.prepare(`UPDATE anuncios SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+
+  const updated = db
+    .prepare("SELECT id, text, image, photo_url, images, created_at FROM anuncios WHERE id = ?")
+    .get(req.params.id);
+  res.json({ ...updated, images: parseImages(updated.images) });
 });
 // Endpoint para actualizar photo_url de anuncios (similar a personas/mascotas/edificios)
 app.patch("/api/anuncios/:id/photo", (req, res) => {
