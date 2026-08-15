@@ -332,7 +332,9 @@ function renderMapMarkers() {
       const color = statusColor(item.status);
       const sIcon = statusIcon(item.status);
       // Show the status icon alongside the type emoji (e.g. 📦 + 🏢).
-      const markerContent = isAngel ? "👼" : `${sIcon}${emoji}`;
+      const markerContent = isAngel
+        ? `<span>👼</span>`
+        : `<span>${sIcon}</span><span>${emoji}</span>`;
       L.marker([lat, lng], {
         type,
         icon: L.divIcon({
@@ -343,10 +345,13 @@ function renderMapMarkers() {
                 height:28px;
                 border-radius:14px;
                 display:flex;
+                flex-wrap:nowrap;
                 align-items:center;
                 justify-content:center;
                 gap:1px;
                 font-size:13px;
+                line-height:1;
+                white-space:nowrap;
                 border:2px solid rgba(255,255,255,0.6);
                 box-shadow:0 2px 6px rgba(0,0,0,0.4);
               ">${markerContent}</div>`,
