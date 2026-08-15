@@ -245,7 +245,11 @@ function renderMapSidebar() {
     ...petsData.map((item) => ({ item, type: "pet" })),
   ]
     .filter(({ type }) => isTypeVisible(type))
-    .sort((a, b) => new Date(b.item.created_at) - new Date(a.item.created_at));
+    .map((entry) => ({
+      ...entry,
+      ts: new Date(entry.item.created_at).getTime(),
+    }))
+    .sort((a, b) => b.ts - a.ts);
 
   // Filter to items inside the current map viewport. Items without
   // lat/lng are excluded (they can't be placed on the map). Pad the
@@ -389,9 +393,19 @@ function initMap() {
   renderOffscreenArrows();
 
   // Re-render the sidebar and off-screen arrows whenever the viewport
-  // changes. Arrows update on every move/zoom frame so they track the map
-  // continuously; the sidebar (DOM-heavy) only refreshes on moveend/zoomend.
-  map.on("move zoom", renderOffscreenArrows);
+  // changes. Arrows are rAF-throttled so the burst of move/zoom events
+  // coalesces into one render per frame (max 60fps) instead of running
+  // O(n) work on every event. The sidebar (DOM-heavy) only refreshes on
+  // moveend/zoomend.
+  let offscreenRaf = null;
+  const scheduleOffscreenArrows = () => {
+    if (offscreenRaf) return;
+    offscreenRaf = requestAnimationFrame(() => {
+      offscreenRaf = null;
+      renderOffscreenArrows();
+    });
+  };
+  map.on("move zoom", scheduleOffscreenArrows);
   map.on("moveend zoomend", () => {
     renderMapSidebar();
     renderOffscreenArrows();
