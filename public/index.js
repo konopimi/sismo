@@ -259,11 +259,11 @@ function haversineDistance(lat1, lng1, lat2, lng2) {
 
 function nearbyItemsHtml(lat, lng, excludeId, excludeType) {
   const RADIUS_M = 1000;
-  const candidates = [
-    ...personsData.map((item) => ({ item, type: "person" })),
-    ...petsData.map((item) => ({ item, type: "pet" })),
-    ...buildingsData.map((item) => ({ item, type: "building" })),
-  ];
+  const candidates = Object.entries(TYPE_REGISTRY)
+    .filter(([, meta]) => meta.data)
+    .flatMap(([type, meta]) =>
+      meta.data().map((item) => ({ item, type })),
+    );
   const nearby = candidates
     .filter(
       ({ item, type }) =>
