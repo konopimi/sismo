@@ -5,6 +5,7 @@
 // ================================================================
 (function () {
   "use strict";
+  console.log("[sismos.js] cargado, definiendo window.initSismos");
 
   let sismosChart = null;
   let sismosData = [];
