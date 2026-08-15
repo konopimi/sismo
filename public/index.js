@@ -736,6 +736,24 @@ const mapPickerLatInput = document.getElementById("mapPickerLatInput");
 const mapPickerLngInput = document.getElementById("mapPickerLngInput");
 const mapPickerGoBtn = document.getElementById("mapPickerGoBtn");
 
+// Build the context-info block (photo + emoji + name + subtitle) for the
+// map picker when editing an item's location. Returns { target, contextHtml }.
+function mapPickerContextInfo(targetRef, subtitle) {
+  const dataArr =
+    targetRef.type === "building" ? buildingsData
+    : targetRef.type === "person" ? personsData
+    : petsData;
+  const target = dataArr.find((i) => i.id === targetRef.id);
+  if (!target) return { target: null, contextHtml: "" };
+  const emoji = MAP_MARKER_META[targetRef.type]?.emoji || "📍";
+  const photo = target.photo_url || target.image;
+  const contextHtml = `
+        ${photo ? `<img src="${escapeHtml(photo)}" alt="" style="width:36px;height:36px;border-radius:8px;object-fit:cover;flex:0 0 auto;" />` : ""}
+        <span style="font-weight:600;">${emoji} ${escapeHtml(target.name)}</span>
+        <span style="color:#999;">${subtitle}</span>
+      `;
+  return { target, contextHtml };
+}
 function openMapPicker(context) {
   mapPickerContext = context;
   mapModal.classList.add("open");
@@ -2738,8 +2756,13 @@ trackLayoutHeights();
 //  SISMOS EN TIEMPO REAL (ECharts)
 // ================================================================
 function initSismoChart() {
+  alert("initSismoChart");
   const dom = document.getElementById("sismoChart");
   if (!dom) return;
+  if (typeof echarts === "undefined") {
+    console.error("ECharts no está cargado. Verifica el CDN en <head>.");
+    return;
+  }
   sismosChart = echarts.init(dom);
   window.sismoChart = sismosChart;
   const option = {
