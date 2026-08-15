@@ -467,6 +467,8 @@ const tabAnuncios = document.getElementById("tabAnuncios");
 const tabColab = document.getElementById("tabColab");
 const tabMapPanel = document.getElementById("tabMapPanel");
 const tabWiki = document.getElementById("tabWiki");
+const tabSismosBtn = document.getElementById("tabSismosBtn");
+const tabSismos = document.getElementById("tabSismos");
 
 let currentTabType = "person"; // track active tab for map cleanup
 
@@ -1041,18 +1043,40 @@ function openModalForItem(item, type) {
       minute: "2-digit",
     })}</span>
         `;
-    let imagesHtml = "";
-    if (item.photo_url) {
-      imagesHtml = `<img class="modal-photo" src="${escapeHtml(item.photo_url)}" alt="Foto subida" />`;
-    } else if (item.image) {
-      imagesHtml = `<img class="modal-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" />`;
-    }
+    // Galería: todas las imágenes (images array) + main (image/photo_url).
+    const gallery = Array.isArray(item.images) ? item.images.slice() : [];
+    const main = item.photo_url || item.image || gallery[0] || null;
+    if (main && !gallery.includes(main)) gallery.unshift(main);
+
+    const mainHtml = main
+      ? `<img class="modal-photo" src="${escapeHtml(main)}" alt="Imagen principal" />`
+      : `<div style="color:#666; padding:12px;">Sin imagen todavía.</div>`;
+
+    const galleryHtml = gallery.length
+      ? `<div class="anuncio-gallery">${gallery
+          .map(
+            (url) => `
+            <div class="anuncio-gallery-item ${url === main ? "is-main" : ""}">
+              <img src="${escapeHtml(url)}" alt="" loading="lazy" />
+              <div class="anuncio-gallery-actions">
+                ${url === main
+                  ? `<span class="anuncio-main-badge">⭐ Principal</span>`
+                  : `<button type="button" class="btn-small" onclick="setAnuncioMain('${item.id}','${escapeHtml(url)}')">⭐ Principal</button>`}
+                <button type="button" class="btn-small btn-delete" onclick="removeAnuncioImage('${item.id}','${escapeHtml(url)}')">✕</button>
+              </div>
+            </div>
+          `,
+          )
+          .join("")}</div>`
+      : "";
+
     modalBody.innerHTML = `
-          ${imagesHtml}
+          ${mainHtml}
           <div style="white-space:pre-wrap;">${escapeHtml(item.text)}</div>
-          <label style="display:block; color:#999; margin:14px 0 4px;">${item.photo_url ? "Cambiar foto" : "Agregar foto"}</label>
-          <input type="file" accept="image/*" id="modalPhotoInput"
+          <label style="display:block; color:#999; margin:14px 0 4px;">Agregar fotos</label>
+          <input type="file" accept="image/*" id="modalPhotoInput" multiple
             style="width:100%; padding:8px; border-radius:8px; border:1px solid #333; background:#1a1d24; color:#eaeaea;" />
+          ${galleryHtml}
         `;
     modalActions.innerHTML = isLocalhost
       ? `
@@ -1066,16 +1090,24 @@ function openModalForItem(item, type) {
     modal.classList.add("open");
     loadComments(item.id, "anuncios");
 
-    // Subir foto desde el modal (clonar input para limpiar listeners previos)
+    // Subir fotos desde el modal (clonar input para limpiar listeners previos)
     const oldInput = document.getElementById("modalPhotoInput");
     const newInput = oldInput.cloneNode(true);
     oldInput.parentNode.replaceChild(newInput, oldInput);
     newInput.addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      await uploadAnuncioPhoto(item.id, file);
-      loadListA();
-      closeModal();
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+      const urls = await uploadAnuncioPhotos(files);
+      if (!urls.length) return;
+      const merged = Array.from(new Set([...gallery, ...urls]));
+      await fetch(`${API_BASE}/anuncios/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: merged }),
+      });
+      await loadListA();
+      const updated = anunciosData.find((a) => a.id === item.id);
+      if (updated) openModalForItem(updated, "anuncio");
     });
     return;
   } else {
@@ -2405,6 +2437,42 @@ async function removeA(id) {
   if (!confirm("¿Eliminar este anuncio?")) return;
   const ok = await adminDelete(`${API_BASE}/anuncios/${id}`);
   if (ok) loadListA();
+}
+
+// Establece una imagen de la galería como principal.
+async function setAnuncioMain(id, url) {
+  const item = anunciosData.find((a) => a.id === id);
+  if (!item) return;
+  await fetch(`${API_BASE}/anuncios/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image: url }),
+  });
+  await loadListA();
+  const updated = anunciosData.find((a) => a.id === id);
+  if (updated) openModalForItem(updated, "anuncio");
+}
+
+// Elimina una imagen de la galería (y ajusta la principal si era esa).
+async function removeAnuncioImage(id, url) {
+  const item = anunciosData.find((a) => a.id === id);
+  if (!item) return;
+  const gallery = Array.isArray(item.images) ? item.images.slice() : [];
+  const next = gallery.filter((u) => u !== url);
+  const main = item.photo_url || item.image;
+  const body = { images: next };
+  // Si se elimina la imagen principal, promover la primera restante.
+  if (main === url) {
+    body.image = next[0] || null;
+  }
+  await fetch(`${API_BASE}/anuncios/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  await loadListA();
+  const updated = anunciosData.find((a) => a.id === id);
+  if (updated) openModalForItem(updated, "anuncio");
 }
 
 function shareAnuncio(id) {
