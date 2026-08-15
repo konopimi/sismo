@@ -643,7 +643,7 @@ h1 {
   /* padding-top: 11px; */
   min-width: 100%;
   max-width: 100%;
-  position: fixed;
+  position: sticky;
   bottom: 0px;
   left: 0px;
   background: rgba(20, 20, 20, 0.85);
@@ -716,6 +716,7 @@ textarea {
 
 .tab-panel {
   display: none;
+  overflow: hidden;
   padding: 5px;
   flex: 1;
 }
@@ -1251,12 +1252,13 @@ textarea {
     flex: 1 1 100%;
     text-align: center;
   }
-1213}
+
+}
 
 /* ===== ALERTA SISMO ===== */
 .alerta {
-  background: #e8f4fd;
-  border-radius: 12px;
+  background: rgba(127, 127, 172, 0.6);
+  border-radius: 10px;
   padding: 15px 20px;
   border: 1px solid #b8d4e8;
   display: flex;
@@ -1265,14 +1267,24 @@ textarea {
   flex-wrap: wrap;
   transition: all 0.3s;
 }
+
 .alerta.peligro {
   background: #ffe0e0;
   border-color: #ff6b6b;
   animation: pulse 1.5s infinite;
 }
+
 @keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.02); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.02);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 }

@@ -211,13 +211,15 @@
   </div>
   <!-- ===== PANEL SISMOS ===== -->
   <div id="tabSismos" class="tab-panel">
-    <div style="padding: 10px;">
+    <div style="max-height:100%-var(--driver-height);padding: 10px;">
       <div id="sismoAlert" class="alerta" style="margin-bottom:15px;">
         <div><strong>Último sismo:</strong> <span id="ultimoLugar">Cargando...</span></div>
-        <div><span id="ultimoMag" style="font-size:28px;font-weight:bold;">--</span> <span id="ultimoHora" style="margin-left:10px;color:#555;"></span></div>
+        <div><span id="ultimoMag" style="font-size:28px;font-weight:bold;">--</span> <span id="ultimoHora"
+            style="margin-left:10px;color:#999;"></span></div>
       </div>
-      <div id="sismoChart" style="width:100%;height:400px;background:#fff;border-radius:12px;border:1px solid #e9ecef;"></div>
-      <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:14px;color:#777;">
+      <div id="sismoChart" style="width:100%;background:#fff;border-radius:12px;border:1px solid #e9ecef;">
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:14px;color:#999;">
         <span>Fuente: USGS | Actualización cada 10s</span>
         <span id="totalSismos">0 sismos</span>
       </div>
@@ -593,7 +595,8 @@
         🤝 <span class="tab-label">Voluntad</span><span class="n">0</span>
       </button>
       <button class="tab-btn" id="tabMapBtn">🗺️ <span class="tab-label">Mapa</span></button>
-      <button class="tab-btn" id="tabSismosBtn">📊 <span class="tab-label">Sismos</span><span class="n">0</span></button>
+      <button class="tab-btn" id="tabSismosBtn">📊 <span class="tab-label">Sismos</span><span
+          class="n">0</span></button>
       <button class="tab-btn" id="wikiBtn">📚 <span class="tab-label">WIKI</span></button>
     </div>
   </div>
