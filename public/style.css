@@ -475,6 +475,25 @@ h1 {
   border-color: palegoldenrod;
 }
 
+.filter-input {
+  padding: 4px 8px;
+  border-radius: 14px;
+  border: 1px solid #333;
+  background: #1a1d24;
+  color: #eaeaea;
+  font-size: 70%;
+  max-width: 160px;
+}
+
+.filter-input::placeholder {
+  color: #777;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: palegoldenrod;
+}
+
 /* ===== WIKI ===== */
 .wiki {
   display: flex;
@@ -672,21 +691,28 @@ h1 {
 }
 
 #driver {
+  position: sticky;
+  bottom: 0px;
+  left: 0px;
+  z-index: 1000;
+}
+
+.driver-inner {
+  overflow: hidden;
+  background: rgba(20, 20, 20, 0.85);
+  backdrop-filter: blur(5px);
+  border-top: 2px solid rgba(127, 127, 127, 0.62);
   display: flex;
   flex-direction: column;
+
+  border-radius: 10px 10px 0px 0px;
+  /* overflow: hidden; */
   /* gap: 10px; */
   /* padding-left: 5px; */
   /* padding-right: 5px; */
   /* padding-top: 11px; */
   min-width: 100%;
   max-width: 100%;
-  position: sticky;
-  bottom: 0px;
-  left: 0px;
-  background: rgba(20, 20, 20, 0.85);
-  backdrop-filter: blur(5px);
-  border-top: 2px solid rgba(127, 127, 127, 0.62);
-  z-index: 1000;
 }
 
 button {
@@ -1026,7 +1052,6 @@ textarea {
   border-radius: 8px;
 }
 
-
 .comment-badge {
   /* font-size: 0.78rem; */
   color: #9aa0a6;
@@ -1100,30 +1125,99 @@ textarea {
     flex: 1 1 100%;
     text-align: center;
   }
-
 }
 
-/* ===== ALERTA SISMO ===== */
-.alerta {
+.sismo-head {
   position: sticky;
   top: calc(var(--top-bar-height) + 5px);
-  background: rgba(127, 127, 172, 0.9);
-  border-radius: 10px 10px 0px 0px;
-  padding: 5px;
-  border-bottom: 2px solid rgba(127, 127, 127);
+  z-index: 998;
   display: flex;
   flex-direction: column;
+  gap: 6px;
+}
+
+/* ===== ALERTA SISMO (card, consistente con .card) ===== */
+.alerta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  background: #1a1d24;
+  border: 1px solid #333;
+  border-left: 4px solid #74b9ff;
+  border-radius: 10px;
+  box-shadow:
+    rgba(0, 0, 0, 0.4) 0px 2px 4px,
+    rgba(0, 0, 0, 0.3) 0px 7px 13px -3px;
+  transition:
+    background 0.3s,
+    border-color 0.3s;
+}
+
+.alerta-head {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  transition: all 0.3s;
-  backdrop-filter: blur(10px);
+  font-size: 70%;
+  color: #999;
+}
+
+.alerta-title {
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.alerta-rel {
+  color: #ccc;
+  font-weight: 600;
+}
+
+.alerta-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.alerta-mag {
+  min-width: 56px;
+  text-align: center;
+  font-size: 150%;
+  font-weight: 800;
+  border-radius: 8px;
+  padding: 4px 0;
+  background: #74b9ff;
+  color: #0f1115;
+}
+
+.alerta-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.alerta-lugar {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.alerta-hora {
+  font-size: 80%;
+  color: #999;
 }
 
 .alerta.peligro {
-  background: #ffe0e0;
-  border-color: #ff6b6b;
+  border-left-color: #d63031;
+  background: #2a1518;
   animation: pulse 1.5s infinite;
+}
+
+.alerta.peligro .alerta-mag {
+  background: #d63031;
+  color: #fff;
 }
 
 @keyframes pulse {
@@ -1168,10 +1262,25 @@ textarea {
   padding: 2px 0;
 }
 
-.sismo-row .mag.m0 { background: #74b9ff; color: #0f1115; }
-.sismo-row .mag.m4 { background: #fdcb6e; color: #0f1115; }
-.sismo-row .mag.m5 { background: #e17055; color: #fff; }
-.sismo-row .mag.m6 { background: #d63031; color: #fff; }
+.sismo-row .mag.m0 {
+  background: #74b9ff;
+  color: #0f1115;
+}
+
+.sismo-row .mag.m4 {
+  background: #fdcb6e;
+  color: #0f1115;
+}
+
+.sismo-row .mag.m5 {
+  background: #e17055;
+  color: #fff;
+}
+
+.sismo-row .mag.m6 {
+  background: #d63031;
+  color: #fff;
+}
 
 .sismo-row .info {
   flex: 1;
@@ -1201,4 +1310,14 @@ textarea {
 
 .sismo-row a:hover {
   text-decoration: underline;
+}
+
+.sismo-row .depth-pill {
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid #333;
+  background: #1a1d24;
+  color: #ccc;
+  font-size: 12px;
+  white-space: nowrap;
 }

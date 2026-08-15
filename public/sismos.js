@@ -1,5 +1,5 @@
 // ================================================================
-//  SISMOS EN TIEMPO REAL (ECharts)
+//  SISMOS EN TIEMPO REAL (ECharts + lista texto)
 //  Self-contained module. Exposes window.initSismos() which index.js
 //  calls when the Sismos tab is activated.
 // ================================================================
@@ -10,6 +10,96 @@
   let sismosChart = null;
   let sismosData = [];
 
+  // Estado de filtros (client-side; el backend ya trae hasta 500).
+  const filters = {
+    minMag: 0, // 0 = todas
+    depth: "", // shallow | mid | deep | vdeep
+    days: 0, // 0 = toda
+    location: "", // texto libre sobre el lugar
+  };
+
+  // ================================================================
+  //  HELPERS
+  // ================================================================
+  function esc(str) {
+    const div = document.createElement("div");
+    div.textContent = str == null ? "" : String(str);
+    return div.innerHTML;
+  }
+
+  function magClass(mag) {
+    if (mag >= 6) return "m6";
+    if (mag >= 5) return "m5";
+    if (mag >= 4) return "m4";
+    return "m0";
+  }
+
+  function depthLabel(d) {
+    if (d == null) return "—";
+    if (d < 30) return "Superficial";
+    if (d < 70) return "Intermedia";
+    if (d < 150) return "Profunda";
+    return "Muy profunda";
+  }
+
+  function relTime(ts) {
+    const diff = Date.now() - ts;
+    const s = Math.floor(diff / 1000);
+    if (s < 60) return "hace unos segundos";
+    const m = Math.floor(s / 60);
+    if (m < 60) return `hace ${m} min`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `hace ${h} h`;
+    const d = Math.floor(h / 24);
+    if (d < 30) return `hace ${d} d`;
+    const mo = Math.floor(d / 30);
+    if (mo < 12) return `hace ${mo} mes${mo > 1 ? "es" : ""}`;
+    const y = Math.floor(d / 365);
+    return `hace ${y} año${y > 1 ? "s" : ""}`;
+  }
+
+  function fullTime(ts) {
+    return new Date(ts).toLocaleString("es-CO", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "America/Bogota",
+    });
+  }
+
+  // ================================================================
+  //  FILTROS
+  // ================================================================
+  function applyFilters() {
+    const now = Date.now();
+    const loc = filters.location.trim().toLowerCase();
+    return sismosData
+      .filter((q) => {
+        const mag = q.mag || 0;
+        if (mag < filters.minMag) return false;
+
+        const d = q.depth == null ? 0 : q.depth;
+        if (filters.depth === "shallow" && !(d < 30)) return false;
+        if (filters.depth === "mid" && !(d >= 30 && d < 70)) return false;
+        if (filters.depth === "deep" && !(d >= 70 && d < 150)) return false;
+        if (filters.depth === "vdeep" && !(d >= 150)) return false;
+
+        if (filters.days > 0 && now - q.timestamp > filters.days * 86400000) {
+          return false;
+        }
+
+        if (loc && !(q.place || "").toLowerCase().includes(loc)) return false;
+
+        return true;
+      })
+      .sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  // ================================================================
+  //  ECharts
+  // ================================================================
   function initSismoChart() {
     const dom = document.getElementById("sismoChart");
     if (!dom) return;
@@ -19,7 +109,6 @@
     }
     sismosChart = echarts.init(dom);
     window.sismoChart = sismosChart;
-    // Asegura que el contenedor tenga tamaño antes de dibujar.
     setTimeout(() => sismosChart && sismosChart.resize(), 50);
     const option = {
       tooltip: {
@@ -29,7 +118,7 @@
           const p = params[0];
           if (!p) return "";
           const data = p.data;
-          return `<strong>${data.place}</strong><br/>Magnitud: <strong>${data.mag}</strong><br/>Profundidad: ${data.depth} km<br/>Hora: ${data.time}`;
+          return `<strong>${esc(data.place)}</strong><br/>Magnitud: <strong>${data.mag}</strong><br/>Profundidad: ${data.depth} km<br/>Hora: ${data.time}`;
         },
       },
       grid: {
@@ -85,98 +174,20 @@
     );
   }
 
-  async function fetchEarthquakes() {
-    try {
-      const apiBase = window.API_BASE || "/api";
-      const res = await fetch(
-        `${apiBase}/earthquakes?minmagnitude=0&limit=500&days=365`,
-      );
-      if (!res.ok) throw new Error("Error en API");
-      const data = await res.json();
-      sismosData = data.earthquakes || [];
-      updateSismoUI(data);
-    } catch (err) {
-      console.error("Error fetching sismos:", err);
-      document.getElementById("ultimoLugar").textContent = "⚠️ Error al cargar";
-      document.getElementById("sismoAlert").style.borderColor = "#d63031";
-      const listEl = document.getElementById("sismosList");
-      if (listEl) {
-        listEl.innerHTML = '<div style="color:#ff6b6b;padding:10px;">⚠️ No se pudieron cargar los sismos. Revisa la conexión o el endpoint /api/earthquakes.</div>';
-      }
-    }
-  }
-
-  function esc(str) {
-    const div = document.createElement("div");
-    div.textContent = str == null ? "" : String(str);
-    return div.innerHTML;
-  }
-
-  function magClass(mag) {
-    if (mag >= 6) return "m6";
-    if (mag >= 5) return "m5";
-    if (mag >= 4) return "m4";
-    return "m0";
-  }
-
-  function renderSismosList() {
-    const listEl = document.getElementById("sismosList");
-    if (!listEl) return;
-    if (!sismosData.length) {
-      listEl.innerHTML = '<div style="color:#999;padding:10px;">Sin datos sísmicos todavía.</div>';
-      return;
-    }
-    listEl.innerHTML = sismosData
-      .map((q) => {
-        const depth = q.depth != null ? `${q.depth.toFixed(1)} km` : "—";
-        const url = q.url || "";
-        return `
-          <div class="sismo-row">
-            <span class="mag ${magClass(q.mag)}">${q.mag.toFixed(1)}</span>
-            <span class="info">
-              <span class="place">${esc(q.place) || "Lugar desconocido"}</span>
-              <span class="meta">${esc(q.time)} · Prof. ${esc(depth)}</span>
-            </span>
-            ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">Detalle ↗</a>` : ""}
-          </div>`;
-      })
-      .join("");
-  }
-
-  function updateSismoUI(data) {
-    const last =
-      data.earthquakes && data.earthquakes.length ? data.earthquakes[0] : null;
-    if (last) {
-      document.getElementById("ultimoLugar").textContent =
-        last.place || "Lugar desconocido";
-      document.getElementById("ultimoMag").textContent = last.mag
-        ? last.mag.toFixed(1)
-        : "--";
-      document.getElementById("ultimoHora").textContent = last.time || "";
-      const alerta = document.getElementById("sismoAlert");
-      alerta.className = "alerta" + (last.mag >= 5 ? " peligro" : "");
-    }
-    document.getElementById("totalSismos").textContent =
-      `${data.count} sismos mostrados`;
-    const badge = document.querySelector("#tabSismosBtn .n");
-    if (badge) badge.textContent = data.count;
-
-    // Text fallback: always render, independent of ECharts.
-    renderSismosList();
-
+  function updateChart() {
     if (!sismosChart) return;
-    const sorted = sismosData.slice().sort((a, b) => a.timestamp - b.timestamp);
-    const xData = sorted.map((q) =>
+    const filtered = applyFilters();
+    const xData = filtered.map((q) =>
       new Date(q.timestamp).toLocaleTimeString("es-CO", {
         hour: "2-digit",
         minute: "2-digit",
         timeZone: "America/Bogota",
       }),
     );
-    const seriesData = sorted.map((q) => ({
+    const seriesData = filtered.map((q) => ({
       value: q.mag,
       place: q.place || "N/A",
-      time: q.time,
+      time: fullTime(q.timestamp),
       depth: q.depth,
       mag: q.mag,
     }));
@@ -186,11 +197,151 @@
     });
   }
 
-  // Public API: called by index.js when the Sismos tab is activated.
+  // ================================================================
+  //  RENDER: alerta, lista, contador
+  // ================================================================
+  function renderAlert() {
+    const last = sismosData.length
+      ? sismosData.reduce((a, b) => (b.timestamp > a.timestamp ? b : a))
+      : null;
+    if (!last) return;
+
+    const mag = last.mag || 0;
+    document.getElementById("ultimoLugar").textContent =
+      last.place || "Lugar desconocido";
+    document.getElementById("ultimoMag").textContent = mag.toFixed(1);
+    document.getElementById("ultimoHora").textContent = fullTime(last.timestamp);
+    document.getElementById("ultimoRel").textContent = relTime(last.timestamp);
+
+    const alerta = document.getElementById("sismoAlert");
+    alerta.className = "alerta" + (mag >= 5 ? " peligro" : "");
+    alerta.style.borderLeftColor =
+      mag >= 6 ? "#d63031" : mag >= 5 ? "#e17055" : mag >= 4 ? "#fdcb6e" : "#74b9ff";
+  }
+
+  function renderSismosList() {
+    const listEl = document.getElementById("sismosList");
+    if (!listEl) return;
+
+    const filtered = applyFilters();
+    const total = document.getElementById("totalSismos");
+    if (total) total.textContent = `${filtered.length} sismos`;
+
+    if (!filtered.length) {
+      listEl.innerHTML =
+        '<div style="color:#999;padding:10px;">Sin sismos que coincidan con los filtros.</div>';
+      return;
+    }
+
+    listEl.innerHTML = filtered
+      .map((q) => {
+        const mag = q.mag || 0;
+        const depth = q.depth != null ? q.depth.toFixed(1) : null;
+        const url = q.url || "";
+        return `
+          <div class="sismo-row">
+            <span class="mag ${magClass(mag)}">${mag.toFixed(1)}</span>
+            <span class="info">
+              <span class="place">${esc(q.place) || "Lugar desconocido"}</span>
+              <span class="meta">${esc(relTime(q.timestamp))} · ${esc(fullTime(q.timestamp))}</span>
+            </span>
+            <span class="depth-pill">${esc(depthLabel(q.depth))}${depth ? ` · ${esc(depth)} km` : ""}</span>
+            ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">Detalle ↗</a>` : ""}
+          </div>`;
+      })
+      .join("");
+  }
+
+  function updateSismoUI(data) {
+    sismosData = data.earthquakes || [];
+    renderAlert();
+    renderSismosList();
+    updateChart();
+  }
+
+  // ================================================================
+  //  FETCH
+  // ================================================================
+  async function fetchEarthquakes() {
+    try {
+      const apiBase = window.API_BASE || "/api";
+      const res = await fetch(
+        `${apiBase}/earthquakes?minmagnitude=0&limit=500&days=365`,
+      );
+      if (!res.ok) throw new Error("Error en API");
+      const data = await res.json();
+      updateSismoUI(data);
+    } catch (err) {
+      console.error("Error fetching sismos:", err);
+      document.getElementById("ultimoLugar").textContent = "⚠️ Error al cargar";
+      document.getElementById("sismoAlert").style.borderColor = "#d63031";
+      const listEl = document.getElementById("sismosList");
+      if (listEl) {
+        listEl.innerHTML =
+          '<div style="color:#ff6b6b;padding:10px;">⚠️ No se pudieron cargar los sismos. Revisa la conexión o el endpoint /api/earthquakes.</div>';
+      }
+    }
+  }
+
+  // ================================================================
+  //  WIRE FILTERS
+  // ================================================================
+  function wireFilters() {
+    const magPills = document.getElementById("sismoMagPills");
+    if (magPills && !magPills.dataset.wired) {
+      magPills.dataset.wired = "1";
+      magPills.addEventListener("click", (e) => {
+        const pill = e.target.closest(".filter-pill");
+        if (!pill) return;
+        magPills.querySelectorAll(".filter-pill").forEach((p) =>
+          p.classList.remove("active"),
+        );
+        pill.classList.add("active");
+        filters.minMag = parseInt(pill.dataset.mag, 10) || 0;
+        renderSismosList();
+        updateChart();
+      });
+    }
+
+    const depthSel = document.getElementById("sismoDepthFilter");
+    if (depthSel && !depthSel.dataset.wired) {
+      depthSel.dataset.wired = "1";
+      depthSel.addEventListener("change", () => {
+        filters.depth = depthSel.value;
+        renderSismosList();
+        updateChart();
+      });
+    }
+
+    const dateSel = document.getElementById("sismoDateFilter");
+    if (dateSel && !dateSel.dataset.wired) {
+      dateSel.dataset.wired = "1";
+      dateSel.addEventListener("change", () => {
+        filters.days = parseInt(dateSel.value, 10) || 0;
+        renderSismosList();
+        updateChart();
+      });
+    }
+
+    const locInput = document.getElementById("sismoLocationFilter");
+    if (locInput && !locInput.dataset.wired) {
+      locInput.dataset.wired = "1";
+      locInput.addEventListener("input", () => {
+        filters.location = locInput.value;
+        renderSismosList();
+        updateChart();
+      });
+    }
+  }
+
+  // ================================================================
+  //  PUBLIC API
+  // ================================================================
   window.initSismos = function() {
     if (!window.sismoChart) {
       initSismoChart();
     }
+    wireFilters();
     fetchEarthquakes();
     if (window.sismoInterval) clearInterval(window.sismoInterval);
     window.sismoInterval = setInterval(fetchEarthquakes, 10000);
