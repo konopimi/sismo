@@ -47,18 +47,22 @@ function visibleMapItems() {
 // Single source of truth for status semantics (color, CSS class, label).
 // Exposed on window so index.js can also use it.
 const STATUS_META = {
-  desaparecido: { color: "#d64545", cssClass: "desaparecido", label: "desaparecido" },
-  encontrado:   { color: "#3fa34d", cssClass: "encontrado", label: "encontrado" },
-  seguro:       { color: "#3fa34d", cssClass: "seguro", label: "seguro" },
-  danado:       { color: "#e0a63c", cssClass: "danado", label: "dañado" },
-  colapsado:    { color: "#b53838", cssClass: "colapsado", label: "colapsado" },
-  acopio:       { color: "#ffffff", cssClass: "acopio", label: "📦 acopio" },
-  angel:        { color: "#add8e6", cssClass: "angel", label: "👼" },
+  desaparecido: { color: "#d64545", cssClass: "desaparecido", label: "desaparecido", icon: "❓" },
+  encontrado:   { color: "#3fa34d", cssClass: "encontrado", label: "encontrado", icon: "✅" },
+  seguro:       { color: "#3fa34d", cssClass: "seguro", label: "seguro", icon: "🫶" },
+  danado:       { color: "#e0a63c", cssClass: "danado", label: "dañado", icon: "⚠️" },
+  colapsado:    { color: "#b53838", cssClass: "colapsado", label: "colapsado", icon: "💥" },
+  acopio:       { color: "#ffffff", cssClass: "acopio", label: "📦 acopio", icon: "📦" },
+  angel:        { color: "#add8e6", cssClass: "angel", label: "👼", icon: "👼" },
 };
 window.STATUS_META = STATUS_META;
 
 function statusColor(status) {
   return STATUS_META[status]?.color || "#d64545";
+}
+
+function statusIcon(status) {
+  return STATUS_META[status]?.icon || "❓";
 }
 
 // Resolve an item's coordinates: prefer its own lat/lng, otherwise fall
@@ -326,24 +330,28 @@ function renderMapMarkers() {
       const isAngel = item.status === "angel";
       const markerEmoji = isAngel ? "👼" : emoji;
       const color = statusColor(item.status);
+      const sIcon = statusIcon(item.status);
+      // Show the status icon alongside the type emoji (e.g. 📦 + 🏢).
+      const markerContent = isAngel ? "👼" : `${sIcon}${emoji}`;
       L.marker([lat, lng], {
         type,
         icon: L.divIcon({
           className: "",
           html: `<div style="
                 background:${color};
-                width:28px;
+                width:34px;
                 height:28px;
-                border-radius:50%;
+                border-radius:14px;
                 display:flex;
                 align-items:center;
                 justify-content:center;
-                font-size:14px;
+                gap:1px;
+                font-size:13px;
                 border:2px solid rgba(255,255,255,0.6);
                 box-shadow:0 2px 6px rgba(0,0,0,0.4);
-              ">${markerEmoji}</div>`,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14],
+              ">${markerContent}</div>`,
+          iconSize: [34, 28],
+          iconAnchor: [17, 14],
         }),
       }).addTo(clusterGroup).bindPopup(`
               ${markerEmoji} <strong>${escapeHtml(item.name)}</strong><br>
