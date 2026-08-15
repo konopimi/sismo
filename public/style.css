@@ -416,6 +416,31 @@ h1 {
   border-color: palegoldenrod;
 }
 
+/* Building status pills: active color follows the status color. */
+.filter-pill[data-status="seguro"].active {
+  background: #3fa34d;
+  color: #fff;
+  border-color: #3fa34d;
+}
+
+.filter-pill[data-status="danado"].active {
+  background: #e0a63c;
+  color: #222;
+  border-color: #e0a63c;
+}
+
+.filter-pill[data-status="colapsado"].active {
+  background: #b53838;
+  color: #fff;
+  border-color: #b53838;
+}
+
+.filter-pill[data-status="acopio"].active {
+  background: #ffffff;
+  color: #222;
+  border-color: #ffffff;
+}
+
 .filter-select {
   padding: 4px 8px;
   border-radius: 14px;
@@ -1037,6 +1062,11 @@ textarea {
 
 @media (max-width: 600px) {
   .tab-label {
+    display: none;
+  }
+
+  /* Building status pills: icon only on small screens. */
+  .filter-pill .pill-label {
     display: none;
   }
 }
