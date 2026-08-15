@@ -16,6 +16,25 @@ function requireAdmin(req, res, next) {
   }
   next();
 }
+
+// Helper for PATCH /:id/photo endpoints
+function handlePhotoPatch(tableName) {
+  return (req, res) => {
+    const { photo_url } = req.body || {};
+    if (
+      !photo_url ||
+      typeof photo_url !== "string" ||
+      !/^https:\/\/res\.cloudinary\.com\//.test(photo_url)
+    ) {
+      return res.status(400).json({ error: "invalid photo_url" });
+    }
+    const result = db
+      .prepare(`UPDATE ${tableName} SET photo_url = ? WHERE id = ?`)
+      .run(photo_url, req.params.id);
+    if (result.changes === 0) return res.status(404).json({ error: "not found" });
+    res.json({ id: req.params.id, photo_url });
+  };
+}
 const db = new Database(DB_PATH);
 db.pragma("journal_mode = WAL");
 // --- Create tables ---
@@ -281,21 +300,7 @@ app.get("/api/disappeared", (req, res) => {
 });
 // The photo itself is uploaded straight from the browser to Cloudinary
 // (unsigned preset); this just records the resulting URL against the report.
-app.patch("/api/disappeared/:id/photo", (req, res) => {
-  const { photo_url } = req.body || {};
-  if (
-    !photo_url ||
-    typeof photo_url !== "string" ||
-    !/^https:\/\/res\.cloudinary\.com\//.test(photo_url)
-  ) {
-    return res.status(400).json({ error: "invalid photo_url" });
-  }
-  const result = db
-    .prepare("UPDATE disappeared SET photo_url = ? WHERE id = ?")
-    .run(photo_url, req.params.id);
-  if (result.changes === 0) return res.status(404).json({ error: "not found" });
-  res.json({ id: req.params.id, photo_url });
-});
+app.patch("/api/disappeared/:id/photo", handlePhotoPatch("disappeared"));
 app.post("/api/disappeared", (req, res) => {
   const {
     id,
@@ -447,13 +452,7 @@ app.patch("/api/disappeared/:id", (req, res) => {
   if (result.changes === 0) return res.status(404).json({ error: "not found" });
   res.json({ id: req.params.id, status, image, lat, lng });
 });
-app.delete("/api/disappeared/:id", (req, res) => {
-  if (
-    !process.env.ADMIN_KEY ||
-    req.headers["x-admin-key"] !== process.env.ADMIN_KEY
-  ) {
-    return res.status(403).json({ error: "forbidden" });
-  }
+app.delete("/api/disappeared/:id", requireAdmin, (req, res) => {
   const result = db
     .prepare("DELETE FROM disappeared WHERE id = ?")
     .run(req.params.id);
@@ -478,21 +477,7 @@ app.get("/api/pets", (req, res) => {
   res.json(rows);
 });
 // Endpoint para actualizar photo_url de mascotas (similar a personas)
-app.patch("/api/pets/:id/photo", (req, res) => {
-  const { photo_url } = req.body || {};
-  if (
-    !photo_url ||
-    typeof photo_url !== "string" ||
-    !/^https:\/\/res\.cloudinary\.com\//.test(photo_url)
-  ) {
-    return res.status(400).json({ error: "invalid photo_url" });
-  }
-  const result = db
-    .prepare("UPDATE pets SET photo_url = ? WHERE id = ?")
-    .run(photo_url, req.params.id);
-  if (result.changes === 0) return res.status(404).json({ error: "not found" });
-  res.json({ id: req.params.id, photo_url });
-});
+app.patch("/api/pets/:id/photo", handlePhotoPatch("pets"));
 app.post("/api/pets", (req, res) => {
   const {
     id,
@@ -599,13 +584,7 @@ app.patch("/api/pets/:id", (req, res) => {
   if (result.changes === 0) return res.status(404).json({ error: "not found" });
   res.json({ id: req.params.id, status, image, lat, lng });
 });
-app.delete("/api/pets/:id", (req, res) => {
-  if (
-    !process.env.ADMIN_KEY ||
-    req.headers["x-admin-key"] !== process.env.ADMIN_KEY
-  ) {
-    return res.status(403).json({ error: "forbidden" });
-  }
+app.delete("/api/pets/:id", requireAdmin, (req, res) => {
   const result = db.prepare("DELETE FROM pets WHERE id = ?").run(req.params.id);
   if (result.changes === 0) return res.status(404).json({ error: "not found" });
   res.status(204).end();
@@ -652,21 +631,7 @@ app.post("/api/buildings", (req, res) => {
   });
 });
 // Endpoint para actualizar photo_url de edificios (similar a personas y mascotas)
-app.patch("/api/buildings/:id/photo", (req, res) => {
-  const { photo_url } = req.body || {};
-  if (
-    !photo_url ||
-    typeof photo_url !== "string" ||
-    !/^https:\/\/res\.cloudinary\.com\//.test(photo_url)
-  ) {
-    return res.status(400).json({ error: "invalid photo_url" });
-  }
-  db.prepare("UPDATE buildings SET photo_url = ? WHERE id = ?").run(
-    photo_url,
-    req.params.id,
-  );
-  res.json({ id: req.params.id, photo_url });
-});
+app.patch("/api/buildings/:id/photo", handlePhotoPatch("buildings"));
 
 app.patch("/api/buildings/:id", (req, res) => {
   const { status, image, lat, lng } = req.body || {};
@@ -701,13 +666,7 @@ app.patch("/api/buildings/:id", (req, res) => {
   if (result.changes === 0) return res.status(404).json({ error: "not found" });
   res.json({ id: req.params.id, status, image, lat, lng });
 });
-app.delete("/api/buildings/:id", (req, res) => {
-  if (
-    !process.env.ADMIN_KEY ||
-    req.headers["x-admin-key"] !== process.env.ADMIN_KEY
-  ) {
-    return res.status(403).json({ error: "forbidden" });
-  }
+app.delete("/api/buildings/:id", requireAdmin, (req, res) => {
   const result = db
     .prepare("DELETE FROM buildings WHERE id = ?")
     .run(req.params.id);
@@ -745,13 +704,7 @@ app.post("/api/collaborators", (req, res) => {
     created_at: createdAt,
   });
 });
-app.delete("/api/collaborators/:id", (req, res) => {
-  if (
-    !process.env.ADMIN_KEY ||
-    req.headers["x-admin-key"] !== process.env.ADMIN_KEY
-  ) {
-    return res.status(403).json({ error: "forbidden" });
-  }
+app.delete("/api/collaborators/:id", requireAdmin, (req, res) => {
   const result = db
     .prepare("DELETE FROM collaborators WHERE id = ?")
     .run(req.params.id);
@@ -839,28 +792,8 @@ app.patch("/api/anuncios/:id", (req, res) => {
   res.json({ ...updated, images: parseImages(updated.images) });
 });
 // Endpoint para actualizar photo_url de anuncios (similar a personas/mascotas/edificios)
-app.patch("/api/anuncios/:id/photo", (req, res) => {
-  const { photo_url } = req.body || {};
-  if (
-    !photo_url ||
-    typeof photo_url !== "string" ||
-    !/^https:\/\/res\.cloudinary\.com\//.test(photo_url)
-  ) {
-    return res.status(400).json({ error: "invalid photo_url" });
-  }
-  const result = db
-    .prepare("UPDATE anuncios SET photo_url = ? WHERE id = ?")
-    .run(photo_url, req.params.id);
-  if (result.changes === 0) return res.status(404).json({ error: "not found" });
-  res.json({ id: req.params.id, photo_url });
-});
-app.delete("/api/anuncios/:id", (req, res) => {
-  if (
-    !process.env.ADMIN_KEY ||
-    req.headers["x-admin-key"] !== process.env.ADMIN_KEY
-  ) {
-    return res.status(403).json({ error: "forbidden" });
-  }
+app.patch("/api/anuncios/:id/photo", handlePhotoPatch("anuncios"));
+app.delete("/api/anuncios/:id", requireAdmin, (req, res) => {
   const result = db
     .prepare("DELETE FROM anuncios WHERE id = ?")
     .run(req.params.id);

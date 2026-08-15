@@ -122,12 +122,13 @@
 
 .modal-status {
   display: inline-block;
-  margin-bottom: 12px;
+  /* margin-bottom: 12px; */
 }
 
 .modal-meta {
   /* font-size: 0.9rem; */
   color: #aaa;
+  padding: 5px;
   margin-bottom: 4px;
   line-height: 1.6;
 }

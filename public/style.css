@@ -146,10 +146,11 @@ h1 {
    100dvh forcing overflow. Visibility is toggled from JS (showMap/
    hideMap) so it only paints on the map tab. */
 #tabMapPanel {
-  position: fixed;
+  position: relative;
   inset: 0;
   padding: 0 !important;
-  z-index: 1; /* below the sticky bars (9999/1000) and content */
+  z-index: 1;
+  /* below the sticky bars (9999/1000) and content */
 }
 
 #map {
