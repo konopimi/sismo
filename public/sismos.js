@@ -240,13 +240,16 @@
         const url = q.url || "";
         return `
           <div class="sismo-row">
-            <span class="mag ${magClass(mag)}">${mag.toFixed(1)}</span>
-            <span class="info">
+            <div class="sismo-top">
               <span class="place">${esc(q.place) || "Lugar desconocido"}</span>
-              <span class="meta">${esc(relTime(q.timestamp))} · ${esc(fullTime(q.timestamp))}</span>
-            </span>
-            <span class="depth-pill">${esc(depthLabel(q.depth))}${depth ? ` · ${esc(depth)} km` : ""}</span>
-            ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">Detalle ↗</a>` : ""}
+              <span class="rel">${esc(relTime(q.timestamp))}</span>
+            </div>
+            <div class="sismo-bottom">
+              <span class="mag ${magClass(mag)}">${mag.toFixed(1)}</span>
+              <span class="meta">${esc(fullTime(q.timestamp))}</span>
+              <span class="depth-pill">${esc(depthLabel(q.depth))}${depth ? ` · ${esc(depth)} km` : ""}</span>
+              ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">Detalle ↗</a>` : ""}
+            </div>
           </div>`;
       })
       .join("");
