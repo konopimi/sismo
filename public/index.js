@@ -113,6 +113,41 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// Factory para previsualización de foto (archivo + URL)
+function setupPhotoPreview({ fileInput, urlInput, previewEl, labelEl, placeholderText, urlPreviewEl }) {
+  fileInput.addEventListener("change", function() {
+    if (previewEl.src) {
+      URL.revokeObjectURL(previewEl.src);
+      previewEl.src = "";
+    }
+    if (this.files.length > 0) {
+      labelEl.textContent = this.files[0].name;
+      previewEl.src = URL.createObjectURL(this.files[0]);
+      previewEl.style.display = "inline-block";
+    } else {
+      labelEl.textContent = placeholderText;
+      previewEl.style.display = "none";
+      previewEl.src = "";
+    }
+  });
+
+  urlInput.addEventListener("input", function() {
+    const url = this.value.trim();
+    if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
+      urlPreviewEl.src = url;
+      urlPreviewEl.style.display = "inline-block";
+      urlPreviewEl.onerror = function() {
+        urlPreviewEl.style.display = "none";
+        urlPreviewEl.src = "";
+      };
+    } else {
+      urlPreviewEl.style.display = "none";
+      urlPreviewEl.src = "";
+      urlPreviewEl.onerror = null;
+    }
+  });
+}
+
 function locationLinksHtml(lat, lng, coordLabel) {
   const label = coordLabel || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
   return `<span class="loc-links">🗺️ ${label}</br> 
@@ -1655,42 +1690,14 @@ const photoPreview = document.getElementById("photoPreview");
 // Referencia para la previsualización de URL
 const urlPreview = document.getElementById("urlPreview");
 
-// Mostrar nombre del archivo seleccionado
-photoInput.addEventListener("change", function() {
-  // Limpiar previsualización anterior
-  if (photoPreview.src) {
-    URL.revokeObjectURL(photoPreview.src);
-    photoPreview.src = "";
-  }
-  if (this.files.length > 0) {
-    fileLabel.textContent = this.files[0].name;
-    // Mostrar vista previa
-    const objectUrl = URL.createObjectURL(this.files[0]);
-    photoPreview.src = objectUrl;
-    photoPreview.style.display = "inline-block";
-  } else if (fileLabel) {
-    fileLabel.textContent = "Ningún archivo seleccionado";
-    photoPreview.style.display = "none";
-    photoPreview.src = "";
-  }
-});
-
-// Previsualización de URL en tiempo real
-imageInput.addEventListener("input", function() {
-  const url = this.value.trim();
-  if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
-    urlPreview.src = url;
-    urlPreview.style.display = "inline-block";
-    // Si la imagen no se carga, ocultarla
-    urlPreview.onerror = function() {
-      urlPreview.style.display = "none";
-      urlPreview.src = "";
-    };
-  } else {
-    urlPreview.style.display = "none";
-    urlPreview.src = "";
-    urlPreview.onerror = null;
-  }
+// Previsualización de archivo y URL — usa factory compartida
+setupPhotoPreview({
+  fileInput: photoInput,
+  urlInput: imageInput,
+  previewEl: photoPreview,
+  labelEl: fileLabel,
+  placeholderText: "Ningún archivo seleccionado",
+  urlPreviewEl: urlPreview,
 });
 
 async function loadList() {
@@ -1907,39 +1914,14 @@ async function uploadPetPhoto(petId, file) {
   }
 }
 
-// Previsualización de archivo para mascotas
-photoInputP.addEventListener("change", function() {
-  if (photoPreviewP.src) {
-    URL.revokeObjectURL(photoPreviewP.src);
-    photoPreviewP.src = "";
-  }
-  if (this.files.length > 0) {
-    fileLabelP.textContent = this.files[0].name;
-    const objectUrl = URL.createObjectURL(this.files[0]);
-    photoPreviewP.src = objectUrl;
-    photoPreviewP.style.display = "inline-block";
-  } else {
-    fileLabelP.textContent = "Sube una foto";
-    photoPreviewP.style.display = "none";
-    photoPreviewP.src = "";
-  }
-});
-
-// Previsualización de URL para mascotas
-imageInputP.addEventListener("input", function() {
-  const url = this.value.trim();
-  if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
-    urlPreviewP.src = url;
-    urlPreviewP.style.display = "inline-block";
-    urlPreviewP.onerror = function() {
-      urlPreviewP.style.display = "none";
-      urlPreviewP.src = "";
-    };
-  } else {
-    urlPreviewP.style.display = "none";
-    urlPreviewP.src = "";
-    urlPreviewP.onerror = null;
-  }
+// Previsualización de archivo y URL — usa factory compartida
+setupPhotoPreview({
+  fileInput: photoInputP,
+  urlInput: imageInputP,
+  previewEl: photoPreviewP,
+  labelEl: fileLabelP,
+  placeholderText: "Sube una foto",
+  urlPreviewEl: urlPreviewP,
 });
 async function loadListP() {
   try {
@@ -2073,39 +2055,14 @@ async function uploadBuildingPhoto(buildingId, file) {
   }
 }
 
-// Previsualización de archivo para edificios
-photoInputB.addEventListener("change", function() {
-  if (photoPreviewB.src) {
-    URL.revokeObjectURL(photoPreviewB.src);
-    photoPreviewB.src = "";
-  }
-  if (this.files.length > 0) {
-    fileLabelB.textContent = this.files[0].name;
-    const objectUrl = URL.createObjectURL(this.files[0]);
-    photoPreviewB.src = objectUrl;
-    photoPreviewB.style.display = "inline-block";
-  } else {
-    fileLabelB.textContent = "Sube una foto";
-    photoPreviewB.style.display = "none";
-    photoPreviewB.src = "";
-  }
-});
-
-// Previsualización de URL para edificios
-imageInputB.addEventListener("input", function() {
-  const url = this.value.trim();
-  if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
-    urlPreviewB.src = url;
-    urlPreviewB.style.display = "inline-block";
-    urlPreviewB.onerror = function() {
-      urlPreviewB.style.display = "none";
-      urlPreviewB.src = "";
-    };
-  } else {
-    urlPreviewB.style.display = "none";
-    urlPreviewB.src = "";
-    urlPreviewB.onerror = null;
-  }
+// Previsualización de archivo y URL — usa factory compartida
+setupPhotoPreview({
+  fileInput: photoInputB,
+  urlInput: imageInputB,
+  previewEl: photoPreviewB,
+  labelEl: fileLabelB,
+  placeholderText: "Sube una foto",
+  urlPreviewEl: urlPreviewB,
 });
 
 async function loadListB() {

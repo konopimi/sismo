@@ -8,6 +8,14 @@ const PORT = process.env.PORT || 3000;
 const DB_PATH = process.env.DB_PATH || "/opt/sismo-api/data.db";
 app.use(cors());
 app.use(express.json());
+
+// Admin auth middleware
+function requireAdmin(req, res, next) {
+  if (!process.env.ADMIN_KEY || req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
+    return res.status(403).json({ error: "forbidden" });
+  }
+  next();
+}
 const db = new Database(DB_PATH);
 db.pragma("journal_mode = WAL");
 // --- Create tables ---
@@ -207,13 +215,7 @@ app.post("/api/comments", (req, res) => {
     .status(201)
     .json({ id: finalId, text: text.trim(), created_at: createdAt });
 });
-app.delete("/api/comments/:id", (req, res) => {
-  if (
-    !process.env.ADMIN_KEY ||
-    req.headers["x-admin-key"] !== process.env.ADMIN_KEY
-  ) {
-    return res.status(403).json({ error: "forbidden" });
-  }
+app.delete("/api/comments/:id", requireAdmin, (req, res) => {
   const result = db
     .prepare("DELETE FROM comments WHERE id = ?")
     .run(req.params.id);
@@ -256,13 +258,7 @@ app.post("/api/item-locations", (req, res) => {
     .status(201)
     .json({ id: finalId, lat, lng, label: lbl, created_at: createdAt });
 });
-app.delete("/api/item-locations/:id", (req, res) => {
-  if (
-    !process.env.ADMIN_KEY ||
-    req.headers["x-admin-key"] !== process.env.ADMIN_KEY
-  ) {
-    return res.status(403).json({ error: "forbidden" });
-  }
+app.delete("/api/item-locations/:id", requireAdmin, (req, res) => {
   const result = db
     .prepare("DELETE FROM item_locations WHERE id = ?")
     .run(req.params.id);
