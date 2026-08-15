@@ -365,24 +365,24 @@ fetch("/cities.json")
       cityCoordinates[c.name] = [c.lat, c.lng];
     });
 
+    // Populate all city <select> elements with the same options.
+    const citySelectIds = [
+      "cityInput",
+      "cityInputP",
+      "cityInputB",
+      "cityInputColab",
+      "citySelectorMap",
+    ];
     const opts = cities
       .map((c) => `<option value="${c.name}">${c.name}</option>`)
       .join("");
-    document.getElementById("cityInput").insertAdjacentHTML("beforeend", opts);
-    document.getElementById("cityInputP").insertAdjacentHTML("beforeend", opts);
-    document.getElementById("cityInputB").insertAdjacentHTML("beforeend", opts);
-    document
-      .getElementById("cityInputColab")
-      .insertAdjacentHTML("beforeend", opts);
-    // Llenar el selector de ciudades del mapa y agregar evento
+    citySelectIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.insertAdjacentHTML("beforeend", opts);
+    });
+    // El selector del mapa además vuela a la ciudad elegida.
     const citySelectorMap = document.getElementById("citySelectorMap");
     if (citySelectorMap) {
-      cities.forEach((c) => {
-        const option = document.createElement("option");
-        option.value = c.name;
-        option.textContent = c.name;
-        citySelectorMap.appendChild(option);
-      });
       citySelectorMap.addEventListener("change", function() {
         const city = this.value;
         if (city && window.sismoMap && cityCoordinates[city]) {
