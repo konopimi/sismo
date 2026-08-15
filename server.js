@@ -301,10 +301,10 @@ app.patch("/api/disappeared/:id/photo", (req, res) => {
   res.json({ id: req.params.id, photo_url });
 });
 app.post("/api/disappeared", (req, res) => {
-  // 1. Add 'description' to the destructured body
   const {
     id,
     name,
+    status,
     location,
     city,
     image,
@@ -327,6 +327,18 @@ app.post("/api/disappeared", (req, res) => {
     return res.status(400).json({ error: "name is required" });
   }
 
+  // 🛡️ Prevent duplicates: If we already scraped this exact URL, skip it!
+  if (source_url) {
+    const existing = db
+      .prepare("SELECT id FROM disappeared WHERE source_url = ?")
+      .get(source_url);
+    if (existing) {
+      return res
+        .status(200)
+        .json({ id: existing.id, status: "already_exists" });
+    }
+  }
+
   const finalId = id || crypto.randomUUID();
   const createdAt = new Date().toISOString();
   const loc = location && location.trim() ? location.trim() : null;
@@ -335,17 +347,35 @@ app.post("/api/disappeared", (req, res) => {
   const latVal = Number.isFinite(lat) ? lat : null;
   const lngVal = Number.isFinite(lng) ? lng : null;
   const metaVal = meta && typeof meta === "string" ? meta.trim() : null;
-
-  // 2. Sanitize description
   const descVal =
     description && typeof description === "string" ? description.trim() : null;
+  const ageVal = Number.isFinite(age) ? age : null;
+  const physDescVal =
+    physical_description && typeof physical_description === "string"
+      ? physical_description.trim()
+      : null;
+  const deptVal = department && typeof department === "string" ? department.trim() : null;
+  const catVal = category && typeof category === "string" ? category.trim() : null;
+  const reportCountVal = Number.isFinite(report_count) ? report_count : null;
+  const timeElapsedVal = time_elapsed && typeof time_elapsed === "string" ? time_elapsed.trim() : null;
+  const sourceTypeVal = source_type && typeof source_type === "string" ? source_type.trim() : null;
+  const reporterVal = reporter && typeof reporter === "string" ? reporter.trim() : null;
+  const sourceUrlVal = source_url && typeof source_url === "string" ? source_url.trim() : null;
 
-  // 3. Update the INSERT query to include 'description' (11 values now)
+  // Map and validate status
+  const validStatuses = ["desaparecido", "encontrado", "angel"];
+  const finalStatus = validStatuses.includes(status) ? status : "desaparecido";
+
   db.prepare(
-    "INSERT INTO disappeared (id, name, status, location, city, image, created_at, lat, lng, meta, description) VALUES (?, ?, 'desaparecido', ?, ?, ?, ?, ?, ?, ?, ?)",
+    `INSERT INTO disappeared (
+      id, name, status, location, city, image, created_at, lat, lng, meta, description,
+      source_url, age, physical_description, department, category, report_count,
+      time_elapsed, source_type, reporter
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     finalId,
     name.trim(),
+    finalStatus,
     loc,
     cty,
     img,
@@ -353,13 +383,22 @@ app.post("/api/disappeared", (req, res) => {
     latVal,
     lngVal,
     metaVal,
-    descVal, // 4. Pass the value
+    descVal,
+    sourceUrlVal,
+    ageVal,
+    physDescVal,
+    deptVal,
+    catVal,
+    reportCountVal,
+    timeElapsedVal,
+    sourceTypeVal,
+    reporterVal,
   );
 
   res.status(201).json({
     id: finalId,
     name: name.trim(),
-    status: "desaparecido",
+    status: finalStatus,
     location: loc,
     city: cty,
     image: img,
@@ -368,6 +407,15 @@ app.post("/api/disappeared", (req, res) => {
     lng: lngVal,
     meta: metaVal,
     description: descVal,
+    source_url: sourceUrlVal,
+    age: ageVal,
+    physical_description: physDescVal,
+    department: deptVal,
+    category: catVal,
+    report_count: reportCountVal,
+    time_elapsed: timeElapsedVal,
+    source_type: sourceTypeVal,
+    reporter: reporterVal,
   });
 });
 app.patch("/api/disappeared/:id", (req, res) => {
