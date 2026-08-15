@@ -37,12 +37,12 @@ function isTypeVisible(type) {
 // Single source of truth for status semantics (color, CSS class, label).
 // Exposed on window so index.js can also use it.
 const STATUS_META = {
-  desaparecido: { color: "#d64545", cssClass: "s-urgente", label: "desaparecido" },
-  encontrado:   { color: "#3fa34d", cssClass: "s-resuelto", label: "encontrado" },
-  seguro:       { color: "#3fa34d", cssClass: "s-revision", label: "seguro" },
-  danado:       { color: "#e0a63c", cssClass: "s-urgente", label: "dañado" },
-  colapsado:    { color: "#b53838", cssClass: "s-urgente", label: "colapsado" },
-  angel:        { color: "#add8e6", cssClass: "s-resuelto", label: "👼" },
+  desaparecido: { color: "#d64545", cssClass: "desaparecido", label: "desaparecido" },
+  encontrado:   { color: "#3fa34d", cssClass: "encontrado", label: "encontrado" },
+  seguro:       { color: "#3fa34d", cssClass: "seguro", label: "seguro" },
+  danado:       { color: "#e0a63c", cssClass: "danado", label: "dañado" },
+  colapsado:    { color: "#b53838", cssClass: "colapsado", label: "colapsado" },
+  angel:        { color: "#add8e6", cssClass: "angel", label: "👼" },
 };
 window.STATUS_META = STATUS_META;
 

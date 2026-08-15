@@ -776,6 +776,18 @@ textarea {
   border-left-color: #3fa34d;
 }
 
+.card.seguro {
+  border-left-color: #3fa34d;
+}
+
+.card.danado {
+  border-left-color: #e0a63c;
+}
+
+.card.colapsado {
+  border-left-color: #b53838;
+}
+
 .card .card-inner {
   display: flex;
   flex: 1;

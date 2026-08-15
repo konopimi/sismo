@@ -2154,7 +2154,7 @@ function buildingCardHtml(item) {
           ${imgHtml}
             <div class="card-inner">
             <div style="display:flex;flex-direction:column;">
-<span class="status-tag ${statusClass}">${statusLabel}</span>
+<span class="status-tag ${statusTagClass}">${statusTagLabel}</span>
             </div >
               <div class="info">
                 <span class="meta">${metaParts.join(" · ")}</span>
