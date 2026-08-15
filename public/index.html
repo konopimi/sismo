@@ -335,9 +335,9 @@
   <!-- ===== CREAR MODAL (all creation forms) ===== -->
   <div id="crearModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="crearModalTitle">
     <div class="modal-content" style="max-width: 560px; max-height: 90vh">
-      <div class="modal-header">
+      <div class="modal-header" data-modal-header>
         <h2 id="crearModalTitle">Crear</h2>
-        <button class="modal-close" id="crearModalClose" aria-label="Cerrar">
+        <button class="modal-close" id="crearModalClose" data-modal-close aria-label="Cerrar">
           🗑️
         </button>
       </div>
@@ -510,11 +510,13 @@
     </div>
   </div>
   <div id="mapModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="mapModalTitle">
-    <div class="modal-content">
-      <button class="modal-close" id="mapModalClose" aria-label="Cerrar">
-        ✕
-      </button>
-      <h2 id="mapModalTitle">Marca la ubicación</h2>
+    <div class="modal-content" data-modal-body>
+      <div class="modal-header" data-modal-header>
+        <h2 id="mapModalTitle">Marca la ubicación</h2>
+        <button class="modal-close" id="mapModalClose" data-modal-close aria-label="Cerrar">
+          ✕
+        </button>
+      </div>
       <div id="mapPickerContext" style="display: none"></div>
       <div style="position: relative; margin-bottom: 10px">
         <input type="text" id="mapSearchInput" placeholder="🔍 Buscar dirección o lugar..." style="
@@ -540,8 +542,8 @@
               overflow-y: auto;
             "></div>
       </div>
-      <div style="display: flex; gap: 8px; margin-bottom: 10px;>
-        <input type=" number" id="mapPickerLatInput" step="any" placeholder="Latitud" style="
+      <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+        <input type="number" id="mapPickerLatInput" step="any" placeholder="Latitud" style="
               flex: 1 1 120px;
               padding: 10px;
               border-radius: 8px;
@@ -562,7 +564,8 @@
       </button>
     </div>
     <div id="mapPickerContainer"></div>
-    <div class="modal-actions">
+    </div>
+    <div class="modal-actions" data-modal-footer>
       <button type="button" id="mapPickerConfirm">
         📍 Usar esta ubicación
       </button>

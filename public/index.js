@@ -639,7 +639,6 @@ tabSismosBtn.addEventListener("click", () =>
 // ================================================================
 const crearModal = document.getElementById("crearModal");
 const crearModalTitle = document.getElementById("crearModalTitle");
-const crearModalClose = document.getElementById("crearModalClose");
 const crearFormWraps = crearModal.querySelectorAll(".crear-form-wrap");
 
 const CREAR_META = {
@@ -650,23 +649,20 @@ const CREAR_META = {
   colaborador: { title: "Colaborar" },
 };
 
+const crearModalShell = Modal({ id: "crearModal" });
+
 function openCrearModal(type) {
   if (!CREAR_META[type]) type = "person";
   crearModalTitle.textContent = CREAR_META[type].title;
   crearFormWraps.forEach((w) => {
     w.classList.toggle("active", w.dataset.type === type);
   });
-  crearModal.classList.add("open");
+  crearModalShell.open();
 }
 
 function closeCrearModal() {
-  crearModal.classList.remove("open");
+  crearModalShell.close();
 }
-
-crearModalClose.addEventListener("click", closeCrearModal);
-crearModal.addEventListener("click", (e) => {
-  if (e.target === crearModal) closeCrearModal();
-});
 
 function openCrearModalForActiveTab() {
   const activeBtn = document.querySelector(".tab-btn.active");
@@ -737,10 +733,8 @@ modalRandom.addEventListener("click", () => {
 });
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
-  // Detail modal is handled by the Modal shell (modal.js).
-  // These two remain until they migrate to the shell.
-  if (crearModal.classList.contains("open")) closeCrearModal();
-  if (mapModal.classList.contains("open")) closeMapPicker();
+  // Escape handling is centralized in modal.js (wireEscape). All three
+  // modals (crear, detail, map) are now backed by Modal shells.
 });
 
 // ----- Selector de ubicación en mapa -----
@@ -755,11 +749,12 @@ let leafletMarker = null;
 let modalMiniMap = null;
 
 const mapModal = document.getElementById("mapModal");
-const mapModalClose = document.getElementById("mapModalClose");
 const mapPickerConfirm = document.getElementById("mapPickerConfirm");
 const mapPickerLatInput = document.getElementById("mapPickerLatInput");
 const mapPickerLngInput = document.getElementById("mapPickerLngInput");
 const mapPickerGoBtn = document.getElementById("mapPickerGoBtn");
+
+const mapModalShell = Modal({ id: "mapModal" });
 
 // Build the context-info block (photo + emoji + name + subtitle) for the
 // map picker when editing an item's location. Returns { target, contextHtml }.
@@ -781,7 +776,7 @@ function mapPickerContextInfo(targetRef, subtitle) {
 }
 function openMapPicker(context) {
   mapPickerContext = context;
-  mapModal.classList.add("open");
+  mapModalShell.open();
 
   if (!leafletMap) {
     leafletMap = L.map("mapPickerContainer").setView(CALI_CENTER, 13);
@@ -856,17 +851,12 @@ function openMapPicker(context) {
 }
 
 function closeMapPicker() {
-  mapModal.classList.remove("open");
+  mapModalShell.close();
   mapPickerContext = null;
   mapSearchInput.value = "";
   mapSearchResults.style.display = "none";
   mapSearchResults.innerHTML = "";
 }
-
-mapModalClose.addEventListener("click", closeMapPicker);
-mapModal.addEventListener("click", (e) => {
-  if (e.target === mapModal) closeMapPicker();
-});
 
 function syncPickerInputs(lat, lng) {
   mapPickerLatInput.value = lat.toFixed(6);
