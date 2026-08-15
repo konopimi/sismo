@@ -139,18 +139,24 @@ h1 {
   flex: 1;
 }
 
+/* The map panel is a fixed full-viewport layer that sits BEHIND the
+   sticky top bar and driver (which float over it with translucent blur).
+   It is taken out of the body's flex/scroll flow entirely, so the other
+   tab panels scroll normally between the sticky bars without the map's
+   100dvh forcing overflow. Visibility is toggled from JS (showMap/
+   hideMap) so it only paints on the map tab. */
 #tabMapPanel {
-  min-height: 100%;
-  padding: 0px !important;
-  flex: 1;
+  position: fixed;
+  inset: 0;
+  padding: 0 !important;
+  z-index: 1; /* below the sticky bars (9999/1000) and content */
 }
 
 #map {
-  flex: 1;
-  min-height: 100vh;
-  min-height: 100dvh;
-  max-height: 100vh;
-  max-height: 100dvh;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .leaflet-control-zoom {
@@ -1027,15 +1033,19 @@ textarea {
 
 /* ===== ALERTA SISMO ===== */
 .alerta {
-  background: rgba(127, 127, 172, 0.6);
-  border-radius: 10px;
-  padding: 10px 15px;
-  border: 1px solid #b8d4e8;
+  position: sticky;
+  top: calc(var(--top-bar-height) + 5px);
+  background: rgba(127, 127, 172, 0.9);
+  border-radius: 10px 10px 0px 0px;
+  padding: 5px;
+  border-bottom: 2px solid rgba(127, 127, 127);
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   transition: all 0.3s;
+  backdrop-filter: blur(10px);
 }
 
 .alerta.peligro {

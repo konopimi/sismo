@@ -421,10 +421,10 @@ function initMap() {
     {
       ext: "jpg",
 
-      attribution:
-        "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
-      // attribution:
-      //   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      //   attribution:
+      //     "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
+      //   // attribution:
+      //   //   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     },
   ).addTo(map);
 
@@ -471,10 +471,14 @@ function initMap() {
 }
 
 function hideMap() {
+  // The map panel is a fixed full-viewport layer; hide it so it doesn't
+  // paint behind the other tabs' content.
+  document.getElementById("tabMapPanel").style.display = "none";
   document.getElementById("mapSidebar").style.display = "none";
 }
 
 function showMap() {
+  document.getElementById("tabMapPanel").style.display = "block";
   document.getElementById("mapSidebar").style.display = "flex";
 }
 

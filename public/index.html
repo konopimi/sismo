@@ -135,7 +135,7 @@
     <div id="listColab" class="list"></div>
   </div>
   <!-- ===== PANEL MAPA ===== -->
-  <div id="tabMapPanel" class="tab-panel" style="position: relative">
+  <div id="tabMapPanel" class="tab-panel">
     <div>
       <!-- <label for="citySelectorMap" style="color:#ccc; margin-right:8px;">Ir a ciudad:</label> -->
       <div style="
@@ -192,13 +192,7 @@
         </div>
       </div>
     </div>
-    <div id="map" style="
-          height: 100vh;
-          height: 100dvh;
-          width: 100%;
-          z-index: 1;
-          position:relative;
-        ">
+    <div id="map">
 
       <div id="mapSidebar" class="map-sidebar">
         <div class="map-sidebar-title">🫂 Personas · 🐕 Mascotas</div>
@@ -212,18 +206,18 @@
   </div>
   <!-- ===== PANEL SISMOS ===== -->
   <div id="tabSismos" class="tab-panel">
-    <div style="max-height:100%">
-      <div id="sismoAlert" class="alerta" style="margin-bottom:15px;">
-        <div><strong>Último sismo:</strong> <span id="ultimoLugar">Cargando...</span></div>
-        <div><span id="ultimoMag" style="font-size:28px;font-weight:bold;">--</span> <span id="ultimoHora"
-            style="margin-left:10px;color:#999;"></span></div>
-      </div>
-      <div id="sismoChart" style="height:400px;width:100%;background:#fff;border-radius:12px;border:1px solid #e9ecef;">
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:14px;color:#999;">
-        <span>Fuente: USGS | Actualización cada 10s</span>
-        <span id="totalSismos">0 sismos</span>
-      </div>
+    <div id="sismoAlert" class="alerta" style="">
+      <div style="font-size:80%; color:gray;align-item:left;">Último sismo</div>
+      <div><span id="ultimoLugar">Cargando...</span></div>
+      <div><span id="ultimoMag" style="font-size:162%;font-weight:bold;">--</span> <span id="ultimoHora"
+          style="margin-left:10px;color:#999;"></span></div>
+    </div>
+    <div id="sismoChart"
+      style="height:400px;width:100%;background:#222;border-radius:0px 0px 10px 10px;border-bottom:1px solid #e9ecef;">
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:14px;color:#999;">
+      <span>Fuente: USGS | Actualización cada 10s</span>
+      <span id="totalSismos">0 sismos</span>
     </div>
   </div>
   <!-- ===== PANEL WIKI ===== -->
@@ -347,7 +341,6 @@
           🗑️
         </button>
       </div>
-      <div class="modal-divider"></div>
       <!-- PERSONA -->
       <div class="crear-form-wrap" data-type="person">
         <form id="addForm">
@@ -499,14 +492,12 @@
           ✕
         </button>
       </div>
-      <div data-modal-body style="flex:1;padding:3px;display:flex;flex-direction:column;width:100%;">
+      <div data-modal-body style="flex:1;display:flex;flex-direction:column;width:100%;">
         <div class="modal-status" id="modalStatus" style="margin-left:auto;">
         </div>
         <div id="modalMeta" class="modal-meta">
         </div>
-        <div class="modal-divider"></div>
         <div id="modalBody"></div>
-        <div class="modal-divider"></div>
         <div id="commentsContainer">
           <div id="commentsList"></div>
           <form id="commentForm" style="display:flex;flex-direction:column;">
