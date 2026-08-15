@@ -34,17 +34,20 @@ function isTypeVisible(type) {
 }
 
 // Marker circle color is driven by the item's status, not its type.
-const STATUS_COLOR = {
-  desaparecido: "#d64545",
-  encontrado: "#3fa34d",
-  seguro: "#3fa34d",
-  danado: "#e0a63c",
-  colapsado: "#b53838",
-  angel: "#add8e6",
+// Single source of truth for status semantics (color, CSS class, label).
+// Exposed on window so index.js can also use it.
+const STATUS_META = {
+  desaparecido: { color: "#d64545", cssClass: "s-urgente", label: "desaparecido" },
+  encontrado:   { color: "#3fa34d", cssClass: "s-resuelto", label: "encontrado" },
+  seguro:       { color: "#3fa34d", cssClass: "s-revision", label: "seguro" },
+  danado:       { color: "#e0a63c", cssClass: "s-urgente", label: "dañado" },
+  colapsado:    { color: "#b53838", cssClass: "s-urgente", label: "colapsado" },
+  angel:        { color: "#add8e6", cssClass: "s-resuelto", label: "👼" },
 };
+window.STATUS_META = STATUS_META;
 
 function statusColor(status) {
-  return STATUS_COLOR[status] || "#d64545";
+  return STATUS_META[status]?.color || "#d64545";
 }
 
 // Resolve an item's coordinates: prefer its own lat/lng, otherwise fall

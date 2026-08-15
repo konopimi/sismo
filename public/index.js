@@ -108,6 +108,28 @@ if (isLocalhost) {
 }
 
 // ================================================================
+//  STATUS META — single source of truth for status semantics
+//  (color for map markers, CSS class for pills, display label)
+//  Defined in map.js and exposed on window.STATUS_META.
+//  Helpers here for convenient access.
+// ================================================================
+function statusMeta(status) {
+  return (window.STATUS_META || {})[status] || (window.STATUS_META || {}).desaparecido;
+}
+
+function statusColor(status) {
+  return statusMeta(status).color;
+}
+
+function statusCssClass(status) {
+  return statusMeta(status).cssClass;
+}
+
+function statusLabel(status) {
+  return statusMeta(status).label;
+}
+
+// ================================================================
 //  UTILIDADES
 // ================================================================
 function escapeHtml(str) {
@@ -1152,8 +1174,9 @@ function openModalForItem(item, type) {
 
   // --- Resto del código existente para personas, mascotas y edificios ---
   const statusClass = item.status || "desaparecido";
-  const statusLabel = item.status || "desaparecido";
-  modalStatus.innerHTML = `<span class="status-tag ${statusClass}">${statusLabel}</span>`;
+  const statusTagLabel = statusLabel(statusClass);
+  const statusTagClass = statusCssClass(statusClass);
+  modalStatus.innerHTML = `<span class="status-tag ${statusTagClass}">${statusTagLabel}</span>`;
   modalTitle.textContent = item.name || "Sin nombre";
 
   const dateStr = item.created_at
@@ -1749,8 +1772,11 @@ function entityCardHtml(item, type, placeholderImg) {
   }
   const isAngel =
     item.name.toLowerCase() == "juan david cano" || item.status == "angel";
+  const cardStatusClass = found ? "encontrado" : statusCssClass(item.status);
+  const statusTagLabel = isAngel ? "👼" : statusLabel(item.status);
+  const statusTagClass = found ? "encontrado" : statusCssClass(item.status);
   return `
-        <div class="card ${found ? "encontrado" : item.status == "desaparecido" ? "desaparecido" : ""}" data-id="${item.id}" data-type="${type}" style = "${isAngel && "background:#7fb8ec; color: white; opacity: 0.62; border-left: 4px solid white; "}" >
+        <div class="card ${cardStatusClass}" data-id="${item.id}" data-type="${type}" style = "${isAngel && "background:#7fb8ec; color: white; opacity: 0.62; border-left: 4px solid white; "}" >
     <div style="padding:5px;background:rgba(127,127,127,0.38)">
       <span class="name"
         style="${isAngel && " color:white;"}"
@@ -1760,8 +1786,7 @@ function entityCardHtml(item, type, placeholderImg) {
       ${imgHtml}
       <div class="card-inner">
         <div style="display:flex;flex-direction:column;">
-          <span class="status-tag ${found ? " encontrado" : ""}" style="margin-left:auto;${isAngel && "background:lightblue;color:white;"}">${isAngel ? "👼" : item.status
-    }</span >
+          <span class="status-tag ${statusTagClass}" style="margin-left:auto;${isAngel && "background:lightblue;color:white;"}">${statusTagLabel}</span >
       </div >
       <div class="info" style="${isAngel & " color:white;"}">
       <span class="meta" style="${isAngel & " color:white;"}">${metaParts.join(" · ")}</span>
@@ -2091,8 +2116,8 @@ function buildingCardHtml(item) {
     metaParts.push(locationLinksHtml(item.lat, item.lng));
   metaParts.push(date);
   const statusClass = item.status || "seguro";
-  const statusLabel =
-    item.status === "colapsado" ? "💥" : item.status === "danado" ? "⚠️" : "🫶";
+  const statusTagLabel = statusLabel(statusClass);
+  const statusTagClass = statusCssClass(statusClass);
   let imgHtml = "";
   if (item.photo_url) {
     imgHtml = `<img class="card-photo" src="${escapeHtml(item.photo_url)}" alt="Foto" />`;
@@ -2741,6 +2766,7 @@ trackLayoutHeights();
 //  SISMOS EN TIEMPO REAL (ECharts)
 // ================================================================
 function initSismoChart() {
+  alert("DEBUGGING!!!");
   const dom = document.getElementById("sismoChart");
   if (!dom) return;
   if (typeof echarts === "undefined") {
