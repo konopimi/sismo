@@ -1,0 +1,249 @@
+diff --git a/public/index.js b/public/index.js
+index 021ca94..2426628 100644
+--- a/public/index.js
++++ b/public/index.js
+@@ -62,6 +62,75 @@ const tabMap = {
+     panel: document.getElementById("tabSismos"),
+   },
+ };
++
++// ================================================================
++//  TYPE REGISTRY — single source of truth for all entity type metadata
++//  (data array, emoji, DOM refs, API type, create title, render fn)
++//  Exposed on window so map.js can also use it.
++// ================================================================
++const TYPE_REGISTRY = {
++  person: {
++    data: () => personsData,
++    emoji: "🫂",
++    btn: tabPersonasBtn,
++    panel: tabPersonas,
++    apiType: "disappeared",
++    createTitle: "Crear persona",
++    renderFn: () => render,
++  },
++  pet: {
++    data: () => petsData,
++    emoji: "🐕",
++    btn: tabPetsBtn,
++    panel: tabPets,
++    apiType: "pets",
++    createTitle: "Crear mascota",
++    renderFn: () => renderP,
++  },
++  building: {
++    data: () => buildingsData,
++    emoji: "🏢",
++    btn: tabEdificiosBtn,
++    panel: tabEdificios,
++    apiType: "buildings",
++    createTitle: "Crear ubicación",
++    renderFn: () => renderB,
++  },
++  anuncio: {
++    data: () => anunciosData,
++    emoji: "📢",
++    btn: tabAnunciosBtn,
++    panel: tabAnuncios,
++    apiType: "anuncios",
++    createTitle: "Crear anuncio",
++    renderFn: () => renderA,
++  },
++  colaborador: {
++    data: () => colabData,
++    emoji: "🤝",
++    btn: tabColabBtn,
++    panel: tabColab,
++    apiType: "collaborators",
++    createTitle: "Colaborar",
++    renderFn: () => renderColab,
++  },
++  map: {
++    btn: tabMapBtn,
++    panel: tabMapPanel,
++    renderFn: () => {},
++  },
++  wiki: {
++    btn: wikiBtn,
++    panel: tabWiki,
++    renderFn: () => {},
++  },
++  sismos: {
++    btn: tabSismosBtn,
++    panel: tabSismos,
++    renderFn: () => {},
++  },
++};
++window.TYPE_REGISTRY = TYPE_REGISTRY;
+ // Coordenadas de ciudades principales de Colombia
+ // (Agrega más ciudades según necesites)
+ let cityCoordinates = {};
+@@ -564,19 +633,8 @@ function switchTab(activeBtn, activePanel, tabType) {
+   // Reset filters for the incoming tab (mirrors search reset on tab switch).
+   if (tabType && filterState[tabType]) resetFilters(tabType);
+ 
+-  // Lookup table for the render function of each tab. Tabs with side
+-  // effects (map, sismos) still need their own branch below.
+-  const RENDER_FN_BY_TAB = {
+-    person: render,
+-    pet: renderP,
+-    building: renderB,
+-    anuncio: renderA,
+-    colaborador: renderColab,
+-    map: () => {},
+-    wiki: () => {},
+-    sismos: () => {},
+-  };
+-  currentRenderFn = RENDER_FN_BY_TAB[tabType] || (() => {});
++  // Render function from TYPE_REGISTRY (single source of truth).
++  currentRenderFn = TYPE_REGISTRY[tabType]?.renderFn || (() => {});
+ 
+   // Side effects specific to certain tabs.
+   if (tabType === "map") {
+@@ -641,13 +699,11 @@ const crearModal = document.getElementById("crearModal");
+ const crearModalTitle = document.getElementById("crearModalTitle");
+ const crearFormWraps = crearModal.querySelectorAll(".crear-form-wrap");
+ 
+-const CREAR_META = {
+-  person: { title: "Crear persona" },
+-  pet: { title: "Crear mascota" },
+-  building: { title: "Crear ubicación" },
+-  anuncio: { title: "Crear anuncio" },
+-  colaborador: { title: "Colaborar" },
+-};
++// CREAR_META derived from TYPE_REGISTRY
++const CREAR_META = {};
++for (const [type, meta] of Object.entries(TYPE_REGISTRY)) {
++  if (meta.createTitle) CREAR_META[type] = { title: meta.createTitle };
++}
+ 
+ const crearModalShell = Modal({ id: "crearModal" });
+ 
+@@ -1054,12 +1110,7 @@ function initModalMiniMap(lat, lng) {
+ 
+ // Data array for a given item type (used by the random-jump button).
+ function dataForType(type) {
+-  if (type === "person") return personsData;
+-  if (type === "pet") return petsData;
+-  if (type === "building") return buildingsData;
+-  if (type === "colaborador") return colabData;
+-  if (type === "anuncio") return anunciosData;
+-  return [];
++  return TYPE_REGISTRY[type]?.data?.() || [];
+ }
+ 
+ // Open the modal for a random item of the same type (excludes current id).
+diff --git a/public/map.js b/public/map.js
+index 6e7b91e..fa7ead0 100644
+--- a/public/map.js
++++ b/public/map.js
+@@ -6,25 +6,27 @@ let cityMarkersLayer = null;
+ let mapMarkersLayer = null;
+ let heatmapLayer = null;
+ 
+-const MAP_MARKER_META = {
+-  person: {
+-    emoji: "🫂",
+-    data: () => personsData,
+-    tabArgs: () => [tabPersonasBtn, tabPersonas, "person"],
+-  },
+-  pet: {
+-    emoji: "🐕",
+-    data: () => petsData,
+-    tabArgs: () => [tabPetsBtn, tabPets, "pet"],
+-  },
+-  building: {
+-    emoji: "🏢",
+-    data: () => buildingsData,
+-    tabArgs: () => [tabEdificiosBtn, tabEdificios, "building"],
+-  },
+-};
++// TYPE_REGISTRY is defined in index.js and exposed on window.
++// We derive MAP_MARKER_META and MAP_SIDEBAR_EMOJI from it.
++const TYPE_REGISTRY = window.TYPE_REGISTRY || {};
++
++const MAP_MARKER_META = {};
++for (const [type, meta] of Object.entries(TYPE_REGISTRY)) {
++  if (meta.data && meta.emoji) {
++    MAP_MARKER_META[type] = {
++      emoji: meta.emoji,
++      data: meta.data,
++      tabArgs: () => [meta.btn, meta.panel, type],
++    };
++  }
++}
+ 
+-const MAP_SIDEBAR_EMOJI = { person: "🫂", pet: "🐕" };
++const MAP_SIDEBAR_EMOJI = {};
++for (const [type, meta] of Object.entries(TYPE_REGISTRY)) {
++  if (meta.emoji && meta.data) {
++    MAP_SIDEBAR_EMOJI[type] = meta.emoji;
++  }
++}
+ 
+ // Which marker types are currently visible on the map. Empty set = all.
+ const mapTypeFilter = new Set(["person", "pet", "building"]);
+diff --git a/public/modal.css b/public/modal.css
+index 097e13e..aa35293 100644
+--- a/public/modal.css
++++ b/public/modal.css
+@@ -23,11 +23,12 @@
+   top: 0px;
+   display: flex;
+   gap: 5px;
+-  background: rgba(127, 127, 127, 0.38);
++  background: rgba(127, 127, 127, 0.8);
+   align-items: center;
+   padding: 4px 6px;
+   backdrop-filter: blur(10px);
+   border-bottom: 2px solid rgba(127, 127, 127, 0.82);
++  border-radius: 5px 5px 0px 0px;
+   z-index: 999999;
+ }
+ 
+@@ -201,11 +202,12 @@
+   position: sticky;
+   bottom: 0px;
+   margin-top: 16px;
+-  background: rgba(127, 127, 127, 0.38);
++  background: rgba(127, 127, 127, 0.8);
+   align-items: center;
+   padding: 3px;
+   backdrop-filter: blur(10px);
+   border-top: 2px solid rgba(127, 127, 127, 0.82);
++  border-radius: 5px 5px 0px 0px;
+   z-index: 999999;
+ }
+ 
+diff --git a/public/run.sh b/public/run.sh
+index 68cb6b5..a486ea0 100755
+--- a/public/run.sh
++++ b/public/run.sh
+@@ -1,2 +1,2 @@
+-npx browser-sync start --server --files "index.html, index.js, map.js, virtue.js, style.css"
++npx browser-sync start --server --files "index.html, index.js, map.js, modal.js, virtue.js, style.css, modal.css"
+ 
+diff --git a/public/style.css b/public/style.css
+index d4f3895..de9d48d 100644
+--- a/public/style.css
++++ b/public/style.css
+@@ -161,7 +161,8 @@ h1 {
+ }
+ 
+ .leaflet-control-zoom {
+-  bottom: calc(var(--driver-height) + 25px);
++  bottom: 25px;
++  /* bottom: calc(var(--driver-height) + 25px); */
+   /* Move to bottom-right */
+ }
+ 
+@@ -298,7 +299,8 @@ h1 {
+ 
+ @media (max-width: 768px) {
+   .leaflet-control-zoom {
+-    bottom: calc(var(--driver-height) + 40px);
++    bottom: 25px;
++    /* bottom: calc(var(--driver-height) + 40px); */
+     /* Move to bottom-right */
+   }
+ 

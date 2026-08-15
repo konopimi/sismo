@@ -1,0 +1,353 @@
+diff --git a/normalize_cities.js b/normalize_cities.js
+deleted file mode 100644
+index 2eb91ca..0000000
+--- a/normalize_cities.js
++++ /dev/null
+@@ -1,112 +0,0 @@
+-// normalize_cities.js
+-// Usage: node normalize_cities.js
+-// Input:  parsed_encontrados.json  (place in project root first)
+-// Output: parsed_encontrados_normalized.json
+-//
+-// What it does:
+-//   1. Loads public/cities.json -> builds a normalized lookup map
+-//   2. Loads parsed_encontrados.json (101 records)
+-//   3. Fixes corrupted city values (e.g. '   "Choco"' -> 'Quibdó')
+-//   4. Fixes missing accents (Timbio -> Timbío, El Dovio -> El Dovío)
+-//   5. Backfills lat/lng from cities.json via fuzzy (accent-insensitive) match
+-//   6. Fixes department spelling (Choco -> Chocó, Valle de Cauca -> Valle del Cauca)
+-//   7. Adds city_normalized and department_normalized fields
+-//   8. Writes parsed_encontrados_normalized.json
+-
+-const fs = require("fs");
+-const path = require("path");
+-
+-const INPUT = path.join(__dirname, "parsed_encontrados.json");
+-const CITIES = path.join(__dirname, "public", "cities.json");
+-const OUTPUT = path.join(__dirname, "parsed_encontrados_normalized.json");
+-
+-// --- helpers ---
+-// Lowercase + strip tildes + trim, so "Quibdó" and "quibdo" match.
+-const normalize = (s) =>
+-  (s || "")
+-    .toLowerCase()
+-    .normalize("NFD")
+-    .replace(/[\u0300-\u036f]/g, "")
+-    .trim();
+-
+-// --- load cities.json ---
+-const citiesRaw = JSON.parse(fs.readFileSync(CITIES, "utf8"));
+-const lookup = new Map();
+-for (const c of citiesRaw) {
+-  const key = normalize(c.name);
+-  if (key) {
+-    lookup.set(key, { city: c.name, lat: c.lat, lng: c.lng });
+-  }
+-}
+-
+-// --- load records ---
+-const records = JSON.parse(fs.readFileSync(INPUT, "utf8"));
+-
+-// --- department canonicalization ---
+-const deptFix = (d) => {
+-  if (!d) return d;
+-  const n = normalize(d);
+-  if (n === "choco") return "Chocó";
+-  if (n === "valle de cauca") return "Valle del Cauca";
+-  return d;
+-};
+-
+-// --- city fixes for known bad values ---
+-const cityFix = (city) => {
+-  if (!city) return city;
+-  const trimmed = city.trim();
+-  // Corrupted line 1478: '   "Choco"' — Chocó is a department, not a city.
+-  // The only Chocó city in our data is Quibdó, so map it there.
+-  if (/^["\s]*choco["\s]*$/i.test(trimmed)) return "Quibdó";
+-  if (normalize(trimmed) === "timbio") return "Timbío";
+-  if (normalize(trimmed) === "el dovio") return "El Dovío";
+-  if (normalize(trimmed) === "anserma nuevo") return "Ansermanuevo";
+-  return trimmed;
+-};
+-
+-// --- process ---
+-let cityFixes = 0;
+-let deptFixes = 0;
+-let geocoded = 0;
+-let unmatched = [];
+-
+-for (const rec of records) {
+-  // Fix corrupted / accent-missing city
+-  if (rec.city) {
+-    const fixed = cityFix(rec.city);
+-    if (fixed !== rec.city) cityFixes++;
+-    rec.city = fixed;
+-  }
+-  rec.city_normalized = normalize(rec.city);
+-
+-  // Backfill lat/lng from cities.json
+-  if (rec.lat == null && rec.lng == null && rec.city_normalized) {
+-    const hit = lookup.get(rec.city_normalized);
+-    if (hit) {
+-      rec.lat = hit.lat;
+-      rec.lng = hit.lng;
+-      geocoded++;
+-    } else {
+-      unmatched.push(rec.city);
+-    }
+-  }
+-
+-  // Fix department spelling
+-  if (rec.department) {
+-    const fixed = deptFix(rec.department);
+-    if (fixed !== rec.department) deptFixes++;
+-    rec.department = fixed;
+-  }
+-  rec.department_normalized = normalize(rec.department);
+-}
+-
+-fs.writeFileSync(OUTPUT, JSON.stringify(records, null, 2) + "\n");
+-
+-console.log(`Done. ${records.length} records -> ${OUTPUT}`);
+-console.log(`  City spelling fixes:     ${cityFixes}`);
+-console.log(`  Department spelling fixes: ${deptFixes}`);
+-console.log(`  Lat/lng backfilled:      ${geocoded}`);
+-if (unmatched.length > 0) {
+-  console.log(`  Cities with no match in cities.json (${unmatched.length}):`);
+-  console.log("    " + [...new Set(unmatched)].join(", "));
+-}
+\ No newline at end of file
+diff --git a/public/index.html b/public/index.html
+index 9d99ace..d6be78c 100644
+--- a/public/index.html
++++ b/public/index.html
+@@ -607,6 +607,7 @@
+   </div>
+   <script src="modal.js"></script>
+   <script src="map.js"></script>
++  <script src="sismos.js"></script>
+   <script src="index.js"></script>
+ </body>
+ 
+diff --git a/public/index.js b/public/index.js
+index 2426628..2f3e1ef 100644
+--- a/public/index.js
++++ b/public/index.js
+@@ -149,6 +149,7 @@ function resolveApiBase() {
+ }
+ 
+ const API_BASE = resolveApiBase();
++window.API_BASE = API_BASE;
+ 
+ const CLOUDINARY_CLOUD_NAME = "snaspwdz";
+ const CLOUDINARY_UPLOAD_PRESET = "sismopinto";
+@@ -591,8 +592,6 @@ const tabSismosBtn = document.getElementById("tabSismosBtn");
+ const tabSismos = document.getElementById("tabSismos");
+ 
+ let currentTabType = "person"; // track active tab for map cleanup
+-let sismosChart = null;
+-let sismosData = [];
+ 
+ function switchTab(activeBtn, activePanel, tabType) {
+   // If leaving the map tab, hide the map container
+@@ -650,12 +649,7 @@ function switchTab(activeBtn, activePanel, tabType) {
+       }
+     }, 200);
+   } else if (tabType === "sismos") {
+-    if (!window.sismoChart) {
+-      initSismoChart();
+-    }
+-    fetchEarthquakes();
+-    if (window.sismoInterval) clearInterval(window.sismoInterval);
+-    window.sismoInterval = setInterval(fetchEarthquakes, 10000);
++    window.initSismos();
+   }
+ 
+   // Actualizar la URL con el parámetro "tab" (sin recargar)
+@@ -2803,122 +2797,5 @@ applyTabFromUrl();
+ handleAnuncioDeepLink();
+ trackLayoutHeights();
+ 
+-// ================================================================
+-//  SISMOS EN TIEMPO REAL (ECharts)
+-// ================================================================
+-function initSismoChart() {
+-  alert("DEBUGGING!!!");
+-  const dom = document.getElementById("sismoChart");
+-  if (!dom) return;
+-  if (typeof echarts === "undefined") {
+-    console.error("ECharts no está cargado. Verifica el CDN en <head>.");
+-    return;
+-  }
+-  sismosChart = echarts.init(dom);
+-  window.sismoChart = sismosChart;
+-  // Asegura que el contenedor tenga tamaño antes de dibujar.
+-  setTimeout(() => sismosChart && sismosChart.resize(), 50);
+-  const option = {
+-    tooltip: {
+-      trigger: "axis",
+-      axisPointer: { type: "shadow" },
+-      formatter: function (params) {
+-        const p = params[0];
+-        if (!p) return "";
+-        const data = p.data;
+-        return `<strong>${data.place}</strong><br/>Magnitud: <strong>${data.mag}</strong><br/>Profundidad: ${data.depth} km<br/>Hora: ${data.time}`;
+-      },
+-    },
+-    grid: { left: "5%", right: "5%", bottom: "15%", top: "15%", containLabel: true },
+-    xAxis: {
+-      type: "category",
+-      data: [],
+-      axisLabel: { rotate: 30, fontSize: 10, interval: 0 },
+-      name: "Hora (UTC-5)",
+-      nameLocation: "middle",
+-      nameGap: 35,
+-    },
+-    yAxis: {
+-      type: "value",
+-      name: "Magnitud (Mw)",
+-      min: 0,
+-      max: 8,
+-      splitLine: { lineStyle: { type: "dashed", color: "#ccc" } },
+-    },
+-    series: [{
+-      name: "Sismos",
+-      type: "bar",
+-      data: [],
+-      itemStyle: {
+-        color: function (params) {
+-          const val = params.value;
+-          if (val >= 6) return "#d63031";
+-          if (val >= 5) return "#e17055";
+-          if (val >= 4) return "#fdcb6e";
+-          return "#74b9ff";
+-        },
+-      },
+-      barWidth: "50%",
+-      label: {
+-        show: true,
+-        position: "top",
+-        formatter: (p) => p.value.toFixed(1),
+-        fontSize: 10,
+-      },
+-    }],
+-  };
+-  sismosChart.setOption(option);
+-  window.addEventListener("resize", () => sismosChart && sismosChart.resize());
+-}
+-
+-async function fetchEarthquakes() {
+-  try {
+-    const res = await fetch(`${API_BASE}/earthquakes?minmagnitude=2.0&limit=30`);
+-    if (!res.ok) throw new Error("Error en API");
+-    const data = await res.json();
+-    sismosData = data.earthquakes || [];
+-    updateSismoUI(data);
+-  } catch (err) {
+-    console.error("Error fetching sismos:", err);
+-    document.getElementById("ultimoLugar").textContent = "⚠️ Error al cargar";
+-    document.getElementById("sismoAlert").style.borderColor = "#d63031";
+-  }
+-}
+-
+-function updateSismoUI(data) {
+-  const last = data.earthquakes && data.earthquakes.length ? data.earthquakes[0] : null;
+-  if (last) {
+-    document.getElementById("ultimoLugar").textContent = last.place || "Lugar desconocido";
+-    document.getElementById("ultimoMag").textContent = last.mag ? last.mag.toFixed(1) : "--";
+-    document.getElementById("ultimoHora").textContent = last.time || "";
+-    const alerta = document.getElementById("sismoAlert");
+-    alerta.className = "alerta" + (last.mag >= 5 ? " peligro" : "");
+-  }
+-  document.getElementById("totalSismos").textContent = `${data.count} sismos mostrados`;
+-  const badge = document.querySelector("#tabSismosBtn .n");
+-  if (badge) badge.textContent = data.count;
+-
+-  if (!sismosChart) return;
+-  const sorted = sismosData.slice().sort((a, b) => a.timestamp - b.timestamp);
+-  const xData = sorted.map((q) =>
+-    new Date(q.timestamp).toLocaleTimeString("es-CO", {
+-      hour: "2-digit",
+-      minute: "2-digit",
+-      timeZone: "America/Bogota",
+-    })
+-  );
+-  const seriesData = sorted.map((q) => ({
+-    value: q.mag,
+-    place: q.place || "N/A",
+-    time: q.time,
+-    depth: q.depth,
+-    mag: q.mag,
+-  }));
+-  sismosChart.setOption({
+-    xAxis: { data: xData },
+-    series: [{ data: seriesData }],
+-  });
+-}
+-
+ // Ejecutar después de que todo esté cargado
+ setTimeout(tryOpenModalFromUrl, 100);
+diff --git a/public/modal.css b/public/modal.css
+index 097e13e..aa35293 100644
+--- a/public/modal.css
++++ b/public/modal.css
+@@ -23,11 +23,12 @@
+   top: 0px;
+   display: flex;
+   gap: 5px;
+-  background: rgba(127, 127, 127, 0.38);
++  background: rgba(127, 127, 127, 0.8);
+   align-items: center;
+   padding: 4px 6px;
+   backdrop-filter: blur(10px);
+   border-bottom: 2px solid rgba(127, 127, 127, 0.82);
++  border-radius: 5px 5px 0px 0px;
+   z-index: 999999;
+ }
+ 
+@@ -201,11 +202,12 @@
+   position: sticky;
+   bottom: 0px;
+   margin-top: 16px;
+-  background: rgba(127, 127, 127, 0.38);
++  background: rgba(127, 127, 127, 0.8);
+   align-items: center;
+   padding: 3px;
+   backdrop-filter: blur(10px);
+   border-top: 2px solid rgba(127, 127, 127, 0.82);
++  border-radius: 5px 5px 0px 0px;
+   z-index: 999999;
+ }
+ 
+diff --git a/public/run.sh b/public/run.sh
+index 68cb6b5..a486ea0 100755
+--- a/public/run.sh
++++ b/public/run.sh
+@@ -1,2 +1,2 @@
+-npx browser-sync start --server --files "index.html, index.js, map.js, virtue.js, style.css"
++npx browser-sync start --server --files "index.html, index.js, map.js, modal.js, virtue.js, style.css, modal.css"
+ 
+diff --git a/public/style.css b/public/style.css
+index d4f3895..de9d48d 100644
+--- a/public/style.css
++++ b/public/style.css
+@@ -161,7 +161,8 @@ h1 {
+ }
+ 
+ .leaflet-control-zoom {
+-  bottom: calc(var(--driver-height) + 25px);
++  bottom: 25px;
++  /* bottom: calc(var(--driver-height) + 25px); */
+   /* Move to bottom-right */
+ }
+ 
+@@ -298,7 +299,8 @@ h1 {
+ 
+ @media (max-width: 768px) {
+   .leaflet-control-zoom {
+-    bottom: calc(var(--driver-height) + 40px);
++    bottom: 25px;
++    /* bottom: calc(var(--driver-height) + 40px); */
+     /* Move to bottom-right */
+   }
+ 

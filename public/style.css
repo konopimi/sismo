@@ -161,7 +161,8 @@ h1 {
 }
 
 .leaflet-control-zoom {
-  bottom: calc(var(--driver-height) + 25px);
+  bottom: 25px;
+  /* bottom: calc(var(--driver-height) + 25px); */
   /* Move to bottom-right */
 }
 
@@ -298,7 +299,8 @@ h1 {
 
 @media (max-width: 768px) {
   .leaflet-control-zoom {
-    bottom: calc(var(--driver-height) + 40px);
+    bottom: 25px;
+    /* bottom: calc(var(--driver-height) + 40px); */
     /* Move to bottom-right */
   }
 
