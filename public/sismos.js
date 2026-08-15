@@ -33,7 +33,13 @@
           return `<strong>${data.place}</strong><br/>Magnitud: <strong>${data.mag}</strong><br/>Profundidad: ${data.depth} km<br/>Hora: ${data.time}`;
         },
       },
-      grid: { left: "5%", right: "5%", bottom: "15%", top: "15%", containLabel: true },
+      grid: {
+        left: "5%",
+        right: "5%",
+        bottom: "15%",
+        top: "15%",
+        containLabel: true,
+      },
       xAxis: {
         type: "category",
         data: [],
@@ -49,36 +55,43 @@
         max: 8,
         splitLine: { lineStyle: { type: "dashed", color: "#ccc" } },
       },
-      series: [{
-        name: "Sismos",
-        type: "bar",
-        data: [],
-        itemStyle: {
-          color: function (params) {
-            const val = params.value;
-            if (val >= 6) return "#d63031";
-            if (val >= 5) return "#e17055";
-            if (val >= 4) return "#fdcb6e";
-            return "#74b9ff";
+      series: [
+        {
+          name: "Sismos",
+          type: "bar",
+          data: [],
+          itemStyle: {
+            color: function (params) {
+              const val = params.value;
+              if (val >= 6) return "#d63031";
+              if (val >= 5) return "#e17055";
+              if (val >= 4) return "#fdcb6e";
+              return "#74b9ff";
+            },
+          },
+          barWidth: "50%",
+          label: {
+            show: true,
+            position: "top",
+            formatter: (p) => p.value.toFixed(1),
+            fontSize: 10,
           },
         },
-        barWidth: "50%",
-        label: {
-          show: true,
-          position: "top",
-          formatter: (p) => p.value.toFixed(1),
-          fontSize: 10,
-        },
-      }],
+      ],
     };
     sismosChart.setOption(option);
-    window.addEventListener("resize", () => sismosChart && sismosChart.resize());
+    window.addEventListener(
+      "resize",
+      () => sismosChart && sismosChart.resize(),
+    );
   }
 
   async function fetchEarthquakes() {
     try {
       const apiBase = window.API_BASE || "/api";
-      const res = await fetch(`${apiBase}/earthquakes?minmagnitude=2.0&limit=30`);
+      const res = await fetch(
+        `${apiBase}/earthquakes?minmagnitude=2.0&limit=30`,
+      );
       if (!res.ok) throw new Error("Error en API");
       const data = await res.json();
       sismosData = data.earthquakes || [];
@@ -91,15 +104,20 @@
   }
 
   function updateSismoUI(data) {
-    const last = data.earthquakes && data.earthquakes.length ? data.earthquakes[0] : null;
+    const last =
+      data.earthquakes && data.earthquakes.length ? data.earthquakes[0] : null;
     if (last) {
-      document.getElementById("ultimoLugar").textContent = last.place || "Lugar desconocido";
-      document.getElementById("ultimoMag").textContent = last.mag ? last.mag.toFixed(1) : "--";
+      document.getElementById("ultimoLugar").textContent =
+        last.place || "Lugar desconocido";
+      document.getElementById("ultimoMag").textContent = last.mag
+        ? last.mag.toFixed(1)
+        : "--";
       document.getElementById("ultimoHora").textContent = last.time || "";
       const alerta = document.getElementById("sismoAlert");
       alerta.className = "alerta" + (last.mag >= 5 ? " peligro" : "");
     }
-    document.getElementById("totalSismos").textContent = `${data.count} sismos mostrados`;
+    document.getElementById("totalSismos").textContent =
+      `${data.count} sismos mostrados`;
     const badge = document.querySelector("#tabSismosBtn .n");
     if (badge) badge.textContent = data.count;
 
@@ -110,7 +128,7 @@
         hour: "2-digit",
         minute: "2-digit",
         timeZone: "America/Bogota",
-      })
+      }),
     );
     const seriesData = sorted.map((q) => ({
       value: q.mag,
@@ -127,8 +145,8 @@
 
   // Public API: called by index.js when the Sismos tab is activated.
   window.initSismos = function () {
+    initSismoChart();
     if (!window.sismoChart) {
-      initSismoChart();
     }
     fetchEarthquakes();
     if (window.sismoInterval) clearInterval(window.sismoInterval);
