@@ -57,6 +57,7 @@ db.exec(`
 db.exec(`
   CREATE TABLE IF NOT EXISTS anuncios (
     id TEXT PRIMARY KEY,
+    title TEXT,
     text TEXT NOT NULL,
     image TEXT,
     photo_url TEXT,
@@ -173,6 +174,9 @@ try {
 } catch (e) { }
 try {
   db.exec("ALTER TABLE anuncios ADD COLUMN images TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE anuncios ADD COLUMN title TEXT");
 } catch (e) { }
 // ========== Comentarios ==========
 app.get("/api/comments", (req, res) => {
@@ -724,19 +728,20 @@ function parseImages(raw) {
 
 app.get("/api/anuncios", (req, res) => {
   const rows = db
-    .prepare("SELECT id, text, image, photo_url, images, created_at FROM anuncios ORDER BY RANDOM()")
+    .prepare("SELECT id, title, text, image, photo_url, images, created_at FROM anuncios ORDER BY RANDOM()")
     .all();
   res.json(
     rows.map((r) => ({ ...r, images: parseImages(r.images) })),
   );
 });
 app.post("/api/anuncios", (req, res) => {
-  const { text, image, images } = req.body || {};
+  const { title, text, image, images } = req.body || {};
   if (!text || !text.trim()) {
     return res.status(400).json({ error: "text is required" });
   }
   const finalId = crypto.randomUUID();
   const createdAt = new Date().toISOString();
+  const ttl = title && title.trim() ? title.trim() : null;
   const img = image && image.trim() ? image.trim() : null;
   const imgs = Array.isArray(images)
     ? images.filter((u) => typeof u === "string" && u.trim()).map((u) => u.trim())
@@ -744,10 +749,11 @@ app.post("/api/anuncios", (req, res) => {
   // Ensure the main image is part of the gallery.
   if (img && !imgs.includes(img)) imgs.unshift(img);
   db.prepare(
-    "INSERT INTO anuncios (id, text, image, images, created_at) VALUES (?, ?, ?, ?, ?)",
-  ).run(finalId, text.trim(), img, JSON.stringify(imgs), createdAt);
+    "INSERT INTO anuncios (id, title, text, image, images, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+  ).run(finalId, ttl, text.trim(), img, JSON.stringify(imgs), createdAt);
   res.status(201).json({
     id: finalId,
+    title: ttl,
     text: text.trim(),
     image: img,
     images: imgs,
@@ -784,7 +790,7 @@ app.patch("/api/anuncios/:id", (req, res) => {
   db.prepare(`UPDATE anuncios SET ${fields.join(", ")} WHERE id = ?`).run(...values);
 
   const updated = db
-    .prepare("SELECT id, text, image, photo_url, images, created_at FROM anuncios WHERE id = ?")
+    .prepare("SELECT id, title, text, image, photo_url, images, created_at FROM anuncios WHERE id = ?")
     .get(req.params.id);
   res.json({ ...updated, images: parseImages(updated.images) });
 });

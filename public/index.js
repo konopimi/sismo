@@ -1033,7 +1033,7 @@ function openModalForItem(item, type) {
   // --- Soporte para anuncios en el modal ---
   if (type === "anuncio") {
     modalStatus.innerHTML = "";
-    modalTitle.textContent = "Anuncio";
+    modalTitle.textContent = item.title || "Anuncio";
     modalMeta.innerHTML = `
           <span>🕒 ${new Date(item.created_at).toLocaleString("es-CO", {
       day: "2-digit",
@@ -2260,6 +2260,7 @@ let anunciosData = [];
 const listElA = document.getElementById("listA");
 const formA = document.getElementById("addFormA");
 const anuncioInput = document.getElementById("anuncioInput");
+const anuncioTitleInput = document.getElementById("anuncioTitleInput");
 const imageInputA = document.getElementById("imageInputA");
 const photoInputA = document.getElementById("photoInputA");
 const fileLabelA = document.getElementById("fileLabelA");
@@ -2346,7 +2347,9 @@ async function loadListA() {
 function renderA() {
   const q = searchInput.value;
   const items = q.trim()
-    ? anunciosData.filter((a) => fuzzyMatch(q, a.text || ""))
+    ? anunciosData.filter(
+        (a) => fuzzyMatch(q, a.title || "") || fuzzyMatch(q, a.text || ""),
+      )
     : anunciosData;
   if (!items.length) {
     listElA.innerHTML = `<div class="empty">${anunciosData.length ? "Sin resultados." : "No hay anuncios todavía."}</div>`;
@@ -2368,8 +2371,12 @@ function renderA() {
       const imgHtml = mainImg
         ? `<img class="card-photo" src="${escapeHtml(mainImg)}" alt="Imagen" />`
         : "";
+      const titleHtml = item.title
+        ? `<div style="padding:5px;background:rgba(127,127,127,0.38);border-bottom:2px solid rgba(127,127,127,0.62);"><span class="name">${escapeHtml(item.title)}</span></div>`
+        : "";
       return `
       <div class="card" data-id="${item.id}" style="display:flex;flex-direction:column;">
+        ${titleHtml}
         ${imgHtml}
         <div class="info" style="padding:5px;">
           <pre class="anuncio-text">${escapeHtml(item.text)}</pre>
@@ -2400,6 +2407,7 @@ listElA.addEventListener("click", (e) => {
 
 formA.addEventListener("submit", async (e) => {
   e.preventDefault();
+  const title = anuncioTitleInput.value.trim();
   const text = anuncioInput.value.trim();
   const image = imageInputA.value.trim();
   if (!text) return;
@@ -2414,6 +2422,7 @@ formA.addEventListener("submit", async (e) => {
   images.push(...uploadedUrls);
 
   const payload = { text };
+  if (title) payload.title = title;
   if (image) payload.image = image;
   if (images.length) payload.images = images;
 
@@ -2424,6 +2433,7 @@ formA.addEventListener("submit", async (e) => {
   });
   await res.json();
 
+  anuncioTitleInput.value = "";
   anuncioInput.value = "";
   imageInputA.value = "";
   if (urlPreviewA) {
@@ -2487,9 +2497,10 @@ async function removeAnuncioImage(id, url) {
 function shareAnuncio(id) {
   const item = anunciosData.find((a) => a.id === id);
   if (!item) return;
+  const shareText = item.title ? `${item.title}\n${item.text}` : item.text;
   shareContent(
-    "Anuncio - Sismo",
-    item.text,
+    item.title || "Anuncio - Sismo",
+    shareText,
     `https://sismoinfo.co/#anuncio/${item.id}`,
   );
 }
