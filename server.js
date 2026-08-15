@@ -807,9 +807,10 @@ app.get("/api/health", (req, res) => res.json({ ok: true }));
 // ============================================================
 app.get("/api/earthquakes", async (req, res) => {
   try {
-    // Parámetros: magnitud mínima (default 2.5) y límite (default 20)
-    const minmag = parseFloat(req.query.minmagnitude) || 2.5;
-    const limit = parseInt(req.query.limit, 10) || 30;
+    // Parámetros: magnitud mínima (default 1.0) y límite (default 300).
+    // USGS permite hasta 20000 resultados por petición.
+    const minmag = parseFloat(req.query.minmagnitude) || 1.0;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 300, 20000);
 
     // Bounding box aproximado de Colombia (puedes ajustarlo)
     const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&minlatitude=-4&maxlatitude=12&minlongitude=-80&maxlongitude=-66&minmagnitude=${minmag}&limit=${limit}&orderby=time`;
