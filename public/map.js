@@ -33,6 +33,16 @@ function isTypeVisible(type) {
   return mapTypeFilter.has(type);
 }
 
+// Flatten all visible map item types into a single [{ item, type }] list.
+// Used by the sidebar and off-screen arrows (persons + pets).
+function visibleMapItems() {
+  return Object.entries(MAP_MARKER_META)
+    .filter(([type]) => isTypeVisible(type))
+    .flatMap(([type, meta]) =>
+      meta.data().map((item) => ({ item, type })),
+    );
+}
+
 // Marker circle color is driven by the item's status, not its type.
 // Single source of truth for status semantics (color, CSS class, label).
 // Exposed on window so index.js can also use it.
@@ -182,10 +192,7 @@ function renderOffscreenArrows() {
     insets.top = Math.max(0, rect.bottom - mapRect.top);
   }
 
-  const all = [
-    ...personsData.map((item) => ({ item, type: "person" })),
-    ...petsData.map((item) => ({ item, type: "pet" })),
-  ].filter(({ type }) => isTypeVisible(type));
+  const all = visibleMapItems();
 
   // Off-screen items with coordinates, sorted by distance from center.
   const offscreen = all
@@ -240,11 +247,7 @@ function renderOffscreenArrows() {
 function renderMapSidebar() {
   const listEl = document.getElementById("mapSidebarList");
   if (!listEl) return;
-  const all = [
-    ...personsData.map((item) => ({ item, type: "person" })),
-    ...petsData.map((item) => ({ item, type: "pet" })),
-  ]
-    .filter(({ type }) => isTypeVisible(type))
+  const all = visibleMapItems()
     .map((entry) => ({
       ...entry,
       ts: new Date(entry.item.created_at).getTime(),
