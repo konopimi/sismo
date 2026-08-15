@@ -497,6 +497,8 @@ const tabSismosBtn = document.getElementById("tabSismosBtn");
 const tabSismos = document.getElementById("tabSismos");
 
 let currentTabType = "person"; // track active tab for map cleanup
+let sismosChart = null;
+let sismosData = [];
 
 function switchTab(activeBtn, activePanel, tabType) {
   // If leaving the map tab, hide the map container
@@ -2735,9 +2737,6 @@ trackLayoutHeights();
 // ================================================================
 //  SISMOS EN TIEMPO REAL (ECharts)
 // ================================================================
-let sismosChart = null;
-let sismosData = [];
-
 function initSismoChart() {
   const dom = document.getElementById("sismoChart");
   if (!dom) return;
