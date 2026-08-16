@@ -885,6 +885,20 @@ textarea {
   border-left-color: #9b59b6;
 }
 
+.card.colaborador .card-photo {
+  width: 70px;
+  min-height: 70px;
+  max-height: 70px;
+}
+
+.card.colaborador .card-inner {
+  gap: 4px;
+}
+
+.card.colaborador .card-main {
+  padding: 6px 0;
+}
+
 .card .card-inner {
   display: flex;
   flex: 1;
