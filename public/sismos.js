@@ -224,6 +224,19 @@
       : null;
     if (!last) return;
 
+    // Check if this latest sismo is already shown in "En vivo" (liveData)
+    const liveLatest = liveData.length > 0 ? liveData[0] : null;
+    if (liveLatest && last.timestamp === liveLatest.timestamp && last.place === liveLatest.place) {
+      // Hide the alert card since it's already in En vivo
+      const alerta = document.getElementById("sismoAlert");
+      if (alerta) alerta.style.display = "none";
+      return;
+    }
+
+    // Show the alert card
+    const alerta = document.getElementById("sismoAlert");
+    if (alerta) alerta.style.display = "";
+
     const mag = last.mag || 0;
     document.getElementById("ultimoLugar").textContent =
       last.place || "Lugar desconocido";
@@ -233,7 +246,6 @@
     );
     document.getElementById("ultimoRel").textContent = relTime(last.timestamp);
 
-    const alerta = document.getElementById("sismoAlert");
     const color = sevColor(mag);
     alerta.className = "alerta" + (mag >= 5 ? " peligro" : "");
     alerta.style.borderLeftColor = color;
