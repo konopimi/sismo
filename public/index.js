@@ -648,12 +648,14 @@ const tabWiki = document.getElementById("tabWiki");
 const tabSismosBtn = document.getElementById("tabSismosBtn");
 const tabSismos = document.getElementById("tabSismos");
 let currentTabType = "person"; // track active tab for map cleanup
+window.currentTabType = currentTabType;
 function switchTab(activeBtn, activePanel, tabType) {
   // If leaving the map tab, hide the map container
   if (currentTabType === "map" && tabType !== "map") {
     hideMap();
   }
   currentTabType = tabType;
+  window.currentTabType = currentTabType;
   // Desactivar todos los botones
   [
     tabPersonasBtn,
@@ -705,6 +707,10 @@ function switchTab(activeBtn, activePanel, tabType) {
     }, 200);
   } else if (tabType === "sismos") {
     window.initSismos();
+    // Reset sismos location filter on tab switch
+    if (typeof window.setSismosLocationFilter === "function") {
+      window.setSismosLocationFilter("");
+    }
   }
   // Actualizar la URL con el parámetro "tab" (sin recargar)
   const url = new URL(window.location);
@@ -1629,6 +1635,13 @@ searchInput.addEventListener("input", () => {
   if (currentTabType === "map") {
     if (typeof window.setMapSearchQuery === "function") {
       window.setMapSearchQuery(searchInput.value);
+    }
+    return;
+  }
+  // On the sismos tab, the search bar filters by location via sismos.js filters
+  if (currentTabType === "sismos") {
+    if (typeof window.setSismosLocationFilter === "function") {
+      window.setSismosLocationFilter(searchInput.value);
     }
     return;
   }

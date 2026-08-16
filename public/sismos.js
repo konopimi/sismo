@@ -256,7 +256,17 @@
       return;
     }
 
+    // Get the latest earthquake from live data (last 72h) to exclude from history
+    const liveLatest = liveData.length > 0 ? liveData[0] : null;
+    
     listEl.innerHTML = filtered
+      .filter((q) => {
+        // Exclude the latest sismo if it's already shown in "En vivo" (last 72h)
+        if (liveLatest && q.timestamp === liveLatest.timestamp && q.place === liveLatest.place) {
+          return false;
+        }
+        return true;
+      })
       .map((q) => {
         const mag = q.mag || 0;
         const depth = q.depth != null ? q.depth.toFixed(1) : null;
@@ -405,16 +415,6 @@
         updateChart();
       });
     }
-
-    const locInput = document.getElementById("sismoLocationFilter");
-    if (locInput && !locInput.dataset.wired) {
-      locInput.dataset.wired = "1";
-      locInput.addEventListener("input", () => {
-        filters.location = locInput.value;
-        renderSismosList();
-        updateChart();
-      });
-    }
   }
 
   // ================================================================
@@ -445,5 +445,12 @@
   // Let map.js trigger a fetch when it needs sismo data (e.g. first map visit).
   window.fetchSismos = function() {
     if (!sismosData.length) fetchEarthquakes();
+  };
+
+  // Allow the main search bar to set the location filter for sismos
+  window.setSismosLocationFilter = function(value) {
+    filters.location = value;
+    renderSismosList();
+    updateChart();
   };
 })();
