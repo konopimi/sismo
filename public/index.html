@@ -143,9 +143,15 @@
         <input type="text" id="loginIdentifier" placeholder="Email o usuario" />
         <input type="password" id="loginPassword" placeholder="Contraseña" />
         <button id="loginBtn">Entrar</button>
-        <small style="color:#999;font-size:0.75rem;margin-top:4px;display:block;">
-          🔒 Cifrado E2E con Matrix · Sin federación · Las conversaciones son encriptadas, no se guardan en base de datos, solo son legibles desde el dispositivo de quien haga parte de la conversación
-        </small>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <small style="color:#999;font-size:0.75rem;">
+            🔒 Cifrado E2E con Matrix · Sin federación · Las conversaciones son encriptadas, no se guardan en base de
+            datos, solo son legibles desde el dispositivo de quien haga parte de la conversación
+          </small>
+        </div>
+        <button id="privacyInfoBtn"
+          style="background:none;border:none;color:#3a5dc5;cursor:pointer;font-size:0.75rem;text-decoration:underline;padding:0;">Más
+          información</button>
         <div id="loginError" style="color:#f66;font-size:0.85rem;"></div>
       </div>
       <div id="chatContainer" style="display:none;flex:1;overflow:hidden;min-height:0;"></div>
@@ -659,6 +665,31 @@
       </div>
     </div>
   </div>
+  <!-- ===== MODAL PRIVACIDAD ===== -->
+  <div id="privacyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="privacyModalTitle">
+    <div class="modal-content" style="max-width: 520px; max-height: 85vh">
+      <div class="modal-header" data-modal-header>
+        <h2 id="privacyModalTitle">🔒 Privacidad del chat</h2>
+        <button class="modal-close" data-modal-close aria-label="Cerrar">✕</button>
+      </div>
+      <div data-modal-body style="padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto;">
+        <p style="margin: 0; color: #ccc; line-height: 1.6;">
+          Este chat usa <b>Matrix</b> con cifrado de extremo a extremo (E2E) mediante el protocolo <b>Olm/Megolm</b>.
+        </p>
+        <ul style="margin: 0; padding-left: 18px; color: #ccc; line-height: 1.8;">
+          <li>Las conversaciones son <b>encriptadas</b> en tu dispositivo antes de enviarse.</li>
+          <li>No se guardan en texto plano en ninguna base de datos.</li>
+          <li>Solo son legibles por los participantes de la conversación, en sus propios dispositivos.</li>
+          <li>El servidor <b>Dendrite</b> solo almacena y retransmite mensajes cifrados; no puede leer su contenido.</li>
+          <li>Sin federación: no se comparte información con otros servidores Matrix.</li>
+        </ul>
+        <p style="margin: 0; color: #999; font-size: 0.85rem; line-height: 1.5;">
+          Si perdés tu dispositivo o tus claves de sesión, no podrás recuperar el historial de conversaciones.
+        </p>
+      </div>
+    </div>
+  </div>
+
   <script src="modal.js"></script>
   <script src="map.js"></script>
   <script src="sismos.js"></script>

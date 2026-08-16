@@ -213,6 +213,16 @@ async function attemptLogin() {
     showLoginForm();
   }
 })();
+
+// ================================================================
+//  PRIVACY MODAL
+// ================================================================
+const privacyModal = document.getElementById("privacyModal");
+const privacyInfoBtn = document.getElementById("privacyInfoBtn");
+if (privacyInfoBtn && privacyModal) {
+  const privacyModalShell = Modal({ id: "privacyModal" });
+  privacyInfoBtn.addEventListener("click", () => privacyModalShell.open());
+}
 const CLOUDINARY_CLOUD_NAME = "snaspwdz";
 const CLOUDINARY_UPLOAD_PRESET = "sismopinto";
 if (isLocalhost) {
