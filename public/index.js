@@ -2489,7 +2489,7 @@ function colabCardHtml(item) {
   if (item.city) metaParts.push(escapeHtml(item.city));
   if (item.contact) metaParts.push(escapeHtml(item.contact));
   metaParts.push(date);
-  const imgHtml = `<img style="opacity:0.62;" class="card-photo" src="${COLAB_PLACEHOLDER}" alt="Colaborador" />`;
+  const imgHtml = `<img style="opacity:0.62;filter:brightness(0) saturate(100%) invert(36%) sepia(68%) saturate(1845%) hue-rotate(250deg) brightness(91%) contrast(88%);" class="card-photo" src="${COLAB_PLACEHOLDER}" alt="Colaborador" />`;
   return `
         <div class="card colaborador" data-id="${item.id}" data-type="colaborador">
 <div style="padding:5px;background:rgba(127,127,127,0.38);border-bottom:2px solid rgba(127,127,127,0.62);">
