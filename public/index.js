@@ -1778,7 +1778,7 @@ async function loadList() {
 const PERSON_PLACEHOLDER =
   "person.png";
 const PET_PLACEHOLDER =
-  "https://external-content.duckduckgo.com/iu/?u=http%3A%2F%2Fvictoriapets.ca%2Fwp-content%2Fthemes%2Fneve-child%2Fimages%2Fplaceholder-pet-image.jpg&f=1&nofb=1&ipt=e0e1204dabf2c9a4e236025578bc41edc6bc8b993269d6a7858d0d9112a04697";
+  "paws.png";
 function entityCardHtml(item, type, placeholderImg) {
   const found = item.status === "encontrado";
   const date = new Date(item.created_at).toLocaleString("es-CO", {
@@ -1971,6 +1971,15 @@ async function loadListP() {
   try {
     const res = await fetch(`${API_BASE}/pets`);
     petsData = await res.json();
+    petsData.forEach((pet) => {
+      if (
+        pet.photo_url === "https://buscandoa.com/assets/img/placeholder.svg" ||
+        pet.image === "https://buscandoa.com/assets/img/placeholder.svg"
+      ) {
+        pet.photo_url = null;
+        pet.image = null;
+      }
+    });
     refreshCityFilter("pet", petsData);
     renderP();
     updateTabCounts();
