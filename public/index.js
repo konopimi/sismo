@@ -1,6 +1,5 @@
 // DIAGNÓSTICO TEMPORAL: verifica si ECharts cargó.
 console.log("[sismos] typeof echarts =", typeof echarts);
-
 // Keep CSS variables --top-bar-height and --driver-height in sync with
 // the real rendered heights of the top bar and the bottom driver bar.
 // These bars are content-driven (they wrap on narrow screens), so we
@@ -9,14 +8,12 @@ function trackLayoutHeights() {
   const root = document.documentElement;
   const topBar = document.querySelector(".top-bar");
   const driver = document.getElementById("driver");
-
   const measure = () => {
     if (topBar)
       root.style.setProperty("--top-bar-height", topBar.offsetHeight + "px");
     if (driver)
       root.style.setProperty("--driver-height", driver.offsetHeight + "px");
   };
-
   measure();
   if (window.ResizeObserver) {
     const ro = new ResizeObserver(measure);
@@ -26,7 +23,6 @@ function trackLayoutHeights() {
     window.addEventListener("resize", measure);
   }
 }
-
 // Mapeo de tipos de pestaña a elementos DOM
 const tabMap = {
   person: {
@@ -62,7 +58,6 @@ const tabMap = {
     panel: document.getElementById("tabSismos"),
   },
 };
-
 // ================================================================
 //  TYPE REGISTRY — single source of truth for all entity type metadata
 //  (data array, emoji, DOM refs, API type, create title, render fn)
@@ -123,7 +118,6 @@ let cityCoordinates = {};
 // ================================================================
 const isLocalhost =
   location.hostname === "localhost" || location.hostname === "127.0.0.1";
-
 function resolveApiBase() {
   if (!isLocalhost) return "/api";
   const target = localStorage.getItem("sismo_api_target") || "remote";
@@ -131,16 +125,13 @@ function resolveApiBase() {
     ? "http://localhost:3000/api"
     : "https://sismoinfo.co/api";
 }
-
 const API_BASE = resolveApiBase();
 window.API_BASE = API_BASE;
-
 // ================================================================
 //  AUTH (login de colaboradores)
 //  Token HMAC firmado por el server, guardado en localStorage.
 // ================================================================
 const AUTH_TOKEN_KEY = "sismo_auth_token";
-
 function getAuthToken() {
   return localStorage.getItem(AUTH_TOKEN_KEY);
 }
@@ -150,7 +141,6 @@ function setAuthToken(t) {
 function clearAuthToken() {
   localStorage.removeItem(AUTH_TOKEN_KEY);
 }
-
 async function authFetch(url, opts = {}) {
   const token = getAuthToken();
   if (token) {
@@ -163,7 +153,6 @@ async function authFetch(url, opts = {}) {
   }
   return res;
 }
-
 function showLoginForm() {
   const loginForm = document.getElementById("loginForm");
   const chatContainer = document.getElementById("chatContainer");
@@ -171,7 +160,6 @@ function showLoginForm() {
   if (chatContainer) chatContainer.style.display = "none";
   window.currentUser = null;
 }
-
 function showChat() {
   const loginForm = document.getElementById("loginForm");
   const chatContainer = document.getElementById("chatContainer");
@@ -181,7 +169,6 @@ function showChat() {
     chatContainer.innerHTML = `<div style="padding:20px;">Conectado como ${escapeHtml(window.currentUser?.name || "")}</div>`;
   }
 }
-
 async function attemptLogin() {
   const identifier = document.getElementById("loginIdentifier")?.value.trim();
   const password = document.getElementById("loginPassword")?.value;
@@ -209,7 +196,6 @@ async function attemptLogin() {
     if (errEl) errEl.textContent = "Error de red";
   }
 }
-
 (async function initAuth() {
   const loginBtn = document.getElementById("loginBtn");
   if (loginBtn) loginBtn.addEventListener("click", attemptLogin);
@@ -227,10 +213,8 @@ async function attemptLogin() {
     showLoginForm();
   }
 })();
-
 const CLOUDINARY_CLOUD_NAME = "snaspwdz";
 const CLOUDINARY_UPLOAD_PRESET = "sismopinto";
-
 if (isLocalhost) {
   const toggle = document.getElementById("apiTargetToggle");
   const btnRemote = document.getElementById("apiTargetRemote");
@@ -253,7 +237,6 @@ if (isLocalhost) {
     });
   }
 }
-
 // ================================================================
 //  STATUS META — single source of truth for status semantics
 //  (color for map markers, CSS class for pills, display label)
@@ -263,19 +246,15 @@ if (isLocalhost) {
 function statusMeta(status) {
   return (window.STATUS_META || {})[status] || (window.STATUS_META || {}).desaparecido;
 }
-
 function statusColor(status) {
   return statusMeta(status).color;
 }
-
 function statusCssClass(status) {
   return statusMeta(status).cssClass;
 }
-
 function statusLabel(status) {
   return statusMeta(status).label;
 }
-
 // ================================================================
 //  UTILIDADES
 // ================================================================
@@ -284,7 +263,6 @@ function escapeHtml(str) {
   div.textContent = str;
   return div.innerHTML;
 }
-
 // Helper para copiar al portapapeles con feedback visual
 function copyWithFeedback(btn, text) {
   navigator.clipboard.writeText(text).then(() => {
@@ -295,7 +273,6 @@ function copyWithFeedback(btn, text) {
     alert("No se pudo copiar. Intenta seleccionar el texto manualmente.");
   });
 }
-
 // Factory para previsualización de foto (archivo + URL)
 function setupPhotoPreview({ fileInput, urlInput, previewEl, labelEl, placeholderText, urlPreviewEl }) {
   fileInput.addEventListener("change", function() {
@@ -313,7 +290,6 @@ function setupPhotoPreview({ fileInput, urlInput, previewEl, labelEl, placeholde
       previewEl.src = "";
     }
   });
-
   urlInput.addEventListener("input", function() {
     const url = this.value.trim();
     if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
@@ -330,7 +306,6 @@ function setupPhotoPreview({ fileInput, urlInput, previewEl, labelEl, placeholde
     }
   });
 }
-
 function locationLinksHtml(lat, lng, coordLabel) {
   const label = coordLabel || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
   return `<span class="loc-links">🗺️ ${label}</br> 
@@ -338,7 +313,6 @@ function locationLinksHtml(lat, lng, coordLabel) {
         <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noopener" style="color:#4ea1ff;">Google Maps</a> ·
         <a href="https://waze.com/ul?ll=${lat},${lng}&navigate=yes" target="_blank" rel="noopener" style="color:#4ea1ff;">Waze</a></span>`;
 }
-
 function haversineDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000;
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -349,7 +323,6 @@ function haversineDistance(lat1, lng1, lat2, lng2) {
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
-
 function nearbyItemsHtml(lat, lng, excludeId, excludeType) {
   const RADIUS_M = 1000;
   const candidates = Object.entries(TYPE_REGISTRY)
@@ -389,7 +362,6 @@ function nearbyItemsHtml(lat, lng, excludeId, excludeType) {
     })
     .join("");
 }
-
 // ================================================================
 //  VIRTUALIZACIÓN LIGERA DE LISTAS
 //  Renderiza en lotes y agrega más al acercarse al final, en vez de
@@ -397,11 +369,9 @@ function nearbyItemsHtml(lat, lng, excludeId, excludeType) {
 // ================================================================
 const VIRTUAL_BATCH_SIZE = 30;
 const virtualObservers = new WeakMap();
-
 function renderVirtualList(containerEl, items, cardHtmlFn) {
   const prevObserver = virtualObservers.get(containerEl);
   if (prevObserver) prevObserver.disconnect();
-
   let rendered = Math.min(VIRTUAL_BATCH_SIZE, items.length);
   containerEl.innerHTML =
     items.slice(0, rendered).map(cardHtmlFn).join("") +
@@ -430,7 +400,6 @@ function renderVirtualList(containerEl, items, cardHtmlFn) {
   observer.observe(sentinel);
   virtualObservers.set(containerEl, observer);
 }
-
 async function loadExtraLocations(itemId, type) {
   const container = document.getElementById("modalExtraLocationsContainer");
   if (!container) return;
@@ -458,13 +427,11 @@ async function loadExtraLocations(itemId, type) {
     container.innerHTML = `<div style="color:#666; font-size:0.85rem;">No se pudieron cargar.</div>`;
   }
 }
-
 async function deleteExtraLocation(locationId, itemId, type) {
   if (!confirm("¿Eliminar esta ubicación adicional?")) return;
   const ok = await adminDelete(`${API_BASE}/item-locations/${locationId}`);
   if (ok) loadExtraLocations(itemId, type);
 }
-
 function viewOnAppMap(lat, lng) {
   closeModal();
   switchTab(tabMapBtn, tabMapPanel, "map");
@@ -473,7 +440,6 @@ function viewOnAppMap(lat, lng) {
       window.sismoMap.flyTo([lat, lng], 16, { duration: 0.3 });
   }, 250);
 }
-
 function commentBadgeHtml(item) {
   if (!item.last_comment) return "";
   const preview =
@@ -483,14 +449,12 @@ function commentBadgeHtml(item) {
   const count = item.comment_count > 1 ? ` (${item.comment_count})` : "";
   return `<div class="comment-badge" title="${escapeHtml(item.last_comment)}">💬${count} ${escapeHtml(preview)}</div>`;
 }
-
 function normalize(str) {
   return (str || "")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 }
-
 function fuzzyMatch(query, target) {
   query = normalize(query);
   target = normalize(target);
@@ -501,7 +465,6 @@ function fuzzyMatch(query, target) {
   }
   return qi === query.length;
 }
-
 function fuzzyFilter(query, items) {
   if (!query.trim()) return items;
   return items.filter(
@@ -511,7 +474,6 @@ function fuzzyFilter(query, items) {
       fuzzyMatch(query, item.city || ""),
   );
 }
-
 async function adminDelete(url) {
   const key = prompt("Clave de administrador:");
   if (!key) return false;
@@ -525,7 +487,6 @@ async function adminDelete(url) {
   }
   return true;
 }
-
 // ================================================================
 //  CARGA DE CIUDADES
 // ================================================================
@@ -536,7 +497,6 @@ fetch("/cities.json")
     cities.forEach((c) => {
       cityCoordinates[c.name] = [c.lat, c.lng];
     });
-
     // Populate all city <select> elements with the same options.
     const citySelectIds = [
       "cityInput",
@@ -563,7 +523,6 @@ fetch("/cities.json")
         }
       });
     }
-
     // Re-run map rendering now that coordinates are loaded (handles the
     // timing issue where initMap runs before the async fetch resolves).
     if (window.sismoMap) {
@@ -574,7 +533,6 @@ fetch("/cities.json")
     }
   })
   .catch(() => console.error("No se pudo cargar cities.json"));
-
 // ================================================================
 //  SUBIDA A CLOUDINARY
 // ================================================================
@@ -582,7 +540,6 @@ async function uploadPersonPhoto(personId, file) {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-
   try {
     const res = await fetch(
       `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
@@ -593,7 +550,6 @@ async function uploadPersonPhoto(personId, file) {
     );
     const data = await res.json();
     if (!data.secure_url) throw new Error("No se obtuvo secure_url");
-
     await fetch(`${API_BASE}/disappeared/${personId}/photo`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -608,21 +564,18 @@ async function uploadPersonPhoto(personId, file) {
     return null;
   }
 }
-
 // ================================================================
 //  COPIAR LINK
 // ================================================================
 document.getElementById("copyLinkBtn").addEventListener("click", () => {
   copyWithFeedback(document.getElementById("copyLinkBtn"), "https://sismoinfo.co");
 });
-
 function copyItemLink(id, type, btn) {
   const url = new URL(window.location);
   url.searchParams.set("id", id);
   url.searchParams.set("type", type);
   copyWithFeedback(btn, url.toString());
 }
-
 // ================================================================
 //  COMPARTIR (Web Share API + fallback WhatsApp)
 // ================================================================
@@ -638,7 +591,6 @@ async function shareContent(title, text, url) {
   const waText = encodeURIComponent(url ? `${text}\n${url}` : text);
   window.open(`https://wa.me/?text=${waText}`, "_blank");
 }
-
 document.getElementById("shareAppBtn").addEventListener("click", () => {
   shareContent(
     "Sismo",
@@ -646,7 +598,6 @@ document.getElementById("shareAppBtn").addEventListener("click", () => {
     "https://sismoinfo.co",
   );
 });
-
 // ================================================================
 //  TABS
 // ================================================================
@@ -655,7 +606,6 @@ const tabPetsBtn = document.getElementById("tabPetsBtn");
 const tabEdificiosBtn = document.getElementById("tabEdificiosBtn");
 const tabAnunciosBtn = document.getElementById("tabAnunciosBtn");
 const tabColabBtn = document.getElementById("tabColabBtn");
-
 const tabMapBtn = document.getElementById("tabMapBtn");
 const wikiBtn = document.getElementById("wikiBtn");
 const tabPersonas = document.getElementById("tabPersonas");
@@ -667,9 +617,7 @@ const tabMapPanel = document.getElementById("tabMapPanel");
 const tabWiki = document.getElementById("tabWiki");
 const tabSismosBtn = document.getElementById("tabSismosBtn");
 const tabSismos = document.getElementById("tabSismos");
-
 let currentTabType = "person"; // track active tab for map cleanup
-
 function switchTab(activeBtn, activePanel, tabType) {
   // If leaving the map tab, hide the map container
   if (currentTabType === "map" && tabType !== "map") {
@@ -689,7 +637,6 @@ function switchTab(activeBtn, activePanel, tabType) {
   ].forEach((b) => b && b.classList.remove("active"));
   // Activar el botón seleccionado
   activeBtn.classList.add("active");
-
   // Ocultar todos los paneles
   [
     tabPersonas,
@@ -703,15 +650,12 @@ function switchTab(activeBtn, activePanel, tabType) {
   ].forEach((p) => p && p.classList.remove("active"));
   // Mostrar el panel seleccionado
   activePanel.classList.add("active");
-
   // Reset the single search bar; the active render fn is set below.
   document.getElementById("searchInput").value = "";
   // Reset filters for the incoming tab (mirrors search reset on tab switch).
   if (tabType && filterState[tabType]) resetFilters(tabType);
-
   // Render function from TYPE_REGISTRY (single source of truth).
   currentRenderFn = TYPE_REGISTRY[tabType]?.renderFn || (() => {});
-
   // Side effects specific to certain tabs.
   if (tabType === "map") {
     // Crear el mapa una sola vez
@@ -732,7 +676,6 @@ function switchTab(activeBtn, activePanel, tabType) {
   } else if (tabType === "sismos") {
     window.initSismos();
   }
-
   // Actualizar la URL con el parámetro "tab" (sin recargar)
   const url = new URL(window.location);
   if (tabType) {
@@ -764,7 +707,6 @@ wikiBtn.addEventListener("click", () => switchTab(wikiBtn, tabWiki, "wiki"));
 tabSismosBtn.addEventListener("click", () =>
   switchTab(tabSismosBtn, tabSismos, "sismos"),
 );
-
 // ================================================================
 //  CREAR MODAL
 //  Unified modal hosting all creation forms. Only the form matching
@@ -773,15 +715,12 @@ tabSismosBtn.addEventListener("click", () =>
 const crearModal = document.getElementById("crearModal");
 const crearModalTitle = document.getElementById("crearModalTitle");
 const crearFormWraps = crearModal.querySelectorAll(".crear-form-wrap");
-
 // CREAR_META derived from TYPE_REGISTRY
 const CREAR_META = {};
 for (const [type, meta] of Object.entries(TYPE_REGISTRY)) {
   if (meta.createTitle) CREAR_META[type] = { title: meta.createTitle };
 }
-
 const crearModalShell = Modal({ id: "crearModal" });
-
 function openCrearModal(type) {
   if (!CREAR_META[type]) type = "person";
   crearModalTitle.textContent = CREAR_META[type].title;
@@ -790,11 +729,9 @@ function openCrearModal(type) {
   });
   crearModalShell.open();
 }
-
 function closeCrearModal() {
   crearModalShell.close();
 }
-
 function openCrearModalForActiveTab() {
   const activeBtn = document.querySelector(".tab-btn.active");
   let type = "person";
@@ -824,11 +761,9 @@ const modalStatus = document.getElementById("modalStatus");
 const modalMeta = document.getElementById("modalMeta");
 const modalBody = document.getElementById("modalBody");
 const modalActions = document.getElementById("modalActions");
-
 let currentItemId = null;
 let currentItemType = null; // modal type: "person" | "pet" | "building" | "colaborador" | "anuncio"
 let currentCommentType = null; // API comment type: "disappeared" | "pets" | "buildings" | "collaborators" | "anuncios"
-
 // Cleanup performed every time the detail modal closes.
 function resetDetailModal() {
   modalTitle.textContent = "";
@@ -850,13 +785,10 @@ function resetDetailModal() {
   url.searchParams.delete("type");
   window.history.replaceState({}, "", url);
 }
-
 const detailModal = Modal({ id: "modal", onClose: resetDetailModal });
-
 function closeModal() {
   detailModal.close();
 }
-
 const modalRandom = document.getElementById("modalRandom");
 modalRandom.addEventListener("click", () => {
   if (currentItemType && currentItemId)
@@ -867,7 +799,6 @@ document.addEventListener("keydown", (e) => {
   // Escape handling is centralized in modal.js (wireEscape). All three
   // modals (crear, detail, map) are now backed by Modal shells.
 });
-
 // ----- Selector de ubicación en mapa -----
 const CALI_CENTER = [3.4516, -76.532];
 let mapPickerContext = null; // "person" | "pet" | "building" | "modalItem"
@@ -878,15 +809,12 @@ let modalExtraLocationTarget = null; // {id, type} cuando se agrega una ubicaci�
 let leafletMap = null;
 let leafletMarker = null;
 let modalMiniMap = null;
-
 const mapModal = document.getElementById("mapModal");
 const mapPickerConfirm = document.getElementById("mapPickerConfirm");
 const mapPickerLatInput = document.getElementById("mapPickerLatInput");
 const mapPickerLngInput = document.getElementById("mapPickerLngInput");
 const mapPickerGoBtn = document.getElementById("mapPickerGoBtn");
-
 const mapModalShell = Modal({ id: "mapModal" });
-
 // Build the context-info block (photo + emoji + name + subtitle) for the
 // map picker when editing an item's location. Returns { target, contextHtml }.
 function mapPickerContextInfo(targetRef, subtitle) {
@@ -908,7 +836,6 @@ function mapPickerContextInfo(targetRef, subtitle) {
 function openMapPicker(context) {
   mapPickerContext = context;
   mapModalShell.open();
-
   if (!leafletMap) {
     leafletMap = L.map("mapPickerContainer").setView(CALI_CENTER, 13);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -926,7 +853,6 @@ function openMapPicker(context) {
       syncPickerInputs(ll.lat, ll.lng);
     });
   }
-
   let existingLat = mapPickerLat[context];
   let existingLng = mapPickerLng[context];
   const mapPickerContextEl = document.getElementById("mapPickerContext");
@@ -976,11 +902,9 @@ function openMapPicker(context) {
   } else {
     syncPickerInputs(CALI_CENTER[0], CALI_CENTER[1]);
   }
-
   // Leaflet necesita recalcular el tamaño una vez el modal ya es visible.
   setTimeout(() => leafletMap.invalidateSize(), 50);
 }
-
 function closeMapPicker() {
   mapModalShell.close();
   mapPickerContext = null;
@@ -988,12 +912,10 @@ function closeMapPicker() {
   mapSearchResults.style.display = "none";
   mapSearchResults.innerHTML = "";
 }
-
 function syncPickerInputs(lat, lng) {
   mapPickerLatInput.value = lat.toFixed(6);
   mapPickerLngInput.value = lng.toFixed(6);
 }
-
 mapPickerGoBtn.addEventListener("click", () => {
   const lat = parseFloat(mapPickerLatInput.value);
   const lng = parseFloat(mapPickerLngInput.value);
@@ -1013,12 +935,10 @@ mapPickerGoBtn.addEventListener("click", () => {
   leafletMarker.setLatLng([lat, lng]);
   leafletMap.setView([lat, lng], 15);
 });
-
 const mapSearchInput = document.getElementById("mapSearchInput");
 const mapSearchResults = document.getElementById("mapSearchResults");
 let mapSearchDebounce = null;
 let mapSearchAbort = null;
-
 mapSearchInput.addEventListener("input", () => {
   clearTimeout(mapSearchDebounce);
   const q = mapSearchInput.value.trim();
@@ -1029,7 +949,6 @@ mapSearchInput.addEventListener("input", () => {
   }
   mapSearchDebounce = setTimeout(() => runMapSearch(q), 500);
 });
-
 async function runMapSearch(query) {
   if (mapSearchAbort) mapSearchAbort.abort();
   mapSearchAbort = new AbortController();
@@ -1045,7 +964,6 @@ async function runMapSearch(query) {
     if (err.name !== "AbortError") console.error(err);
   }
 }
-
 function renderMapSearchResults(results) {
   if (!results.length) {
     mapSearchResults.innerHTML = `<div class="map-search-result" style="color:#666; cursor:default;">Sin resultados</div>`;
@@ -1059,7 +977,6 @@ function renderMapSearchResults(results) {
     )
     .join("");
   mapSearchResults.style.display = "block";
-
   mapSearchResults
     .querySelectorAll(".map-search-result[data-index]")
     .forEach((el) => {
@@ -1075,13 +992,11 @@ function renderMapSearchResults(results) {
       });
     });
 }
-
 document.addEventListener("click", (e) => {
   if (!mapSearchResults.contains(e.target) && e.target !== mapSearchInput) {
     mapSearchResults.style.display = "none";
   }
 });
-
 mapPickerConfirm.addEventListener("click", async () => {
   if (!mapPickerContext) return;
   const typedLat = parseFloat(mapPickerLatInput.value);
@@ -1097,7 +1012,6 @@ mapPickerConfirm.addEventListener("click", async () => {
       ? leafletMarker.getLatLng().lng
       : null;
   if (lat == null || lng == null) return;
-
   if (mapPickerContext === "modalItem" && modalLocationTarget) {
     const { id, type } = modalLocationTarget;
     const endpoint =
@@ -1126,7 +1040,6 @@ mapPickerConfirm.addEventListener("click", async () => {
     if (updated) openModalForItem(updated, type);
     return;
   }
-
   if (mapPickerContext === "modalItemExtra" && modalExtraLocationTarget) {
     const { id, type } = modalExtraLocationTarget;
     const itemType = type === "person" ? "disappeared" : "pets";
@@ -1140,7 +1053,6 @@ mapPickerConfirm.addEventListener("click", async () => {
     loadExtraLocations(id, type);
     return;
   }
-
   mapPickerLat[mapPickerContext] = lat;
   mapPickerLng[mapPickerContext] = lng;
   const btnByContext = { person: gpsBtn, pet: gpsBtnP, building: gpsBtnB };
@@ -1160,7 +1072,6 @@ mapPickerConfirm.addEventListener("click", async () => {
     display.innerHTML = `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" style="color:#4ea1ff;">🗺️ ${lat.toFixed(5)}, ${lng.toFixed(5)}</a>`;
   closeMapPicker();
 });
-
 function initModalMiniMap(lat, lng) {
   if (modalMiniMap) {
     modalMiniMap.remove();
@@ -1182,12 +1093,10 @@ function initModalMiniMap(lat, lng) {
     modalMiniMap.invalidateSize();
   }, 50);
 }
-
 // Data array for a given item type (used by the random-jump button).
 function dataForType(type) {
   return TYPE_REGISTRY[type]?.data?.() || [];
 }
-
 // Open the modal for a random item of the same type (excludes current id).
 function showRandomItem(type, currentId) {
   const data = dataForType(type);
@@ -1196,14 +1105,12 @@ function showRandomItem(type, currentId) {
   const next = pool[Math.floor(Math.random() * pool.length)];
   openModalForItem(next, type);
 }
-
 function openModalForItem(item, type) {
   const commentsContainer = document.getElementById("commentsContainer");
   // Track the open item up front so the 🎲 random button works for every
   // type (anuncios return early below, before the old assignment ran).
   currentItemId = item.id;
   currentItemType = type;
-
   // --- Soporte para anuncios en el modal ---
   if (type === "anuncio") {
     modalStatus.innerHTML = "";
@@ -1221,11 +1128,9 @@ function openModalForItem(item, type) {
     const gallery = Array.isArray(item.images) ? item.images.slice() : [];
     const main = item.photo_url || item.image || gallery[0] || null;
     if (main && !gallery.includes(main)) gallery.unshift(main);
-
     const mainHtml = main
       ? `<img class="modal-photo" src="${escapeHtml(main)}" alt="Imagen principal" />`
       : `<div style="color:#666; padding:12px;">Sin imagen todavía.</div>`;
-
     const galleryHtml = gallery.length
       ? `<div class="anuncio-gallery">${gallery
           .map(
@@ -1243,7 +1148,6 @@ function openModalForItem(item, type) {
           )
           .join("")}</div>`
       : "";
-
     modalBody.innerHTML = `
           ${mainHtml}
           <div style="white-space:pre-wrap;">${escapeHtml(item.text)}</div>
@@ -1263,7 +1167,6 @@ function openModalForItem(item, type) {
     commentsContainer.style.display = "";
     detailModal.open();
     loadComments(item.id, "anuncios");
-
     // Subir fotos desde el modal (clonar input para limpiar listeners previos)
     const oldInput = document.getElementById("modalPhotoInput");
     const newInput = oldInput.cloneNode(true);
@@ -1287,14 +1190,12 @@ function openModalForItem(item, type) {
   } else {
     commentsContainer.style.display = "";
   }
-
   // --- Resto del código existente para personas, mascotas y edificios ---
   const statusClass = item.status || "desaparecido";
   const statusTagLabel = statusLabel(statusClass);
   const statusTagClass = statusCssClass(statusClass);
   modalStatus.innerHTML = `<span class="status-tag ${statusTagClass}">${statusTagLabel}</span>`;
   modalTitle.textContent = item.name || "Sin nombre";
-
   const dateStr = item.created_at
     ? new Date(item.created_at).toLocaleString("es-CO", {
       day: "2-digit",
@@ -1311,7 +1212,6 @@ function openModalForItem(item, type) {
     metaParts.push(locationLinksHtml(item.lat, item.lng));
   metaParts.push(`🕒 ${dateStr}`);
   modalMeta.innerHTML = metaParts.map((p) => `<span>${p}</span>`).join("");
-
   // --- Cuerpo del modal: imágenes y subida de foto (para personas y mascotas) ---
   if (type === "person" || type === "pet") {
     const hasLoc = item.lat != null && item.lng != null;
@@ -1321,7 +1221,6 @@ function openModalForItem(item, type) {
     } else if (item.image) {
       imagesHtml = `<img class="modal-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" style=${item.name.toLowerCase() == "sharon alvear guzmán" && ""}/>`;
     }
-
     // 🐕 NEW: Deep scraped details for Pets
     let deepDetailsHtml = "";
     if (type === "pet") {
@@ -1334,11 +1233,9 @@ function openModalForItem(item, type) {
         details.push(`<span>⚧ <b>Sexo:</b> ${escapeHtml(item.sex)}</span>`);
       if (item.size)
         details.push(`<span>📏 <b>Tamaño:</b> ${escapeHtml(item.size)}</span>`);
-
       if (item.description) {
         details.push(`<div style="width:100%;margin-bottom:12px;white-space:pre-wrap;color:#ccc;font-size:0.95rem;line-height:1.4;">${escapeHtml(item.description)}</div>`);
       }
-
       let contactHtml = "";
       if (
         item.contact_name ||
@@ -1358,34 +1255,24 @@ function openModalForItem(item, type) {
         contactHtml += `</div></div>`;
         details.push(contactHtml);
       }
-
       let sourceHtml = "";
       if (item.source_url) {
         sourceHtml += `<div style="margin-bottom:12px;font-size:0.85rem;"><a href="${item.source_url}" target="_blank" style="color:#4ea1ff;text-decoration:underline;">🔗 Ver publicación original (${item.meta || "Fuente externa"})</a></div>`;
       }
-
       details.push(sourceHtml);
-
       if (details.length) {
         deepDetailsHtml = `<div class="pet-details" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;font-size:0.9rem;">${details.join("")}</div>`;
       }
-
-
-
     }
-
     modalBody.innerHTML = `
           ${deepDetailsHtml}
-
           <label style="display:block; color:#999; margin-bottom:4px;">${item.photo_url ? "Cambiar foto" : "Agregar foto"}</label>
           <input type="file" accept="image/*" id="modalPhotoInput"
             style="width:100%; padding:8px; border-radius:8px; border:1px solid #333; background:#1a1d24; color:#eaeaea;" />
           ${imagesHtml}
-
         <div style="display:flex;">
             <div style="color:#999;margin-bottom:6px;">📍 Ubicación principal</div>
           <button type="button" class="btn-small" id="modalSetLocationBtn" style="margin-left:auto;margin-bottom:10px;">${hasLoc ? "Cambiar ubicación" : "Agregar ubicación"}</button>
-
         </div>
           <div style="display:flex;">
             <div style="color:#999;margin-bottom:6px;">📍 Otras ubicaciones posibles</div>
@@ -1403,7 +1290,6 @@ function openModalForItem(item, type) {
         : ""
       }
         `;
-
     document
       .getElementById("modalSetLocationBtn")
       .addEventListener("click", () => {
@@ -1417,7 +1303,6 @@ function openModalForItem(item, type) {
         openMapPicker("modalItemExtra");
       });
     loadExtraLocations(item.id, type);
-
     const nearbyContainer = document.getElementById("modalNearbyContainer");
     if (nearbyContainer) {
       nearbyContainer.addEventListener("click", (e) => {
@@ -1435,7 +1320,6 @@ function openModalForItem(item, type) {
         if (nItem) openModalForItem(nItem, nType);
       });
     }
-
     // Remover listeners previos clonando el input
     const oldInput = document.getElementById("modalPhotoInput");
     const newInput = oldInput.cloneNode(true);
@@ -1490,7 +1374,6 @@ function openModalForItem(item, type) {
         modalLocationTarget = { id: item.id, type: "building" };
         openMapPicker("modalItem");
       });
-
     // Subir foto desde el modal (clonar input para limpiar listeners previos)
     const oldInput = document.getElementById("modalPhotoInput");
     const newInput = oldInput.cloneNode(true);
@@ -1502,7 +1385,6 @@ function openModalForItem(item, type) {
       loadListB();
       closeModal();
     });
-
     const nearbyContainer = document.getElementById("modalNearbyContainer");
     if (nearbyContainer) {
       nearbyContainer.addEventListener("click", (e) => {
@@ -1558,7 +1440,6 @@ function openModalForItem(item, type) {
   } else {
     modalBody.innerHTML = `<div style="color:#888;">Detalles del reporte</div>`;
   }
-
   // --- Acciones del modal (botones) ---
   let actionsHtml = "";
   if (
@@ -1569,7 +1450,6 @@ function openModalForItem(item, type) {
   ) {
     actionsHtml += `<button type="button" class="btn-small" onclick="copyItemLink('${item.id}','${type}', this)">🔗</button>`;
   }
-
   if (isLocalhost) {
     actionsHtml += `<button  onclick="removeItem('${item.id}','${type}'); closeModal();">🗑️</button>`;
   }
@@ -1595,14 +1475,12 @@ function openModalForItem(item, type) {
     }
   }
   modalActions.innerHTML = actionsHtml;
-
   // --- Abrir modal y actualizar URL ---
   detailModal.open();
   const url = new URL(window.location);
   url.searchParams.set("id", item.id);
   url.searchParams.set("type", type);
   window.history.replaceState({}, "", url);
-
   // --- Cargar comentarios (solo si no es anuncio) ---
   if (type !== "anuncio") {
     const commentType =
@@ -1616,12 +1494,10 @@ function openModalForItem(item, type) {
     loadComments(item.id, commentType);
   }
 }
-
 // ================================================================
 //  COMENTARIOS
 // ================================================================
 let currentComments = [];
-
 async function loadComments(itemId, itemType) {
   if (!itemId || !itemType) return;
   currentItemId = itemId;
@@ -1637,7 +1513,6 @@ async function loadComments(itemId, itemType) {
       `<div style="color:#666;">Error al cargar comentarios.</div>`;
   }
 }
-
 function renderComments() {
   const list = document.getElementById("commentsList");
   if (!currentComments.length) {
@@ -1664,13 +1539,11 @@ function renderComments() {
     })
     .join("");
 }
-
 async function deleteComment(id) {
   if (!confirm("¿Eliminar este comentario?")) return;
   const ok = await adminDelete(`${API_BASE}/comments/${id}`);
   if (ok) loadComments(currentItemId, currentCommentType);
 }
-
 document.getElementById("commentForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const input = document.getElementById("commentInput");
@@ -1688,7 +1561,6 @@ document.getElementById("commentForm").addEventListener("submit", async (e) => {
   input.value = "";
   loadComments(currentItemId, currentCommentType);
 });
-
 // ================================================================
 //  PERSONS (Personas)
 // ================================================================
@@ -1714,7 +1586,6 @@ searchInput.addEventListener("input", () => {
   }
   if (currentRenderFn) currentRenderFn();
 });
-
 // ================================================================
 //  FILTROS POR TAB
 //  Cada tab con lista tiene su propio estado de filtro {status, city}.
@@ -1730,7 +1601,6 @@ const filterState = {
   building: { status: new Set(), city: "" },
   colaborador: { status: new Set(), city: "" },
 };
-
 // Apply the active tab's filter state to an already-search-filtered array.
 // status: empty set = all; otherwise item.status must be in the set (OR).
 function applyFilters(items, tab) {
@@ -1742,7 +1612,6 @@ function applyFilters(items, tab) {
     return true;
   });
 }
-
 // Rebuild a tab's city <select> from its data so only present cities show.
 function refreshCityFilter(tab, data) {
   const row = document.querySelector(`.filter-row[data-tab="${tab}"]`);
@@ -1762,7 +1631,6 @@ function refreshCityFilter(tab, data) {
   if (cities.includes(current)) sel.value = current;
   else filterState[tab].city = "";
 }
-
 // Reset a tab's filters to default (called on tab switch, like search reset).
 function resetFilters(tab) {
   const f = filterState[tab];
@@ -1778,7 +1646,6 @@ function resetFilters(tab) {
   const sel = row.querySelector('.filter-select[data-filter="city"]');
   if (sel) sel.value = "";
 }
-
 // Wire up all filter controls once.
 document.querySelectorAll(".filter-row").forEach((row) => {
   const tab = row.dataset.tab;
@@ -1830,11 +1697,9 @@ document.querySelectorAll(".filter-row").forEach((row) => {
 });
 const photoInput = document.getElementById("photoInput");
 const fileLabel = document.getElementById("fileLabel");
-
 const photoPreview = document.getElementById("photoPreview");
 // Referencia para la previsualización de URL
 const urlPreview = document.getElementById("urlPreview");
-
 // Previsualización de archivo y URL — usa factory compartida
 setupPhotoPreview({
   fileInput: photoInput,
@@ -1844,7 +1709,6 @@ setupPhotoPreview({
   placeholderText: "Ningún archivo seleccionado",
   urlPreviewEl: urlPreview,
 });
-
 async function loadList() {
   try {
     const res = await fetch(`${API_BASE}/disappeared`);
@@ -1858,14 +1722,12 @@ async function loadList() {
     listEl.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
   }
 }
-
 // Shared card renderer for persons and pets (same layout, same fields).
 // Only the entity type and fallback image differ between the two.
 const PERSON_PLACEHOLDER =
   "person.png";
 const PET_PLACEHOLDER =
   "https://external-content.duckduckgo.com/iu/?u=http%3A%2F%2Fvictoriapets.ca%2Fwp-content%2Fthemes%2Fneve-child%2Fimages%2Fplaceholder-pet-image.jpg&f=1&nofb=1&ipt=e0e1204dabf2c9a4e236025578bc41edc6bc8b993269d6a7858d0d9112a04697";
-
 function entityCardHtml(item, type, placeholderImg) {
   const found = item.status === "encontrado";
   const date = new Date(item.created_at).toLocaleString("es-CO", {
@@ -1881,7 +1743,6 @@ function entityCardHtml(item, type, placeholderImg) {
     metaParts.push(locationLinksHtml(item.lat, item.lng));
   metaParts.push(date);
   let imgHtml = "";
-
   if (item.status === "angel") {
     imgHtml = `<img style="opacity:0.62;" class="card-photo" src="angel.png" alt="Imagen" />`;
   }
@@ -1893,7 +1754,6 @@ function entityCardHtml(item, type, placeholderImg) {
   } else if (item.image) {
     imgHtml = `<img class="card-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" style=${item.name.toLowerCase() == "sharon alvear guzmán" && ""}/>`;
   } else {
-
     imgHtml = `<img style="opacity:0.62;filter:brightness(0) saturate(100%) ${item.status == 'desaparecido' ? 'invert(36%) sepia(68%) saturate(1845%) hue-rotate(327deg) brightness(91%) contrast(88%) ' : 'invert(55%) sepia(35%) saturate(1050%) hue-rotate(75deg) brightness(90%) contrast(85%)'};" class="card-photo" src="${placeholderImg} " alt="Imagen URL" />`;
   }
   const isAngel =
@@ -1918,7 +1778,6 @@ function entityCardHtml(item, type, placeholderImg) {
       <span class="meta" style="${isAngel & " color:white;"}">${metaParts.join(" · ")}</span>
                 ${commentBadgeHtml(item)}
               </div >
-
     <div class="actions" style="${isAngel && " display:none"};" >
       ${found
       ? (item.name.toLowerCase().includes("#paciente") ? "" :
@@ -1935,11 +1794,9 @@ function entityCardHtml(item, type, placeholderImg) {
         </div >
     `;
 }
-
 function personCardHtml(item) {
   return entityCardHtml(item, "person", PERSON_PLACEHOLDER);
 }
-
 function render() {
   const items = applyFilters(
     fuzzyFilter(searchInput.value, personsData),
@@ -1951,7 +1808,6 @@ function render() {
   }
   renderVirtualList(listEl, items, personCardHtml);
 }
-
 listEl.addEventListener("click", (e) => {
   if (e.target.closest("button")) return;
   const card = e.target.closest(".card");
@@ -1959,9 +1815,7 @@ listEl.addEventListener("click", (e) => {
   const id = card.dataset.id;
   const item = personsData.find((p) => p.id === id);
   if (item) openModalForItem(item, "person");
-
 });
-
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const name = nameInput.value.trim();
@@ -1971,17 +1825,14 @@ form.addEventListener("submit", async (e) => {
   const lat = mapPickerLat.person;
   const lng = mapPickerLng.person;
   if (!name) return;
-
   const payload = { name, location, city, lat, lng };
   if (image) payload.image = image;
-
   const res = await fetch(`${API_BASE}/disappeared`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   const created = await res.json();
-
   nameInput.value = "";
   locationInput.value = "";
   cityInput.value = "";
@@ -1991,7 +1842,6 @@ form.addEventListener("submit", async (e) => {
     urlPreview.style.display = "none";
     urlPreview.src = "";
   }
-
   const file = photoInput.files[0];
   // Limpiar previsualización
   if (photoPreview.src) {
@@ -2012,9 +1862,7 @@ form.addEventListener("submit", async (e) => {
   loadList();
   closeCrearModal();
 });
-
 gpsBtn.addEventListener("click", () => openMapPicker("person"));
-
 // ================================================================
 //  PETS (Mascotas) - sin cambios
 // ================================================================
@@ -2030,7 +1878,6 @@ const photoInputP = document.getElementById("photoInputP");
 const fileLabelP = document.getElementById("fileLabelP");
 const photoPreviewP = document.getElementById("photoPreviewP");
 const urlPreviewP = document.getElementById("urlPreviewP");
-
 // Función para subir foto de mascota a Cloudinary
 async function uploadPetPhoto(petId, file) {
   const formData = new FormData();
@@ -2060,7 +1907,6 @@ async function uploadPetPhoto(petId, file) {
     return null;
   }
 }
-
 // Previsualización de archivo y URL — usa factory compartida
 setupPhotoPreview({
   fileInput: photoInputP,
@@ -2083,11 +1929,9 @@ async function loadListP() {
     listElP.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
   }
 }
-
 function petCardHtml(item) {
   return entityCardHtml(item, "pet", PET_PLACEHOLDER);
 }
-
 function renderP() {
   const items = applyFilters(fuzzyFilter(searchInput.value, petsData), "pet");
   if (!items.length) {
@@ -2096,7 +1940,6 @@ function renderP() {
   }
   renderVirtualList(listElP, items, petCardHtml);
 }
-
 listElP.addEventListener("click", (e) => {
   if (e.target.closest("button")) return;
   const card = e.target.closest(".card");
@@ -2105,7 +1948,6 @@ listElP.addEventListener("click", (e) => {
   const item = petsData.find((p) => p.id === id);
   if (item) openModalForItem(item, "pet");
 });
-
 formP.addEventListener("submit", async (e) => {
   e.preventDefault();
   const name = nameInputP.value.trim();
@@ -2117,13 +1959,11 @@ formP.addEventListener("submit", async (e) => {
   if (!name) return;
   const payload = { name, location, city, lat, lng };
   if (image) payload.image = image;
-
   const res = await fetch(`${API_BASE}/pets`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-
   const created = await res.json();
   nameInputP.value = "";
   locationInputP.value = "";
@@ -2153,9 +1993,7 @@ formP.addEventListener("submit", async (e) => {
   loadListP();
   closeCrearModal();
 });
-
 gpsBtnP.addEventListener("click", () => openMapPicker("pet"));
-
 // ================================================================
 //  BUILDINGS (Edificios) - sin cambios
 // ================================================================
@@ -2171,7 +2009,6 @@ const photoInputB = document.getElementById("photoInputB");
 const fileLabelB = document.getElementById("fileLabelB");
 const photoPreviewB = document.getElementById("photoPreviewB");
 const urlPreviewB = document.getElementById("urlPreviewB");
-
 // Función para subir foto de edificio a Cloudinary
 async function uploadBuildingPhoto(buildingId, file) {
   const formData = new FormData();
@@ -2201,7 +2038,6 @@ async function uploadBuildingPhoto(buildingId, file) {
     return null;
   }
 }
-
 // Previsualización de archivo y URL — usa factory compartida
 setupPhotoPreview({
   fileInput: photoInputB,
@@ -2211,7 +2047,6 @@ setupPhotoPreview({
   placeholderText: "Sube una foto",
   urlPreviewEl: urlPreviewB,
 });
-
 async function loadListB() {
   try {
     const res = await fetch(`${API_BASE}/buildings`);
@@ -2224,10 +2059,8 @@ async function loadListB() {
     listElB.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
   }
 }
-
 const BUILDING_PLACEHOLDER =
   "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.vecteezy.com%2Fsystem%2Fresources%2Fpreviews%2F077%2F676%2F103%2Fnon_2x%2Fsimple-rounded-image-placeholder-with-mountain-landscape-inside-icon-vector.jpg&f=1&nofb=1&ipt=90c0361e0c9755a3d22b949bed9e2588c3e34ea83dc3b27b43f316c5723c07cf";
-
 function buildingCardHtml(item) {
   const date = new Date(item.created_at).toLocaleString("es-CO", {
     day: "2-digit",
@@ -2267,7 +2100,6 @@ function buildingCardHtml(item) {
                 <span class="meta">${metaParts.join(" · ")}</span>
                 ${commentBadgeHtml(item)}
               </div>
-
 <div class="actions">
               <button class="btn-seguro${statusClass === "seguro" ? " btn-active" : ""}" ${statusClass === "seguro" ? "disabled" : ""} onclick="setStatusB('${item.id}','seguro')">🫶</button>
               <button style="display:none;"class="btn-danado${statusClass === "danado" ? " btn-active" : ""}" ${statusClass === "danado" ? "disabled" : ""} onclick="setStatusB('${item.id}','danado')">Dañado</button>
@@ -2283,7 +2115,6 @@ function buildingCardHtml(item) {
         </div >
       `;
 }
-
 function renderB() {
   const items = applyFilters(
     fuzzyFilter(searchInput.value, buildingsData),
@@ -2295,7 +2126,6 @@ function renderB() {
   }
   renderVirtualList(listElB, items, buildingCardHtml);
 }
-
 listElB.addEventListener("click", (e) => {
   if (e.target.closest("button")) return;
   const card = e.target.closest(".card");
@@ -2304,7 +2134,6 @@ listElB.addEventListener("click", (e) => {
   const item = buildingsData.find((b) => b.id === id);
   if (item) openModalForItem(item, "building");
 });
-
 formB.addEventListener("submit", async (e) => {
   e.preventDefault();
   const name = nameInputB.value.trim();
@@ -2316,14 +2145,12 @@ formB.addEventListener("submit", async (e) => {
   if (!name) return;
   const payload = { name, location, city, lat, lng };
   if (image) payload.image = image;
-
   const res = await fetch(`${API_BASE}/buildings`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   const created = await res.json();
-
   nameInputB.value = "";
   locationInputB.value = "";
   cityInputB.value = "";
@@ -2332,7 +2159,6 @@ formB.addEventListener("submit", async (e) => {
     urlPreviewB.style.display = "none";
     urlPreviewB.src = "";
   }
-
   const file = photoInputB.files[0];
   if (photoPreviewB.src) {
     URL.revokeObjectURL(photoPreviewB.src);
@@ -2344,7 +2170,6 @@ formB.addEventListener("submit", async (e) => {
   if (file && created.id) {
     await uploadBuildingPhoto(created.id, file);
   }
-
   mapPickerLat.building = null;
   mapPickerLng.building = null;
   gpsBtnB.classList.remove("has-location");
@@ -2353,16 +2178,13 @@ formB.addEventListener("submit", async (e) => {
   loadListB();
   closeCrearModal();
 });
-
 gpsBtnB.addEventListener("click", () => openMapPicker("building"));
-
 // ================================================================
 //  MODAL: ya muestra imágenes para cualquier tipo
 //  La función openModalForItem() ya maneja person, pet y building
 //  con el mismo código. Para pets también mostrará image y photo_url.
 // ================================================================
 // (No se requiere cambio, pero se deja claro que el modal ya es compatible)
-
 // ================================================================
 //  ANUNCIOS
 // ================================================================
@@ -2376,7 +2198,6 @@ const photoInputA = document.getElementById("photoInputA");
 const fileLabelA = document.getElementById("fileLabelA");
 const photoPreviewA = document.getElementById("photoPreviewA");
 const urlPreviewA = document.getElementById("urlPreviewA");
-
 // Sube un único archivo a Cloudinary y devuelve su secure_url (o null).
 async function uploadToCloudinary(file) {
   const formData = new FormData();
@@ -2390,7 +2211,6 @@ async function uploadToCloudinary(file) {
   if (!data.secure_url) throw new Error("No se obtuvo secure_url");
   return data.secure_url;
 }
-
 // Sube varios archivos a Cloudinary y devuelve un array de URLs (ignora fallos).
 async function uploadAnuncioPhotos(files) {
   const urls = [];
@@ -2404,7 +2224,6 @@ async function uploadAnuncioPhotos(files) {
   }
   return urls;
 }
-
 // Previsualización de archivo para anuncios (soporta múltiples)
 photoInputA.addEventListener("change", function() {
   if (photoPreviewA.src) {
@@ -2425,7 +2244,6 @@ photoInputA.addEventListener("change", function() {
     photoPreviewA.src = "";
   }
 });
-
 // Previsualización de URL para anuncios
 imageInputA.addEventListener("input", function() {
   const url = this.value.trim();
@@ -2442,7 +2260,6 @@ imageInputA.addEventListener("input", function() {
     urlPreviewA.onerror = null;
   }
 });
-
 async function loadListA() {
   try {
     const res = await fetch(`${API_BASE}/anuncios`);
@@ -2453,7 +2270,6 @@ async function loadListA() {
     listElA.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
   }
 }
-
 function renderA() {
   const q = searchInput.value;
   const items = q.trim()
@@ -2514,35 +2330,29 @@ listElA.addEventListener("click", (e) => {
   const item = anunciosData.find((a) => a.id === id);
   if (item) openModalForItem(item, "anuncio");
 });
-
 formA.addEventListener("submit", async (e) => {
   e.preventDefault();
   const title = anuncioTitleInput.value.trim();
   const text = anuncioInput.value.trim();
   const image = imageInputA.value.trim();
   if (!text) return;
-
   // Subir todas las fotos seleccionadas a Cloudinary primero.
   const files = Array.from(photoInputA.files || []);
   const uploadedUrls = files.length ? await uploadAnuncioPhotos(files) : [];
-
   // Construir la galería: URL principal (si hay) + fotos subidas.
   const images = [];
   if (image) images.push(image);
   images.push(...uploadedUrls);
-
   const payload = { text };
   if (title) payload.title = title;
   if (image) payload.image = image;
   if (images.length) payload.images = images;
-
   const res = await fetch(`${API_BASE}/anuncios`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   await res.json();
-
   anuncioTitleInput.value = "";
   anuncioInput.value = "";
   imageInputA.value = "";
@@ -2557,17 +2367,14 @@ formA.addEventListener("submit", async (e) => {
   }
   photoInputA.value = "";
   fileLabelA.textContent = "Sube una o más fotos";
-
   loadListA();
   closeCrearModal();
 });
-
 async function removeA(id) {
   if (!confirm("¿Eliminar este anuncio?")) return;
   const ok = await adminDelete(`${API_BASE}/anuncios/${id}`);
   if (ok) loadListA();
 }
-
 // Establece una imagen de la galería como principal.
 async function setAnuncioMain(id, url) {
   const item = anunciosData.find((a) => a.id === id);
@@ -2581,7 +2388,6 @@ async function setAnuncioMain(id, url) {
   const updated = anunciosData.find((a) => a.id === id);
   if (updated) openModalForItem(updated, "anuncio");
 }
-
 // Elimina una imagen de la galería (y ajusta la principal si era esa).
 async function removeAnuncioImage(id, url) {
   const item = anunciosData.find((a) => a.id === id);
@@ -2603,7 +2409,6 @@ async function removeAnuncioImage(id, url) {
   const updated = anunciosData.find((a) => a.id === id);
   if (updated) openModalForItem(updated, "anuncio");
 }
-
 function shareAnuncio(id) {
   const item = anunciosData.find((a) => a.id === id);
   if (!item) return;
@@ -2614,7 +2419,6 @@ function shareAnuncio(id) {
     `https://sismoinfo.co/#anuncio/${item.id}`,
   );
 }
-
 // ================================================================
 //  COLABORADORES (Voluntarios)
 // ================================================================
@@ -2625,7 +2429,6 @@ const nameInputColab = document.getElementById("nameInputColab");
 const skillInputColab = document.getElementById("skillInputColab");
 const contactInputColab = document.getElementById("contactInputColab");
 const cityInputColab = document.getElementById("cityInputColab");
-
 async function loadListColab() {
   try {
     const res = await fetch(`${API_BASE}/collaborators`);
@@ -2637,7 +2440,6 @@ async function loadListColab() {
     listElColab.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
   }
 }
-
 // ================================================================
 //  CONTADORES EN LAS PESTAÑAS
 //  Mantiene un badge con el total de items por categoría, vivo.
@@ -2653,10 +2455,8 @@ function updateTabCounts() {
   set("tabAnunciosBtn", anunciosData.length);
   set("tabColabBtn", colabData.length);
 }
-
 const COLAB_PLACEHOLDER =
   "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.vecteezy.com%2Fsystem%2Fresources%2Fpreviews%2F021%2F548%2F095%2Fnon_2x%2Fdefault-profile-picture-avatar-user-avatar-icon-person-icon-head-icon-profile-picture-icons-default-anonymous-user-male-and-female-businessman-photo-placeholder-social-network-avatar-portrait-free-vector.jpg&f=1&nofb=1&ipt=621673f72ece5d2869a9051c758ecc2d3f48741320548453b28c17465f313244";
-
 function colabCardHtml(item) {
   const date = new Date(item.created_at).toLocaleString("es-CO", {
     day: "2-digit",
@@ -2685,7 +2485,6 @@ function colabCardHtml(item) {
                 <span class="meta">${metaParts.join(" · ")}</span>
                 ${commentBadgeHtml(item)}
               </div>
-
 <div class="actions">
               ${isLocalhost
       ? `<button class="btn-small btn-delete" onclick="removeColab('${item.id}')">✕</button>`
@@ -2697,7 +2496,6 @@ function colabCardHtml(item) {
         </div >
       `;
 }
-
 function renderColab() {
   const q = searchInput.value;
   const searched = q.trim()
@@ -2716,7 +2514,6 @@ function renderColab() {
   }
   renderVirtualList(listElColab, items, colabCardHtml);
 }
-
 // --- Abrir modal al hacer clic en un colaborador ---
 listElColab.addEventListener("click", (e) => {
   if (e.target.closest("button")) return;
@@ -2727,7 +2524,6 @@ listElColab.addEventListener("click", (e) => {
   const item = colabData.find((c) => c.id === id);
   if (item) openModalForItem(item, "colaborador");
 });
-
 formColab.addEventListener("submit", async (e) => {
   e.preventDefault();
   const name = nameInputColab.value.trim();
@@ -2762,13 +2558,11 @@ formColab.addEventListener("submit", async (e) => {
   if (passEl) passEl.value = "";
   loadListColab();
 });
-
 async function removeColab(id) {
   if (!confirm("¿Quitar este colaborador?")) return;
   const ok = await adminDelete(`${API_BASE}/collaborators/${id}`);
   if (ok) loadListColab();
 }
-
 // Deep link: #anuncio/ abre directamente ese anuncio en su modal.
 function handleAnuncioDeepLink() {
   const match = location.hash.match(/^#anuncio\/(.+)$/);
@@ -2779,7 +2573,6 @@ function handleAnuncioDeepLink() {
   switchTab(tabAnunciosBtn, tabAnuncios, "anuncio");
   openModalForItem(item, "anuncio");
 }
-
 // ================================================================
 //  ACCIONES COMPARTIDAS
 // ================================================================
@@ -2795,7 +2588,6 @@ async function setStatus(id, status, type) {
   if (type === "person") loadList();
   else if (type === "pet") loadListP();
 }
-
 async function removeItem(id, type) {
   if (!confirm("¿Eliminar este reporte?")) return;
   const endpoint =
@@ -2807,7 +2599,6 @@ async function removeItem(id, type) {
     else if (type === "pet") loadListP();
   }
 }
-
 async function setStatusB(id, status) {
   await fetch(`${API_BASE}/buildings/${id}`, {
     method: "PATCH",
@@ -2816,25 +2607,21 @@ async function setStatusB(id, status) {
   });
   loadListB();
 }
-
 async function removeB(id) {
   if (!confirm("¿Eliminar este edificio?")) return;
   const ok = await adminDelete(`${API_BASE}/buildings/${id}`);
   if (ok) loadListB();
 }
-
 // ================================================================
 //  ABRIR MODAL DESDE URL
 // ================================================================
 let modalOpenedFromUrl = false;
 let urlModalAttempts = 0;
 const MAX_URL_ATTEMPTS = 6;
-
 function getUrlParams() {
   const params = new URLSearchParams(window.location.search);
   return { id: params.get("id"), type: params.get("type") };
 }
-
 function tryOpenModalFromUrl() {
   if (modalOpenedFromUrl) return true;
   // If the user is on the map tab, the modal was opened from the map (not a
@@ -2843,16 +2630,13 @@ function tryOpenModalFromUrl() {
   if (currentTabType === "map") return true;
   const { id, type } = getUrlParams();
   if (!id || !type || type === "anuncio") return true;
-
   let dataArray = null;
   if (type === "person") dataArray = personsData;
   else if (type === "pet") dataArray = petsData;
   else if (type === "building") dataArray = buildingsData;
   else if (type === "colaborador") dataArray = colabData;
   else return true;
-
   if (!dataArray || dataArray.length === 0) return false;
-
   const item = dataArray.find((i) => i.id === id);
   if (item) {
     if (type === "person") switchTab(tabPersonasBtn, tabPersonas, "person");
@@ -2869,7 +2653,6 @@ function tryOpenModalFromUrl() {
   // Si no hay parámetro o es inválido, ya está activa "person" por defecto
   return true;
 }
-
 // ================================================================
 //  INICIALIZACIÓN
 //  Lee el tab de la URL (si existe) y carga todos los datasets.
@@ -2893,7 +2676,6 @@ function applyTabFromUrl() {
     switchTab(...tabTargets[tab]);
   }
 }
-
 loadList();
 loadListP();
 loadListB();
@@ -2902,6 +2684,5 @@ loadListColab();
 applyTabFromUrl();
 handleAnuncioDeepLink();
 trackLayoutHeights();
-
 // Ejecutar después de que todo esté cargado
 setTimeout(tryOpenModalFromUrl, 100);

@@ -29,8 +29,10 @@
           transform: scale(162%) translate(-5px, 3px);
           z-index: 999;
         " />
-    <b style="flex: 1; font-size: 110%"><span style="color: #fcd116">SISMO</span><span
-        style="color: #3a5dc5">INFO</span><span style="color: #ce1126">.CO</span>
+    <b style="flex: 1; font-size: 110%">
+      <span style="color: #fcd116">SISMO</span>
+      <span style="color: #3a5dc5">INFO</span>
+      <span style="color: #ce1126">.CO</span>
     </b>
     <button id="copyLinkBtn">🔗 <span class="tab-label">LINK</span></button>
     <button id="shareAppBtn">📤 <span class="tab-label">Compartir</span></button>
@@ -74,7 +76,6 @@
   <div id="tabPets" class="tab-panel">
     <div class="tool-bar">
       <div class="filter-row" data-tab="pet">
-
         <button id="crear-top" class="crear-btn" onclick="openCrearModal('pet')">
           🐾 NUEVO
         </button>
@@ -151,7 +152,6 @@
   <!-- ===== PANEL MAPA ===== -->
   <div id="tabMapPanel" class="tab-panel">
     <div id="map">
-
       <!-- <label for="citySelectorMap" style="color:#ccc; margin-right:8px;">Ir a ciudad:</label> -->
       <div id="mapTypeFilter" style="
               display: flex;
@@ -181,7 +181,6 @@
           <span style="font-size: 0.75rem; color: #ccc">🔥</span>
           <input type="checkbox" id="heatmapToggle" checked onchange="toggleHeatmap(this.checked)" />
         </label>
-
         <select id="citySelectorMap" style="
               padding: 3px 5px;
               border-radius: 8px;
@@ -196,18 +195,23 @@
       <div id="mapSidebar" class="map-sidebar">
         <div class="map-sidebar-title">🫂 Personas · 🐕 Mascotas</div>
         <div id="mapSidebarList" class="map-sidebar-list"></div>
-
       </div>
-
       <div id="offscreenArrows"></div>
-
     </div>
-
   </div>
   <!-- ===== PANEL SISMOS ===== -->
   <div id="tabSismos" class="tab-panel">
     <!-- ===== ÚLTIMO SISMO (card, consistente con el resto) ===== -->
     <div class="sismo-head">
+      <div id="sismoLive" class="sismo-live" style="margin-top:10px;">
+        <div class="sismo-live-head">
+          <span class="sismo-live-dot" aria-hidden="true"></span>
+          <span class="sismo-live-title">En vivo · últimos 24 h</span>
+          <span id="sismoLiveUpdated" class="sismo-live-updated">—</span>
+        </div>
+        <div id="sismoLiveList" class="sismo-live-list"></div>
+      </div>
+
       <div id="sismoAlert" class="alerta">
         <div class="alerta-head">
           <span class="alerta-title">Último sismo</span>
@@ -249,18 +253,7 @@
         </div>
       </div>
     </div>
-
     <!-- ===== FEED EN VIVO (ventana corta, poll 60s) ===== -->
-    <div id="sismoLive" class="sismo-live" style="margin-top:10px;">
-      <div class="sismo-live-head">
-        <span class="sismo-live-dot" aria-hidden="true"></span>
-        <span class="sismo-live-title">En vivo · últimos 24 h</span>
-        <span id="sismoLiveUpdated" class="sismo-live-updated">—</span>
-      </div>
-      <div id="sismoLiveList" class="sismo-live-list"></div>
-    </div>
-
-
     <div id="sismoChart"
       style="display:none;height:400px;width:100%;background:#222;border-radius:0px 0px 10px 10px;border-bottom:1px solid #e9ecef;">
     </div>
@@ -536,11 +529,9 @@
   <!-- ===== MODAL (detail) ===== -->
   <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal-content">
-
       <div class="modal-header" data-modal-header>
         <button class="modal-random" id="modalRandom" type="button" aria-label="Ver otro al azar"
           title="Ver otro al azar">🎲</button>
-
         <div id="modalTitle" style="flex:1;text-transform:uppercase;"></div>
         <button class="modal-close" id="modalClose" data-modal-close aria-label="Cerrar">
           ✕
