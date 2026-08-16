@@ -220,13 +220,16 @@
         <div class="alerta-body">
           <span id="ultimoMag" class="alerta-mag">--</span>
           <span class="alerta-info">
-            <span id="ultimoLugar" class="alerta-lugar">Cargando...</span>
+            <span id="ultimoLugar" class="alerta-lugar"></span>
             <span id="ultimoHora" class="alerta-hora"></span>
           </span>
         </div>
       </div>
       <!-- ===== FILTROS (misma familia visual: pills + selects) ===== -->
-      <div class="tool-bar" style="position:static;top:auto;">
+      <div class="tool-bar" style="background:rgba(128,128,128,0.62);position:static;top:auto;">
+
+        <!-- ===== HISTORIAL ===== -->
+        <div style="margin-top:10px;margin-bottom:5px;font-weight:600;color:#ccc;font-size:0.9rem;">Historial</div>
         <div class="filter-row" data-tab="sismos">
           <select class="filter-select" id="sismoMagFilter">
             <option value="0">Magn.: todas</option>
@@ -252,8 +255,6 @@
         </div>
       </div>
     </div>
-    <!-- ===== HISTORIAL ===== -->
-    <div style="margin-top:10px;margin-bottom:5px;font-weight:600;color:#ccc;font-size:0.9rem;">Historial</div>
     <!-- ===== FEED EN VIVO (ventana corta, poll 60s) ===== -->
     <div id="sismoChart"
       style="display:none;height:400px;width:100%;background:#222;border-radius:0px 0px 10px 10px;border-bottom:1px solid #e9ecef;">

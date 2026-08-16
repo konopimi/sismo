@@ -11,6 +11,7 @@
   let sismosData = [];
   let liveData = [];
   let liveWired = false;
+  let liveFetchAttempted = false;
 
   // Estado de filtros (client-side; el backend ya trae hasta 500).
   const filters = {
@@ -222,20 +223,19 @@
     const last = sismosData.length
       ? sismosData.reduce((a, b) => (b.timestamp > a.timestamp ? b : a))
       : null;
-    if (!last) return;
+    const alerta = document.getElementById("sismoAlert");
+    if (!alerta) return;
 
     // Check if this latest sismo is already shown in "En vivo" (liveData)
     const liveLatest = liveData.length > 0 ? liveData[0] : null;
-    if (liveLatest && last.timestamp === liveLatest.timestamp && last.place === liveLatest.place) {
-      // Hide the alert card since it's already in En vivo
-      const alerta = document.getElementById("sismoAlert");
-      if (alerta) alerta.style.display = "none";
+    if (!last || (liveLatest && last.timestamp === liveLatest.timestamp && last.place === liveLatest.place)) {
+      // Hide the alert card: no data, or already shown in En vivo
+      alerta.style.display = "none";
       return;
     }
 
-    // Show the alert card
-    const alerta = document.getElementById("sismoAlert");
-    if (alerta) alerta.style.display = "";
+    // Show the alert card - unique latest sismo not in En vivo
+    alerta.style.display = "";
 
     const mag = last.mag || 0;
     document.getElementById("ultimoLugar").textContent =
@@ -315,8 +315,13 @@
     }
 
     if (!liveData.length) {
-      listEl.innerHTML =
-        '<div class="sismo-live-empty">Sin sismos en las últimas 72 h.</div>';
+      if (!liveFetchAttempted) {
+        listEl.innerHTML =
+          '<div class="sismo-live-empty" style="color:#999;">Cargando sismos en vivo...</div>';
+      } else {
+        listEl.innerHTML =
+          '<div class="sismo-live-empty">Sin sismos en las últimas 72 h.</div>';
+      }
       return;
     }
 
@@ -373,6 +378,7 @@
   // Feed "en vivo": ventana corta (24 h), solo para la franja superior.
   // No toca sismosData (el historial) para no inundar la lista principal.
   async function fetchLive() {
+    liveFetchAttempted = true;
     try {
       const apiBase = window.API_BASE || "/api";
       const res = await fetch(
@@ -439,6 +445,8 @@
       initSismoChart();
     }
     wireFilters();
+    // Show initial loading state for En vivo
+    renderLiveStrip();
 
     // Historial: carga completa una sola vez (no se refetchea cada 10s).
     if (!sismosData.length) fetchEarthquakes();
