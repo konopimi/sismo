@@ -59,7 +59,7 @@
      Defaults are fallbacks until the first measurement runs. */
   --top-bar-height: 47px;
   --driver-height: 0px;
-  --surface: 77, 77, 77;
+  --surface: 42, 42, 42;
 }
 
 html {
@@ -807,6 +807,7 @@ textarea {
 
   border-bottom: 2px solid rgba(var(--surface), 0.62) !important;
   padding: 10px 20px !important;
+  text-align: center;
 }
 
 .search-row input[type="search"] {
