@@ -364,7 +364,7 @@ h1 {
   top: 47px;
   flex: 1;
   width: 100%;
-  max-width: calc(100%-50px);
+  /* max-width: calc(100%-50px); */
   padding: 5px;
   z-index: 999;
   margin-bottom: 5px;
@@ -832,8 +832,8 @@ textarea {
   width: 100%;
   min-width: 200px;
   /* max-width: 300px; */
-  min-height: 180px;
-  max-height: 180px;
+  min-height: 150px;
+  max-height: 150px;
   font-size: 62%;
   background: #1a1d24;
   border-radius: 10px;
