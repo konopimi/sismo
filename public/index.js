@@ -1772,6 +1772,8 @@ function resetFilters(tab) {
 document.querySelectorAll(".filter-row").forEach((row) => {
   const tab = row.dataset.tab;
   const f = filterState[tab];
+  // Sismos manages its own filters (magnitude/depth/date/location) in sismos.js.
+  if (!f) return;
   row.querySelectorAll(".filter-pill").forEach((pill) => {
     pill.addEventListener("click", () => {
       const status = pill.dataset.status || "";
