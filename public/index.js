@@ -858,6 +858,17 @@ function openMapPicker(context) {
   const mapPickerContextEl = document.getElementById("mapPickerContext");
   mapPickerContextEl.style.display = "none";
   mapPickerContextEl.innerHTML = "";
+  // Show a context hint for the create-form contexts too, so the user
+  // knows which item type they are placing on the map.
+  const createContextLabels = {
+    person: "🫂 Ubicación de la persona",
+    pet: "🐕 Ubicación de la mascota",
+    building: "🏢 Ubicación del edificio",
+  };
+  if (createContextLabels[context]) {
+    mapPickerContextEl.innerHTML = `<span style="font-weight:600;">${createContextLabels[context]}</span>`;
+    mapPickerContextEl.style.display = "flex";
+  }
   if (context === "modalItem" && modalLocationTarget) {
     const { target, contextHtml } = mapPickerContextInfo(
       modalLocationTarget,

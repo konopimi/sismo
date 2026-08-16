@@ -557,7 +557,7 @@
   <div id="mapModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="mapModalTitle">
     <div class="modal-content" data-modal-body>
       <div class="modal-header" data-modal-header>
-        <h2 id="mapModalTitle">Marca la ubicación</h2>
+        <h2 id="mapModalTitle" style="flex:1;">Marca la ubicación</h2>
         <button class="modal-close" id="mapModalClose" data-modal-close aria-label="Cerrar">
           ✕
         </button>
@@ -609,13 +609,12 @@
         </button>
       </div>
       <div id="mapPickerContainer"></div>
+      <div class="modal-actions" data-modal-footer>
+        <button type="button" id="mapPickerConfirm">
+          📍 Usar esta ubicación
+        </button>
+      </div>
     </div>
-    <div class="modal-actions" data-modal-footer>
-      <button type="button" id="mapPickerConfirm">
-        📍 Usar esta ubicación
-      </button>
-    </div>
-  </div>
   </div>
   <div id="driver" style="">
     <div class="driver-inner">
