@@ -2477,7 +2477,7 @@ function updateTabCounts() {
   set("tabColabBtn", colabData.length);
 }
 const COLAB_PLACEHOLDER =
-  "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.vecteezy.com%2Fsystem%2Fresources%2Fpreviews%2F021%2F548%2F095%2Fnon_2x%2Fdefault-profile-picture-avatar-user-avatar-icon-person-icon-head-icon-profile-picture-icons-default-anonymous-user-male-and-female-businessman-photo-placeholder-social-network-avatar-portrait-free-vector.jpg&f=1&nofb=1&ipt=621673f72ece5d2869a9051c758ecc2d3f48741320548453b28c17465f313244";
+  "person.png";
 function colabCardHtml(item) {
   const date = new Date(item.created_at).toLocaleString("es-CO", {
     day: "2-digit",
@@ -2491,7 +2491,7 @@ function colabCardHtml(item) {
   metaParts.push(date);
   const imgHtml = `<img style="opacity:0.62;" class="card-photo" src="${COLAB_PLACEHOLDER}" alt="Colaborador" />`;
   return `
-        <div class="card" data-id="${item.id}" data-type="colaborador">
+        <div class="card colaborador" data-id="${item.id}" data-type="colaborador">
 <div style="padding:5px;background:rgba(127,127,127,0.38);border-bottom:2px solid rgba(127,127,127,0.62);">
               <span class="name">${escapeHtml(item.name)}</span>
 </div>

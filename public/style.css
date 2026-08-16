@@ -255,17 +255,27 @@ h1 {
   background: rgba(34, 38, 46, 0.85);
 }
 
+.map-sidebar-card.desaparecido {
+  background: rgba(21, 5, 5, 0.85) !important;
+  border-left-color: #d64545;
+}
+
 .map-sidebar-card.encontrado {
+  background: rgba(5, 21, 16, 0.85) !important;
   border-left-color: #3fa34d;
+}
+
+.map-sidebar-card.angel {
+  background: rgba(127, 184, 236, 0.62) !important;
+  border-left-color: #add8e6;
 }
 
 .map-sidebar-photo {
   width: 40px;
   height: 40px;
   object-fit: cover;
-  border-radius: 6px;
   flex-shrink: 0;
-  background: #12151c;
+  /* background: #12151c; */
 }
 
 .map-sidebar-info {
@@ -865,6 +875,11 @@ textarea {
 .card.acopio {
   background: #101114 !important;
   border-left-color: #ffffff;
+}
+
+.card.colaborador {
+  background: #150a1e !important;
+  border-left-color: #9b59b6;
 }
 
 .card .card-inner {

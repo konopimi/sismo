@@ -129,14 +129,15 @@ function mapSidebarCardHtml(item, type) {
       : `<img class="map-sidebar-photo" style="opacity:0.62;" src="${placeholder}" alt="" />`;
   const location = item.city || item.location || "Sin ubicación";
   const emoji = isAngel ? "👼" : MAP_SIDEBAR_EMOJI[type];
+  const statusClass = isAngel ? "angel" : item.status || "desaparecido";
   return `
-    <div class="map-sidebar-card ${found ? "encontrado" : ""}" data-id="${item.id}" data-type="${type}" style="${isAngel ? "background:lightblue;opacity:0.62;" : ""}">
+    <div class="map-sidebar-card ${statusClass}" data-id="${item.id}" data-type="${type}">
       ${imgHtml}
       <div class="map-sidebar-info">
         <span class="map-sidebar-name">${emoji} ${escapeHtml(item.name)}</span>
         <span class="map-sidebar-meta">${escapeHtml(location)}</span>
       </div>
-      <span style="display:none"class="status-tag ${found ? "encontrado" : ""}">${item.status}</span>
+      <span style="display:none"class="status-tag ${statusClass}">${item.status}</span>
     </div>
   `;
 }
