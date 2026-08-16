@@ -1501,10 +1501,7 @@ function openModalForItem(item, type) {
   ) {
     actionsHtml += `<button type="button" class="btn-small" onclick="copyItemLink('${item.id}','${type}', this)">🔗</button>`;
   }
-  if (
-    isLocalhost &&
-    type !== "colaborador"
-  ) {
+  if (isLocalhost) {
     actionsHtml += `<button  onclick="removeItem('${item.id}','${type}'); closeModal();">🗑️</button>`;
   }
   if (type === "person" || type === "pet") {
@@ -1523,11 +1520,7 @@ function openModalForItem(item, type) {
     if (isLocalhost) {
       actionsHtml += `<button class="btn-small btn-delete" onclick="removeB('${item.id}'); closeModal();">✕ Eliminar</button>`;
     }
-  } else if (type === "colaborador") {
-    if (isLocalhost) {
-      actionsHtml += `<button class="btn-small btn-delete" onclick="removeColab('${item.id}'); closeModal();">✕ Eliminar</button>`;
-    }
-  }
+
   modalActions.innerHTML = actionsHtml;
   // --- Abrir modal y actualizar URL ---
   detailModal.open();
