@@ -290,17 +290,11 @@
   //  WIRE FILTERS
   // ================================================================
   function wireFilters() {
-    const magPills = document.getElementById("sismoMagPills");
-    if (magPills && !magPills.dataset.wired) {
-      magPills.dataset.wired = "1";
-      magPills.addEventListener("click", (e) => {
-        const pill = e.target.closest(".filter-pill");
-        if (!pill) return;
-        magPills.querySelectorAll(".filter-pill").forEach((p) =>
-          p.classList.remove("active"),
-        );
-        pill.classList.add("active");
-        filters.minMag = parseInt(pill.dataset.mag, 10) || 0;
+    const magSel = document.getElementById("sismoMagFilter");
+    if (magSel && !magSel.dataset.wired) {
+      magSel.dataset.wired = "1";
+      magSel.addEventListener("change", () => {
+        filters.minMag = parseInt(magSel.value, 10) || 0;
         renderSismosList();
         updateChart();
       });

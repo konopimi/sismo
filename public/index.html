@@ -223,13 +223,13 @@
       <!-- ===== FILTROS (misma familia visual: pills + selects) ===== -->
       <div class="tool-bar" style="position:static;top:auto;">
         <div class="filter-row" data-tab="sismos">
-          <div class="filter-pills" id="sismoMagPills">
-            <button class="filter-pill active" data-mag="0">Todas</button>
-            <button class="filter-pill" data-mag="3">M3+</button>
-            <button class="filter-pill" data-mag="4">M4+</button>
-            <button class="filter-pill" data-mag="5">M5+</button>
-            <button class="filter-pill" data-mag="6">M6+</button>
-          </div>
+          <select class="filter-select" id="sismoMagFilter">
+            <option value="0">Magnitud: todas</option>
+            <option value="3">Magnitud: M3+</option>
+            <option value="4">Magnitud: M4+</option>
+            <option value="5">Magnitud: M5+</option>
+            <option value="6">Magnitud: M6+</option>
+          </select>
           <select class="filter-select" id="sismoDepthFilter">
             <option value="">Profundidad: todas</option>
             <option value="shallow">Superficial (&lt;30 km)</option>
