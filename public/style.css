@@ -1257,6 +1257,12 @@ textarea {
     rgba(0, 0, 0, 0.3) 0px 7px 13px -3px;
 }
 
+/* Borde izquierdo según magnitud (agrupa visualmente) */
+.sismo-row.sev-0 { border-left-color: #74b9ff; }
+.sismo-row.sev-4 { border-left-color: #fdcb6e; }
+.sismo-row.sev-5 { border-left-color: #e17055; }
+.sismo-row.sev-6 { border-left-color: #d63031; }
+
 .sismo-row .sismo-top {
   display: flex;
   justify-content: space-between;

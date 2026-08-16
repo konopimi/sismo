@@ -34,6 +34,14 @@
     return "m0";
   }
 
+  // Clase para el borde izquierdo según magnitud (agrupa visualmente).
+  function sevClass(mag) {
+    if (mag >= 6) return "sev-6";
+    if (mag >= 5) return "sev-5";
+    if (mag >= 4) return "sev-4";
+    return "sev-0";
+  }
+
   function depthLabel(d) {
     if (d == null) return "—";
     if (d < 30) return "Superficial";
@@ -247,7 +255,7 @@
         const depth = q.depth != null ? q.depth.toFixed(1) : null;
         const url = q.url || "";
         return `
-          <div class="sismo-row">
+          <div class="sismo-row ${sevClass(mag)}">
             <div class="sismo-top">
               <span class="place">${esc(q.place) || "Lugar desconocido"}</span>
               <span class="rel">${esc(relTime(q.timestamp))}</span>
