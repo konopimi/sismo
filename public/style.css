@@ -242,6 +242,7 @@ h1 {
 
 .map-sidebar-card {
   display: flex;
+  overflow: hidden;
   align-items: center;
   gap: 8px;
   background: rgba(26, 29, 36, 0.7);
@@ -1057,6 +1058,10 @@ textarea {
 .status-tag.acopio {
   background: #ffffff;
   color: #222;
+}
+
+.status-tag.colaborador {
+  background: #9b59b6;
 }
 
 .empty {

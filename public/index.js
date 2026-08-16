@@ -2499,7 +2499,7 @@ function colabCardHtml(item) {
           ${imgHtml}
             <div class="card-inner">
             <div style="display:flex;flex-direction:column;">
-<span class="status-tag">🤝</span>
+<span class="status-tag colaborador">🤝</span>
             </div >
               <div class="info">
                 ${item.skill ? `<span class="meta">${escapeHtml(item.skill)}</span>` : ""}
