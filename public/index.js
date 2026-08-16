@@ -1455,7 +1455,7 @@ function openModalForItem(item, type) {
     }
     if (hasLoc) initModalMiniMap(item.lat, item.lng);
   } else if (type === "colaborador") {
-    modalStatus.innerHTML = `<span class="status-tag">🤝 Voluntario</span>`;
+    modalStatus.innerHTML = `<span class="status-tag colaborador">🤝 Voluntario</span>`;
     modalTitle.textContent = item.name || "Colaborador";
     const colabMetaParts = [];
     if (item.city) colabMetaParts.push(`📍 ${escapeHtml(item.city)}`);
