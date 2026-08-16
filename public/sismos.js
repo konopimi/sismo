@@ -118,7 +118,7 @@
           const p = params[0];
           if (!p) return "";
           const data = p.data;
-          return `<strong>${esc(data.place)}</strong><br/>Magnitud: <strong>${data.mag}</strong><br/>Profundidad: ${data.depth} km<br/>Hora: ${data.time}`;
+          return `<strong>${esc(data.place)}</strong><br/>Magn.: <strong>${data.mag}</strong><br/>Prof.: ${data.depth} km<br/>Hora: ${data.time}`;
         },
       },
       grid: {
@@ -210,13 +210,21 @@
     document.getElementById("ultimoLugar").textContent =
       last.place || "Lugar desconocido";
     document.getElementById("ultimoMag").textContent = mag.toFixed(1);
-    document.getElementById("ultimoHora").textContent = fullTime(last.timestamp);
+    document.getElementById("ultimoHora").textContent = fullTime(
+      last.timestamp,
+    );
     document.getElementById("ultimoRel").textContent = relTime(last.timestamp);
 
     const alerta = document.getElementById("sismoAlert");
     alerta.className = "alerta" + (mag >= 5 ? " peligro" : "");
     alerta.style.borderLeftColor =
-      mag >= 6 ? "#d63031" : mag >= 5 ? "#e17055" : mag >= 4 ? "#fdcb6e" : "#74b9ff";
+      mag >= 6
+        ? "#d63031"
+        : mag >= 5
+          ? "#e17055"
+          : mag >= 4
+            ? "#fdcb6e"
+            : "#74b9ff";
   }
 
   function renderSismosList() {
@@ -248,7 +256,7 @@
               <span class="mag ${magClass(mag)}">${mag.toFixed(1)}</span>
               <span class="meta">${esc(fullTime(q.timestamp))}</span>
               <span class="depth-pill">${esc(depthLabel(q.depth))}${depth ? ` · ${esc(depth)} km` : ""}</span>
-              ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">Detalle ↗</a>` : ""}
+              ${url ? `<a style="margin-left:auto;"href="${esc(url)}" target="_blank" rel="noopener">Detalle ↗</a>` : ""}
             </div>
           </div>`;
       })

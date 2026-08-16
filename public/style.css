@@ -378,7 +378,7 @@ h1 {
 .filter-row {
   display: flex;
   justify-content: right;
-  gap: 8px;
+  gap: 5px;
   flex-wrap: wrap;
   flex: 1;
   min-width: 0;
@@ -467,7 +467,7 @@ h1 {
   color: #eaeaea;
   font-size: 70%;
   cursor: pointer;
-  max-width: 180px;
+  max-width: 160px;
 }
 
 .filter-select:focus {
@@ -482,7 +482,7 @@ h1 {
   background: #1a1d24;
   color: #eaeaea;
   font-size: 70%;
-  max-width: 160px;
+  max-width: 120px;
 }
 
 .filter-input::placeholder {
