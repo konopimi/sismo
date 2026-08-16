@@ -1973,8 +1973,8 @@ async function loadListP() {
     petsData = await res.json();
     petsData.forEach((pet) => {
       if (
-        pet.photo_url === "https://buscandoa.com/assets/img/placeholder.svg" ||
-        pet.image === "https://buscandoa.com/assets/img/placeholder.svg"
+        (pet.photo_url && pet.photo_url.includes("https://buscandoa.com/assets/img/placeholder.svg")) ||
+        (pet.image && pet.image.includes("https://buscandoa.com/assets/img/placeholder.svg"))
       ) {
         pet.photo_url = null;
         pet.image = null;
