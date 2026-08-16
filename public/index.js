@@ -255,6 +255,36 @@ function statusCssClass(status) {
 function statusLabel(status) {
   return statusMeta(status).label;
 }
+// Convert a hex color to its hue angle (0-360) using standard RGB→HSL.
+function hexToHue(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec((hex || "").trim());
+  if (!m) return 0;
+  const n = parseInt(m[1], 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  if (delta === 0) return 0; // achromatic
+  let hue;
+  if (max === r) hue = ((g - b) / delta) % 6;
+  else if (max === g) hue = (b - r) / delta + 2;
+  else hue = (r - g) / delta + 4;
+  hue *= 60;
+  return hue < 0 ? hue + 360 : hue;
+}
+// Hue of `sepia(100%) saturate(10000%)` applied to white — the base the
+// hue-rotate starts from. Derived from the W3C sepia matrix.
+const SEPIA_BASE_HUE = 60;
+// Build a CSS filter that recolors a grayscale silhouette to the hue of the
+// given status color. Standard "black → any color" technique: black → white
+// → sepia → saturate to a pure hue → rotate to the target hue.
+function placeholderFilter(status) {
+  const hue = hexToHue(statusMeta(status).color);
+  const rotate = hue - SEPIA_BASE_HUE;
+  return `brightness(0) invert(100%) sepia(100%) saturate(10000%) hue-rotate(${rotate.toFixed(1)}deg)`;
+}
 // ================================================================
 //  UTILIDADES
 // ================================================================
@@ -1775,7 +1805,7 @@ function entityCardHtml(item, type, placeholderImg) {
   } else if (item.image) {
     imgHtml = `<img class="card-photo" src="${escapeHtml(item.image)}" alt="Imagen URL" style=${item.name.toLowerCase() == "sharon alvear guzmán" && ""}/>`;
   } else {
-    imgHtml = `<img style="opacity:0.62;filter:brightness(0) saturate(100%) ${item.status == 'desaparecido' ? 'invert(36%) sepia(68%) saturate(1845%) hue-rotate(327deg) brightness(91%) contrast(88%) ' : 'invert(55%) sepia(35%) saturate(1050%) hue-rotate(75deg) brightness(90%) contrast(85%)'};" class="card-photo" src="${placeholderImg} " alt="Imagen URL" />`;
+    imgHtml = `<img style="opacity:0.62;filter:${placeholderFilter(item.status)};" class="card-photo" src="${placeholderImg}" alt="Imagen URL" />`;
   }
   const isAngel =
     item.name.toLowerCase() == "juan david cano" || item.status == "angel";
@@ -2489,7 +2519,7 @@ function colabCardHtml(item) {
   if (item.city) metaParts.push(escapeHtml(item.city));
   if (item.contact) metaParts.push(escapeHtml(item.contact));
   metaParts.push(date);
-  const imgHtml = `<img style="opacity:0.62;filter:brightness(0) saturate(100%) invert(36%) sepia(68%) saturate(1845%) hue-rotate(250deg) brightness(91%) contrast(88%);" class="card-photo" src="${COLAB_PLACEHOLDER}" alt="Colaborador" />`;
+  const imgHtml = `<img style="opacity:0.62;filter:${placeholderFilter("colaborador")};" class="card-photo" src="${COLAB_PLACEHOLDER}" alt="Colaborador" />`;
   return `
         <div class="card colaborador" data-id="${item.id}" data-type="colaborador">
 <div style="padding:5px;background:rgba(127,127,127,0.38);border-bottom:2px solid rgba(127,127,127,0.62);">

@@ -74,6 +74,7 @@ const STATUS_META = {
   colapsado:    { color: "#b53838", cssClass: "colapsado", label: "colapsado", icon: "💥" },
   acopio:       { color: "#ffffff", cssClass: "acopio", label: "📦 acopio", icon: "📦" },
   angel:        { color: "#add8e6", cssClass: "angel", label: "👼", icon: "👼" },
+  colaborador:  { color: "#9b59b6", cssClass: "colaborador", label: "colaborador", icon: "🤝" },
 };
 window.STATUS_META = STATUS_META;
 
