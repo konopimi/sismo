@@ -196,6 +196,10 @@ try {
 try {
   db.exec("ALTER TABLE buildings ADD COLUMN photo_url TEXT");
 } catch (e) { }
+// Add private flag to buildings (only logged-in collaborators can see them)
+try {
+  db.exec("ALTER TABLE buildings ADD COLUMN private INTEGER DEFAULT 0");
+} catch (e) { }
 // --- lat/lng for map picker (separate from free-text location) ---
 for (const t of ["disappeared", "pets", "buildings"]) {
   try {
@@ -650,20 +654,25 @@ app.delete("/api/pets/:id", requireAdmin, (req, res) => {
 });
 // ========== Edificios ==========
 app.get("/api/buildings", (req, res) => {
+  // Private buildings are only visible to logged-in collaborators.
+  const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  const userId = verifyToken(token);
   const rows = db
     .prepare(
       `
-      SELECT id, name, status, location, city, image, photo_url, created_at, lat, lng,
+      SELECT id, name, status, location, city, image, photo_url, created_at, lat, lng, private,
         (SELECT text FROM comments WHERE item_id = buildings.id AND item_type = 'buildings' ORDER BY created_at DESC LIMIT 1) AS last_comment,
         (SELECT COUNT(*) FROM comments WHERE item_id = buildings.id AND item_type = 'buildings') AS comment_count
-      FROM buildings ORDER BY RANDOM()
+      FROM buildings
+      ${userId ? "" : "WHERE private = 0"}
+      ORDER BY RANDOM()
     `,
     )
     .all();
   res.json(rows);
 });
 app.post("/api/buildings", (req, res) => {
-  const { id, name, location, city, image, lat, lng } = req.body || {};
+  const { id, name, location, city, image, lat, lng, private: isPrivate } = req.body || {};
   if (!name || !name.trim()) {
     return res.status(400).json({ error: "name is required" });
   }
@@ -674,9 +683,10 @@ app.post("/api/buildings", (req, res) => {
   const img = image && image.trim() ? image.trim() : null;
   const latVal = Number.isFinite(lat) ? lat : null;
   const lngVal = Number.isFinite(lng) ? lng : null;
+  const privateVal = isPrivate ? 1 : 0;
   db.prepare(
-    "INSERT INTO buildings (id, name, status, location, city, image, created_at, lat, lng) VALUES (?, ?, 'seguro', ?, ?, ?, ?, ?, ?)",
-  ).run(finalId, name.trim(), loc, cty, img, createdAt, latVal, lngVal);
+    "INSERT INTO buildings (id, name, status, location, city, image, created_at, lat, lng, private) VALUES (?, ?, 'seguro', ?, ?, ?, ?, ?, ?, ?)",
+  ).run(finalId, name.trim(), loc, cty, img, createdAt, latVal, lngVal, privateVal);
   res.status(201).json({
     id: finalId,
     name: name.trim(),
@@ -687,13 +697,14 @@ app.post("/api/buildings", (req, res) => {
     created_at: createdAt,
     lat: latVal,
     lng: lngVal,
+    private: privateVal,
   });
 });
 // Endpoint para actualizar photo_url de edificios (similar a personas y mascotas)
 app.patch("/api/buildings/:id/photo", handlePhotoPatch("buildings"));
 
 app.patch("/api/buildings/:id", (req, res) => {
-  const { status, image, lat, lng } = req.body || {};
+  const { status, image, lat, lng, private: isPrivate } = req.body || {};
   if (status && !["seguro", "danado", "colapsado", "acopio"].includes(status)) {
     return res.status(400).json({ error: "invalid status" });
   }
@@ -715,6 +726,10 @@ app.patch("/api/buildings/:id", (req, res) => {
     fields.push("lng = ?");
     values.push(Number.isFinite(lng) ? lng : null);
   }
+  if (isPrivate !== undefined) {
+    fields.push("private = ?");
+    values.push(isPrivate ? 1 : 0);
+  }
   if (fields.length === 0) {
     return res.status(400).json({ error: "no fields to update" });
   }
@@ -723,7 +738,7 @@ app.patch("/api/buildings/:id", (req, res) => {
     .prepare(`UPDATE buildings SET ${fields.join(", ")} WHERE id = ?`)
     .run(...values);
   if (result.changes === 0) return res.status(404).json({ error: "not found" });
-  res.json({ id: req.params.id, status, image, lat, lng });
+  res.json({ id: req.params.id, status, image, lat, lng, private: isPrivate });
 });
 app.delete("/api/buildings/:id", requireAdmin, (req, res) => {
   const result = db

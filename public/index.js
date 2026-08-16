@@ -1538,6 +1538,10 @@ function openModalForItem(item, type) {
     actionsHtml += `<button class="btn-small btn-danado${s === "danado" ? " btn-active" : ""}" ${s === "danado" ? "disabled" : ""} onclick="setStatusB('${item.id}','danado'); closeModal();">Dañado</button>`;
     actionsHtml += `<button class="btn-small btn-colapsado${s === "colapsado" ? " btn-active" : ""}" ${s === "colapsado" ? "disabled" : ""} onclick="setStatusB('${item.id}','colapsado'); closeModal();">Colapsado</button>`;
     actionsHtml += `<button class="btn-small btn-acopio${s === "acopio" ? " btn-active" : ""}" ${s === "acopio" ? "disabled" : ""} onclick="setStatusB('${item.id}','acopio'); closeModal();">📦 Acopio</button>`;
+    if (window.currentUser) {
+      const isPriv = item.private ? 1 : 0;
+      actionsHtml += `<button class="btn-small" onclick="togglePrivateB('${item.id}', ${isPriv ? 0 : 1}); closeModal();">${isPriv ? "🔓 Hacer público" : "🔒 Hacer privado"}</button>`;
+    }
     if (isLocalhost) {
       actionsHtml += `<button class="btn-small btn-delete" onclick="removeB('${item.id}'); closeModal();">✕ Eliminar</button>`;
     }
@@ -2089,6 +2093,7 @@ const nameInputB = document.getElementById("nameInputB");
 const locationInputB = document.getElementById("locationInputB");
 const cityInputB = document.getElementById("cityInputB");
 const gpsBtnB = document.getElementById("gpsBtnB");
+const privateInputB = document.getElementById("privateInputB");
 const imageInputB = document.getElementById("imageInputB");
 const photoInputB = document.getElementById("photoInputB");
 const fileLabelB = document.getElementById("fileLabelB");
@@ -2134,7 +2139,7 @@ setupPhotoPreview({
 });
 async function loadListB() {
   try {
-    const res = await fetch(`${API_BASE}/buildings`);
+    const res = await authFetch(`${API_BASE}/buildings`);
     buildingsData = await res.json();
     refreshCityFilter("building", buildingsData);
     renderB();
@@ -2173,7 +2178,7 @@ function buildingCardHtml(item) {
   return `
         <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
 <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
-              <span class="name">${escapeHtml(item.name)}</span>
+              <span class="name">${escapeHtml(item.name)}${item.private ? " 🔒" : ""}</span>
 </div>
           <div class="card-main">
           ${imgHtml}
@@ -2227,8 +2232,9 @@ formB.addEventListener("submit", async (e) => {
   const image = imageInputB.value.trim();
   const lat = mapPickerLat.building;
   const lng = mapPickerLng.building;
+  const isPrivate = privateInputB ? privateInputB.checked : false;
   if (!name) return;
-  const payload = { name, location, city, lat, lng };
+  const payload = { name, location, city, lat, lng, private: isPrivate };
   if (image) payload.image = image;
   const res = await fetch(`${API_BASE}/buildings`, {
     method: "POST",
@@ -2240,6 +2246,7 @@ formB.addEventListener("submit", async (e) => {
   locationInputB.value = "";
   cityInputB.value = "";
   imageInputB.value = "";
+  if (privateInputB) privateInputB.checked = false;
   if (urlPreviewB) {
     urlPreviewB.style.display = "none";
     urlPreviewB.src = "";
@@ -2707,6 +2714,14 @@ async function removeB(id) {
   if (!confirm("¿Eliminar este edificio?")) return;
   const ok = await adminDelete(`${API_BASE}/buildings/${id}`);
   if (ok) loadListB();
+}
+async function togglePrivateB(id, isPrivate) {
+  await authFetch(`${API_BASE}/buildings/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ private: isPrivate ? 1 : 0 }),
+  });
+  loadListB();
 }
 // ================================================================
 //  ABRIR MODAL DESDE URL
