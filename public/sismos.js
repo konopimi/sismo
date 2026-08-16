@@ -384,6 +384,8 @@
         (a, b) => b.timestamp - a.timestamp,
       );
       renderLiveStrip();
+      // Re-render alert in case the latest sismo is now in live data
+      renderAlert();
     } catch (err) {
       console.error("Error fetching sismos en vivo:", err);
       const listEl = document.getElementById("sismoLiveList");
