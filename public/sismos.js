@@ -42,6 +42,14 @@
     return "sev-0";
   }
 
+  // Color hex según magnitud (consistente con los bordes y badges).
+  function sevColor(mag) {
+    if (mag >= 6) return "#d63031";
+    if (mag >= 5) return "#e17055";
+    if (mag >= 4) return "#fdcb6e";
+    return "#74b9ff";
+  }
+
   function depthLabel(d) {
     if (d == null) return "—";
     if (d < 30) return "Superficial";
@@ -224,15 +232,12 @@
     document.getElementById("ultimoRel").textContent = relTime(last.timestamp);
 
     const alerta = document.getElementById("sismoAlert");
+    const color = sevColor(mag);
     alerta.className = "alerta" + (mag >= 5 ? " peligro" : "");
-    alerta.style.borderLeftColor =
-      mag >= 6
-        ? "#d63031"
-        : mag >= 5
-          ? "#e17055"
-          : mag >= 4
-            ? "#fdcb6e"
-            : "#74b9ff";
+    alerta.style.borderLeftColor = color;
+    document.getElementById("ultimoMag").style.background = color;
+    document.getElementById("ultimoMag").style.color =
+      mag >= 5 ? "#fff" : "#0f1115";
   }
 
   function renderSismosList() {
