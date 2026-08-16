@@ -826,10 +826,20 @@ function mapPickerContextInfo(targetRef, subtitle) {
   if (!target) return { target: null, contextHtml: "" };
   const emoji = MAP_MARKER_META[targetRef.type]?.emoji || "📍";
   const photo = target.photo_url || target.image;
+  // Derive a useful subtitle from the item's own data when none is given.
+  const derivedSubtitle =
+    subtitle ||
+    (target.location
+      ? escapeHtml(target.location)
+      : target.city
+        ? escapeHtml(target.city)
+        : target.lat != null
+          ? "Ubicación actual en el mapa"
+          : "Sin ubicación todavía");
   const contextHtml = `
         ${photo ? `<img src="${escapeHtml(photo)}" alt="" style="width:36px;height:36px;border-radius:8px;object-fit:cover;flex:0 0 auto;" />` : ""}
         <span style="font-weight:600;">${emoji} ${escapeHtml(target.name)}</span>
-        <span style="color:#999;">${subtitle}</span>
+        <span style="color:#999;">${derivedSubtitle}</span>
       `;
   return { target, contextHtml };
 }
@@ -872,7 +882,7 @@ function openMapPicker(context) {
   if (context === "modalItem" && modalLocationTarget) {
     const { target, contextHtml } = mapPickerContextInfo(
       modalLocationTarget,
-      target.location ? escapeHtml(target.location) : target.lat != null ? "Ubicación actual en el mapa" : "Sin ubicación todavía",
+      null,
     );
     if (target && target.lat != null && target.lng != null) {
       existingLat = target.lat;
