@@ -533,7 +533,6 @@ function refreshMap() {
 // Set the shared search-bar query for the map and re-render. Called by
 // index.js when the user types in the search bar while on the map tab.
 // Debounced so a burst of keystrokes coalesces into one re-render.
-let mapSearchDebounce = null;
 window.setMapSearchQuery = function(q) {
   mapSearchQuery = q || "";
   if (!window.sismoMap) return;
