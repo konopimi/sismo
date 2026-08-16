@@ -1501,7 +1501,10 @@ function openModalForItem(item, type) {
   ) {
     actionsHtml += `<button type="button" class="btn-small" onclick="copyItemLink('${item.id}','${type}', this)">🔗</button>`;
   }
-  if (isLocalhost) {
+  if (
+    isLocalhost &&
+    type !== "colaborador"
+  ) {
     actionsHtml += `<button  onclick="removeItem('${item.id}','${type}'); closeModal();">🗑️</button>`;
   }
   if (type === "person" || type === "pet") {
