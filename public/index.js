@@ -719,6 +719,10 @@ function switchTab(activeBtn, activePanel, tabType) {
       initMap();
     }
     showMap();
+    // Reset the map search query (the search bar was cleared above).
+    if (typeof window.setMapSearchQuery === "function") {
+      window.setMapSearchQuery("");
+    }
     setTimeout(() => {
       if (window.sismoMap) {
         window.sismoMap.invalidateSize();
@@ -1701,6 +1705,13 @@ const searchInput = document.getElementById("searchInput");
 // currentRenderFn is set by switchTab() to the active section's render fn.
 let currentRenderFn = render;
 searchInput.addEventListener("input", () => {
+  // On the map tab, the search bar filters map markers/sidebar instead.
+  if (currentTabType === "map") {
+    if (typeof window.setMapSearchQuery === "function") {
+      window.setMapSearchQuery(searchInput.value);
+    }
+    return;
+  }
   if (currentRenderFn) currentRenderFn();
 });
 

@@ -5,6 +5,10 @@
 let cityMarkersLayer = null;
 let mapMarkersLayer = null;
 let heatmapLayer = null;
+let sismoMarkersLayer = null;
+
+// Search query applied to map markers/sidebar (driven by the shared search bar).
+let mapSearchQuery = "";
 
 const MAP_MARKER_META = {
   person: {
@@ -27,7 +31,7 @@ const MAP_MARKER_META = {
 const MAP_SIDEBAR_EMOJI = { person: "🫂", pet: "🐕" };
 
 // Which marker types are currently visible on the map. Empty set = all.
-const mapTypeFilter = new Set(["person", "pet", "building"]);
+const mapTypeFilter = new Set(["person", "pet", "building", "sismo"]);
 
 function isTypeVisible(type) {
   return mapTypeFilter.has(type);
@@ -40,7 +44,23 @@ function visibleMapItems() {
     .filter(([type]) => isTypeVisible(type))
     .flatMap(([type, meta]) =>
       meta.data().map((item) => ({ item, type })),
-    );
+    )
+    .filter(({ item, type }) => mapItemMatchesSearch(item, type));
+}
+
+// Apply the shared search-bar query to a map item. Matches name/location/city
+// for persons/pets/buildings, and place for sismos.
+function mapItemMatchesSearch(item, type) {
+  if (!mapSearchQuery.trim()) return true;
+  const q = mapSearchQuery;
+  if (type === "sismo") {
+    return fuzzyMatch(q, item.place || "");
+  }
+  return (
+    fuzzyMatch(q, item.name || "") ||
+    fuzzyMatch(q, item.location || "") ||
+    fuzzyMatch(q, item.city || "")
+  );
 }
 
 // Marker circle color is driven by the item's status, not its type.
@@ -325,6 +345,7 @@ function renderMapMarkers() {
     if (!isTypeVisible(type)) return;
     const { emoji, data } = MAP_MARKER_META[type];
     data().forEach((item) => {
+      if (!mapItemMatchesSearch(item, type)) return;
       const [lat, lng] = resolveItemCoords(item);
       if (lat == null || lng == null) return;
       const isAngel = item.status === "angel";
@@ -363,6 +384,47 @@ function renderMapMarkers() {
               <a href="#" onclick="window.__mapPopupOpen('${item.id}','${type}'); return false;">Ver detalle</a>
             `);
     });
+  });
+
+  renderSismoMarkers();
+}
+
+// Plot earthquakes (sismos) on the map as magnitude-colored circles.
+function renderSismoMarkers() {
+  if (!window.sismoMap) return;
+  if (sismoMarkersLayer) window.sismoMap.removeLayer(sismoMarkersLayer);
+  sismoMarkersLayer = L.layerGroup().addTo(window.sismoMap);
+
+  if (!isTypeVisible("sismo")) return;
+
+  // Ensure sismo data is loaded (fetch on first map visit if empty).
+  if (typeof window.fetchSismos === "function") window.fetchSismos();
+
+  const sismos = (typeof window.getSismosData === "function"
+    ? window.getSismosData()
+    : []) || [];
+
+  sismos.forEach((q) => {
+    if (q.lat == null || q.lng == null) return;
+    if (!mapItemMatchesSearch(q, "sismo")) return;
+    const mag = q.mag || 0;
+    const color =
+      mag >= 6 ? "#d63031" : mag >= 5 ? "#e17055" : mag >= 4 ? "#fdcb6e" : "#74b9ff";
+    const size = Math.max(16, Math.min(34, 12 + mag * 3));
+    L.circleMarker([q.lat, q.lng], {
+      radius: size / 2,
+      color: "#fff",
+      weight: 1,
+      fillColor: color,
+      fillOpacity: 0.85,
+    })
+      .addTo(sismoMarkersLayer)
+      .bindPopup(`
+        🌋 <strong>${escapeHtml(q.place || "Sismo")}</strong><br>
+        Magnitud: <strong>${mag.toFixed(1)}</strong><br>
+        Profundidad: ${q.depth != null ? q.depth.toFixed(1) + " km" : "—"}<br>
+        ${q.url ? `<a href="${escapeHtml(q.url)}" target="_blank" rel="noopener">Detalle ↗</a>` : ""}
+      `);
   });
 }
 
@@ -464,6 +526,22 @@ function refreshMap() {
   renderMapMarkers();
   renderMapSidebar();
 }
+
+// Set the shared search-bar query for the map and re-render. Called by
+// index.js when the user types in the search bar while on the map tab.
+window.setMapSearchQuery = function(q) {
+  mapSearchQuery = q || "";
+  if (!window.sismoMap) return;
+  renderMapMarkers();
+  renderMapSidebar();
+  renderOffscreenArrows();
+};
+
+// Re-render sismo markers when new earthquake data arrives.
+window.onSismosUpdate = function() {
+  if (!window.sismoMap) return;
+  renderSismoMarkers();
+};
 
 function toggleHeatmap(enabled) {
   if (enabled) {

@@ -281,6 +281,10 @@
     renderAlert();
     renderSismosList();
     updateChart();
+    // Notify map.js so sismo markers refresh on the map.
+    if (typeof window.onSismosUpdate === "function") {
+      window.onSismosUpdate();
+    }
   }
 
   // ================================================================
@@ -363,5 +367,15 @@
     fetchEarthquakes();
     if (window.sismoInterval) clearInterval(window.sismoInterval);
     window.sismoInterval = setInterval(fetchEarthquakes, 10000);
+  };
+
+  // Expose the latest earthquake data so map.js can plot sismos on the map.
+  window.getSismosData = function() {
+    return sismosData;
+  };
+
+  // Let map.js trigger a fetch when it needs sismo data (e.g. first map visit).
+  window.fetchSismos = function() {
+    if (!sismosData.length) fetchEarthquakes();
   };
 })();
