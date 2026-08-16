@@ -697,10 +697,6 @@ function switchTab(activeBtn, activePanel, tabType) {
   ].forEach((p) => p && p.classList.remove("active"));
   // Mostrar el panel seleccionado
   activePanel.classList.add("active");
-  // Reset the single search bar; the active render fn is set below.
-  document.getElementById("searchInput").value = "";
-  // Reset filters for the incoming tab (mirrors search reset on tab switch).
-  if (tabType && filterState[tabType]) resetFilters(tabType);
   // Render function from TYPE_REGISTRY (single source of truth).
   currentRenderFn = TYPE_REGISTRY[tabType]?.renderFn || (() => {});
   // Side effects specific to certain tabs.
@@ -735,6 +731,8 @@ function switchTab(activeBtn, activePanel, tabType) {
     url.searchParams.delete("tab");
   }
   window.history.replaceState({}, "", url);
+  // Persist the active tab (and current search/filters) for reload.
+  saveFilters();
 }
 tabPersonasBtn.addEventListener("click", () =>
   switchTab(tabPersonasBtn, tabPersonas, "person"),
@@ -1655,6 +1653,7 @@ searchInput.addEventListener("input", () => {
     if (typeof window.setMapSearchQuery === "function") {
       window.setMapSearchQuery(searchInput.value);
     }
+    saveFilters();
     return;
   }
   // On the sismos tab, the search bar filters by location via sismos.js filters
@@ -1662,9 +1661,11 @@ searchInput.addEventListener("input", () => {
     if (typeof window.setSismosLocationFilter === "function") {
       window.setSismosLocationFilter(searchInput.value);
     }
+    saveFilters();
     return;
   }
   if (currentRenderFn) currentRenderFn();
+  saveFilters();
 });
 // ================================================================
 //  FILTROS POR TAB
@@ -1674,13 +1675,45 @@ searchInput.addEventListener("input", () => {
 //  Los render fns aplican applyFilters() después de fuzzyFilter().
 // ================================================================
 // status is a Set of selected statuses (inclusive OR).
-// Empty set = "Todos" (show all). city is a single string.
+// Empty set = "Todos" (show all). city is a single SHARED string across tabs.
 const filterState = {
-  person: { status: new Set(), city: "" },
-  pet: { status: new Set(), city: "" },
-  building: { status: new Set(), city: "" },
-  colaborador: { status: new Set(), city: "" },
+  person: { status: new Set() },
+  pet: { status: new Set() },
+  building: { status: new Set() },
+  colaborador: { status: new Set() },
 };
+// Shared city filter: changing it in any tab applies to every tab.
+let sharedCity = "";
+// ================================================================
+//  PERSISTENCIA DE FILTROS + TAB + BÚSQUEDA (localStorage)
+//  Al recargar, se restaura el tab activo, la búsqueda y los filtros.
+// ================================================================
+const FILTER_STORAGE_KEY = "sismo_filters_v1";
+function saveFilters() {
+  const data = {
+    tab: currentTabType,
+    search: searchInput ? searchInput.value : "",
+    city: sharedCity,
+    status: {
+      person: [...filterState.person.status],
+      pet: [...filterState.pet.status],
+      building: [...filterState.building.status],
+      colaborador: [...filterState.colaborador.status],
+    },
+  };
+  try {
+    localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(data));
+  } catch (e) { /* storage full or unavailable */ }
+}
+function loadFilters() {
+  try {
+    const raw = localStorage.getItem(FILTER_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+}
 // Apply the active tab's filter state to an already-search-filtered array.
 // status: empty set = all; otherwise item.status must be in the set (OR).
 function applyFilters(items, tab) {
@@ -1688,17 +1721,17 @@ function applyFilters(items, tab) {
   if (!f) return items;
   return items.filter((item) => {
     if (f.status.size && !f.status.has(item.status || "")) return false;
-    if (f.city && (item.city || "") !== f.city) return false;
+    if (sharedCity && (item.city || "") !== sharedCity) return false;
     return true;
   });
 }
 // Rebuild a tab's city <select> from its data so only present cities show.
+// The city filter is SHARED across tabs: every select reflects sharedCity.
 function refreshCityFilter(tab, data) {
   const row = document.querySelector(`.filter-row[data-tab="${tab}"]`);
   if (!row) return;
   const sel = row.querySelector('.filter-select[data-filter="city"]');
   if (!sel) return;
-  const current = sel.value;
   const cities = [...new Set(data.map((d) => d.city).filter(Boolean))].sort(
     (a, b) => a.localeCompare(b, "es"),
   );
@@ -1707,24 +1740,33 @@ function refreshCityFilter(tab, data) {
     cities
       .map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`)
       .join("");
-  // Preserve selection if still valid.
-  if (cities.includes(current)) sel.value = current;
-  else filterState[tab].city = "";
+  // Reflect the shared city selection (if this tab's data has it).
+  if (sharedCity && cities.includes(sharedCity)) sel.value = sharedCity;
+  else sel.value = "";
 }
-// Reset a tab's filters to default (called on tab switch, like search reset).
+// Sync the shared city value into every tab's city <select>.
+function syncCitySelects() {
+  document.querySelectorAll('.filter-select[data-filter="city"]').forEach((sel) => {
+    const row = sel.closest(".filter-row");
+    if (!row) return;
+    const tab = row.dataset.tab;
+    const data = TYPE_REGISTRY[tab]?.data?.() || [];
+    const cities = [...new Set(data.map((d) => d.city).filter(Boolean))];
+    if (sharedCity && cities.includes(sharedCity)) sel.value = sharedCity;
+    else sel.value = "";
+  });
+}
+// Reset a tab's STATUS filters to default (city is shared and NOT reset here).
 function resetFilters(tab) {
   const f = filterState[tab];
   if (!f) return;
   f.status.clear();
-  f.city = "";
   const row = document.querySelector(`.filter-row[data-tab="${tab}"]`);
   if (!row) return;
   // Empty set = "Todos" (show all): highlight every pill.
   row
     .querySelectorAll(".filter-pill")
     .forEach((p) => p.classList.add("active"));
-  const sel = row.querySelector('.filter-select[data-filter="city"]');
-  if (sel) sel.value = "";
 }
 // Wire up all filter controls once.
 document.querySelectorAll(".filter-row").forEach((row) => {
@@ -1765,13 +1807,16 @@ document.querySelectorAll(".filter-row").forEach((row) => {
         });
       }
       if (currentRenderFn) currentRenderFn();
+      saveFilters();
     });
   });
   const sel = row.querySelector('.filter-select[data-filter="city"]');
   if (sel) {
     sel.addEventListener("change", () => {
-      filterState[tab].city = sel.value;
+      sharedCity = sel.value;
+      syncCitySelects();
       if (currentRenderFn) currentRenderFn();
+      saveFilters();
     });
   }
 });
