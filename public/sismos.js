@@ -294,7 +294,7 @@
 
     if (!liveData.length) {
       listEl.innerHTML =
-        '<div class="sismo-live-empty">Sin sismos en las últimas 24 h.</div>';
+        '<div class="sismo-live-empty">Sin sismos en las últimas 72 h.</div>';
       return;
     }
 
@@ -354,7 +354,7 @@
     try {
       const apiBase = window.API_BASE || "/api";
       const res = await fetch(
-        `${apiBase}/earthquakes?minmagnitude=0&limit=50&hours=24`,
+        `${apiBase}/earthquakes?minmagnitude=0&limit=50&hours=72`,
       );
       if (!res.ok) throw new Error("Error en API live");
       const data = await res.json();
