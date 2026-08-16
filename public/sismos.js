@@ -9,6 +9,8 @@
 
   let sismosChart = null;
   let sismosData = [];
+  let liveData = [];
+  let liveWired = false;
 
   // Estado de filtros (client-side; el backend ya trae hasta 500).
   const filters = {
@@ -276,6 +278,41 @@
       .join("");
   }
 
+  function renderLiveStrip() {
+    const listEl = document.getElementById("sismoLiveList");
+    const updEl = document.getElementById("sismoLiveUpdated");
+    if (!listEl) return;
+
+    if (updEl) {
+      updEl.textContent = new Date().toLocaleTimeString("es-CO", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        timeZone: "America/Bogota",
+      });
+    }
+
+    if (!liveData.length) {
+      listEl.innerHTML =
+        '<div class="sismo-live-empty">Sin sismos en las últimas 24 h.</div>';
+      return;
+    }
+
+    listEl.innerHTML = liveData
+      .map((q) => {
+        const mag = q.mag || 0;
+        const depth = q.depth != null ? `${q.depth.toFixed(0)} km` : "";
+        return `
+          <div class="sismo-live-item ${sevClass(mag)}">
+            <span class="mag ${magClass(mag)}">${mag.toFixed(1)}</span>
+            <span class="place">${esc(q.place) || "Lugar desconocido"}</span>
+            ${depth ? `<span class="depth">${esc(depth)}</span>` : ""}
+            <span class="rel">${esc(relTime(q.timestamp))}</span>
+          </div>`;
+      })
+      .join("");
+  }
+
   function updateSismoUI(data) {
     sismosData = data.earthquakes || [];
     renderAlert();
@@ -307,6 +344,30 @@
       if (listEl) {
         listEl.innerHTML =
           '<div style="color:#ff6b6b;padding:10px;">⚠️ No se pudieron cargar los sismos. Revisa la conexión o el endpoint /api/earthquakes.</div>';
+      }
+    }
+  }
+
+  // Feed "en vivo": ventana corta (24 h), solo para la franja superior.
+  // No toca sismosData (el historial) para no inundar la lista principal.
+  async function fetchLive() {
+    try {
+      const apiBase = window.API_BASE || "/api";
+      const res = await fetch(
+        `${apiBase}/earthquakes?minmagnitude=0&limit=50&hours=24`,
+      );
+      if (!res.ok) throw new Error("Error en API live");
+      const data = await res.json();
+      liveData = (data.earthquakes || []).sort(
+        (a, b) => b.timestamp - a.timestamp,
+      );
+      renderLiveStrip();
+    } catch (err) {
+      console.error("Error fetching sismos en vivo:", err);
+      const listEl = document.getElementById("sismoLiveList");
+      if (listEl) {
+        listEl.innerHTML =
+          '<div class="sismo-live-empty" style="color:#ff6b6b;">⚠️ No se pudo actualizar el feed en vivo.</div>';
       }
     }
   }
@@ -364,9 +425,16 @@
       initSismoChart();
     }
     wireFilters();
-    fetchEarthquakes();
-    if (window.sismoInterval) clearInterval(window.sismoInterval);
-    window.sismoInterval = setInterval(fetchEarthquakes, 10000);
+
+    // Historial: carga completa una sola vez (no se refetchea cada 10s).
+    if (!sismosData.length) fetchEarthquakes();
+
+    // Feed en vivo: primera carga + poll cada 60s, sin tocar el historial.
+    if (!liveWired) {
+      liveWired = true;
+      fetchLive();
+      window.sismoLiveInterval = setInterval(fetchLive, 60000);
+    }
   };
 
   // Expose the latest earthquake data so map.js can plot sismos on the map.

@@ -935,7 +935,11 @@ app.get("/api/earthquakes", async (req, res) => {
 
     // Ventana temporal: USGS por defecto solo devuelve los últimos 30 días
     // si no se pasa starttime/endtime. Ampliamos a 365 días por defecto.
-    const days = parseInt(req.query.days, 10) || 365;
+    // `hours` permite ventanas cortas (p. ej. ?hours=24) para el feed "en vivo".
+    const hours = parseFloat(req.query.hours);
+    const days = Number.isFinite(hours) && hours > 0
+      ? hours / 24
+      : (parseInt(req.query.days, 10) || 365);
     const end = new Date();
     const start = new Date(end.getTime() - days * 86400000);
 

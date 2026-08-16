@@ -250,13 +250,23 @@
       </div>
     </div>
 
+    <!-- ===== FEED EN VIVO (ventana corta, poll 60s) ===== -->
+    <div id="sismoLive" class="sismo-live" style="margin-top:10px;">
+      <div class="sismo-live-head">
+        <span class="sismo-live-dot" aria-hidden="true"></span>
+        <span class="sismo-live-title">En vivo · últimos 24 h</span>
+        <span id="sismoLiveUpdated" class="sismo-live-updated">—</span>
+      </div>
+      <div id="sismoLiveList" class="sismo-live-list"></div>
+    </div>
+
 
     <div id="sismoChart"
       style="display:none;height:400px;width:100%;background:#222;border-radius:0px 0px 10px 10px;border-bottom:1px solid #e9ecef;">
     </div>
     <div id="sismosList" class="sismos-list" style="margin-top:10px;"></div>
     <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:14px;color:#999;">
-      <span>Fuente: USGS | Actualización cada 10s</span>
+      <span>Fuente: USGS | En vivo cada 60s</span>
       <span id="totalSismos">0 sismos</span>
     </div>
   </div>
