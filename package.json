@@ -1,5 +1,26 @@
 {
   "dependencies": {
     "@hocuspocus/server": "^3.4.4"
-  }
+  },
+  "name": "sismo",
+  "version": "1.0.0",
+  "description": "https://sismoinfo.co",
+  "main": "dev-loop.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/konopimi/sismo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/konopimi/sismo/issues"
+  },
+  "homepage": "https://github.com/konopimi/sismo#readme"
 }

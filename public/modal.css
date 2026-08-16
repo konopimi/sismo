@@ -23,11 +23,11 @@
   top: 0px;
   display: flex;
   gap: 5px;
-  background: rgba(127, 127, 127, 0.8);
+  background: rgba(var(--surface), 0.8);
   align-items: center;
   padding: 4px 6px;
   backdrop-filter: blur(10px);
-  border-bottom: 2px solid rgba(127, 127, 127, 0.82);
+  border-bottom: 2px solid rgba(var(--surface), 0.82);
   border-radius: 5px 5px 0px 0px;
   z-index: 999999;
 }
@@ -202,11 +202,11 @@
   position: sticky;
   bottom: 0px;
   margin-top: 16px;
-  background: rgba(127, 127, 127, 0.8);
+  background: rgba(var(--surface), 0.8);
   align-items: center;
   padding: 3px;
   backdrop-filter: blur(10px);
-  border-top: 2px solid rgba(127, 127, 127, 0.82);
+  border-top: 2px solid rgba(var(--surface), 0.82);
   border-radius: 5px 5px 0px 0px;
   z-index: 999999;
 }

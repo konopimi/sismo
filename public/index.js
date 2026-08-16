@@ -1824,7 +1824,7 @@ function entityCardHtml(item, type, placeholderImg) {
   const statusTagClass = found ? "encontrado" : statusCssClass(item.status);
   return `
         <div class="card ${cardStatusClass}" data-id="${item.id}" data-type="${type}" style = "${isAngel && "background:#7fb8ec; color: white; opacity: 0.62; border-left: 4px solid white; "}" >
-    <div style="padding:5px;background:rgba(127,127,127,0.38)">
+    <div style="padding:5px;background:rgba(var(--surface),0.38)">
       <span class="name"
         style="${isAngel && " color:white;"}"
 >${escapeHtml(item.name)}</span>
@@ -2157,7 +2157,7 @@ function buildingCardHtml(item) {
   }
   return `
         <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
-<div style="padding:5px;background:rgba(127,127,127,0.38);border-bottom:2px solid rgba(127,127,127,0.62);">
+<div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
               <span class="name">${escapeHtml(item.name)}</span>
 </div>
           <div class="card-main">
@@ -2368,7 +2368,7 @@ function renderA() {
         ? `<img class="card-photo" src="${escapeHtml(mainImg)}" alt="Imagen" />`
         : "";
       const titleHtml = item.title
-        ? `<div style="padding:5px;background:rgba(127,127,127,0.38);border-bottom:2px solid rgba(127,127,127,0.62);"><span class="name">${escapeHtml(item.title)}</span></div>`
+        ? `<div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);"><span class="name">${escapeHtml(item.title)}</span></div>`
         : "";
       return `
       <div class="card" data-id="${item.id}" style="display:flex;flex-direction:column;">
@@ -2541,7 +2541,7 @@ function colabCardHtml(item) {
   const imgHtml = `<img style="opacity:0.62;filter:${placeholderFilter("colaborador")};" class="card-photo" src="${COLAB_PLACEHOLDER}" alt="Colaborador" />`;
   return `
         <div class="card colaborador" data-id="${item.id}" data-type="colaborador">
-<div style="padding:5px;background:rgba(127,127,127,0.38);border-bottom:2px solid rgba(127,127,127,0.62);">
+<div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
               <span class="name">${escapeHtml(item.name)}</span>
 </div>
           <div class="card-main">
