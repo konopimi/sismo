@@ -302,32 +302,33 @@ function renderMapSidebar() {
 
 function renderMapMarkers() {
   if (!window.sismoMap) return;
-  if (mapMarkersLayer) window.sismoMap.removeLayer(mapMarkersLayer);
 
-  // Single mixed cluster group: persons, pets and buildings cluster
-  // together (no per-type separation).
-  const clusterGroup = L.markerClusterGroup({
-    showCoverageOnHover: false,
-    maxClusterRadius: 50,
-    spiderfyOnMaxZoom: true,
-    iconCreateFunction: (cluster) => {
-      const total = cluster.getChildCount();
-      const size = total < 10 ? "small" : total < 100 ? "medium" : "large";
-      return L.divIcon({
-        html: `<div class="cluster-counts">
-                 <span class="cluster-emoji">📍</span>
-                 <span class="cluster-total">${total}</span>
-               </div>`,
-        className: `marker-cluster marker-cluster-${size}`,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-      });
-    },
-  });
-  window.sismoMap.addLayer(clusterGroup);
-
-  // Keep a single layer reference for removal on re-render.
-  mapMarkersLayer = clusterGroup;
+  // Reuse the cluster group across re-renders: constructing a new
+  // L.markerClusterGroup is expensive (internal event wiring + cluster
+  // recomputation), so we build it once and just clearLayers() + re-add.
+  if (!mapMarkersLayer) {
+    mapMarkersLayer = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      iconCreateFunction: (cluster) => {
+        const total = cluster.getChildCount();
+        const size = total < 10 ? "small" : total < 100 ? "medium" : "large";
+        return L.divIcon({
+          html: `<div class="cluster-counts">
+                   <span class="cluster-emoji">📍</span>
+                   <span class="cluster-total">${total}</span>
+                 </div>`,
+          className: `marker-cluster marker-cluster-${size}`,
+          iconSize: [40, 40],
+          iconAnchor: [20, 20],
+        });
+      },
+    });
+    window.sismoMap.addLayer(mapMarkersLayer);
+  }
+  const clusterGroup = mapMarkersLayer;
+  clusterGroup.clearLayers();
 
   if (heatmapLayer && window.sismoMap.hasLayer(heatmapLayer)) {
     const points = [];
@@ -392,8 +393,10 @@ function renderMapMarkers() {
 // Plot earthquakes (sismos) on the map as magnitude-colored circles.
 function renderSismoMarkers() {
   if (!window.sismoMap) return;
-  if (sismoMarkersLayer) window.sismoMap.removeLayer(sismoMarkersLayer);
-  sismoMarkersLayer = L.layerGroup().addTo(window.sismoMap);
+  if (!sismoMarkersLayer) {
+    sismoMarkersLayer = L.layerGroup().addTo(window.sismoMap);
+  }
+  sismoMarkersLayer.clearLayers();
 
   if (!isTypeVisible("sismo")) return;
 
@@ -529,12 +532,18 @@ function refreshMap() {
 
 // Set the shared search-bar query for the map and re-render. Called by
 // index.js when the user types in the search bar while on the map tab.
+// Debounced so a burst of keystrokes coalesces into one re-render.
+let mapSearchDebounce = null;
 window.setMapSearchQuery = function(q) {
   mapSearchQuery = q || "";
   if (!window.sismoMap) return;
-  renderMapMarkers();
-  renderMapSidebar();
-  renderOffscreenArrows();
+  if (mapSearchDebounce) clearTimeout(mapSearchDebounce);
+  mapSearchDebounce = setTimeout(() => {
+    mapSearchDebounce = null;
+    renderMapMarkers();
+    renderMapSidebar();
+    renderOffscreenArrows();
+  }, 150);
 };
 
 // Re-render sismo markers when new earthquake data arrives.
@@ -569,11 +578,12 @@ function toggleHeatmap(enabled) {
       });
     }
     heatmapLayer.addTo(window.sismoMap);
-    // leaflet.heat only redraws on 'zoomend'/'moveend', so during zoom and
-    // the post-zoom lerp the canvas lags. A single 'move' handler (which
-    // fires during both) with _reset() keeps it in sync. rAF throttling
-    // coalesces the burst of events so we don't double-reposition and cause
-    // the visible jump.
+    // leaflet.heat only redraws on 'zoomend'/'moveend', so during the zoom
+    // animation the canvas lags. A 'zoom' handler (fires only during zoom,
+    // not pan) with _reset() keeps it in sync. rAF throttling coalesces the
+    // burst of events so we don't double-reposition and cause a visible jump.
+    // Listening to 'zoom' instead of 'move' avoids a full heatmap redraw on
+    // every pan frame, which was the main source of sluggishness.
     if (!window.__heatmapMoveHandler) {
       let raf = null;
       window.__heatmapMoveHandler = () => {
@@ -589,7 +599,7 @@ function toggleHeatmap(enabled) {
           }
         });
       };
-      window.sismoMap.on("move", window.__heatmapMoveHandler);
+      window.sismoMap.on("zoom", window.__heatmapMoveHandler);
     }
   } else if (heatmapLayer) {
     window.sismoMap.removeLayer(heatmapLayer);
