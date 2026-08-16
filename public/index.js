@@ -1520,6 +1520,7 @@ function openModalForItem(item, type) {
     if (isLocalhost) {
       actionsHtml += `<button class="btn-small btn-delete" onclick="removeB('${item.id}'); closeModal();">✕ Eliminar</button>`;
     }
+  }
 
   modalActions.innerHTML = actionsHtml;
   // --- Abrir modal y actualizar URL ---
