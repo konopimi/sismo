@@ -158,6 +158,8 @@ function showLoginForm() {
   const chatContainer = document.getElementById("chatContainer");
   if (loginForm) loginForm.style.display = "flex";
   if (chatContainer) chatContainer.style.display = "none";
+  if (colabListWrapper) colabListWrapper.style.display = "none";
+  if (colabLoginPrompt) colabLoginPrompt.style.display = "block";
   window.currentUser = null;
 }
 function showChat() {
@@ -168,6 +170,9 @@ function showChat() {
     chatContainer.style.display = "flex";
     chatContainer.innerHTML = `<div style="padding:20px;">Conectado como ${escapeHtml(window.currentUser?.name || "")}</div>`;
   }
+  if (colabListWrapper) colabListWrapper.style.display = "block";
+  if (colabLoginPrompt) colabLoginPrompt.style.display = "none";
+  if (!colabData.length) loadListColab();
 }
 async function attemptLogin() {
   const identifier = document.getElementById("loginIdentifier")?.value.trim();
@@ -2504,18 +2509,29 @@ function shareAnuncio(id) {
 // ================================================================
 let colabData = [];
 const listElColab = document.getElementById("listColab");
+const colabListWrapper = document.getElementById("colabListWrapper");
+const colabLoginPrompt = document.getElementById("colabLoginPrompt");
 const formColab = document.getElementById("addFormColab");
 const nameInputColab = document.getElementById("nameInputColab");
 const skillInputColab = document.getElementById("skillInputColab");
 const contactInputColab = document.getElementById("contactInputColab");
 const cityInputColab = document.getElementById("cityInputColab");
 async function loadListColab() {
+  if (!getAuthToken()) {
+    colabData = [];
+    renderColab();
+    if (colabListWrapper) colabListWrapper.style.display = "none";
+    if (colabLoginPrompt) colabLoginPrompt.style.display = "block";
+    return;
+  }
   try {
     const res = await fetch(`${API_BASE}/collaborators`);
     colabData = await res.json();
     refreshCityFilter("colaborador", colabData);
     renderColab();
     updateTabCounts();
+    if (colabListWrapper) colabListWrapper.style.display = "block";
+    if (colabLoginPrompt) colabLoginPrompt.style.display = "none";
   } catch {
     listElColab.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
   }
