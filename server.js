@@ -6,6 +6,9 @@ import Database from "better-sqlite3";
 import crypto from "crypto";
 const app = express();
 const PORT = process.env.PORT || 3000;
+const MATRIX_HOMESERVER_URL = process.env.MATRIX_HOMESERVER_URL || "http://localhost:8008";
+const MATRIX_SHARED_SECRET = process.env.MATRIX_SHARED_SECRET || "";
+const MATRIX_DOMAIN = process.env.MATRIX_DOMAIN || "matrix.sismoinfo.co";
 const DB_PATH = process.env.DB_PATH || "/opt/sismo-api/data.db";
 app.use(cors());
 app.use(express.json());
@@ -77,6 +80,57 @@ function resolveDisplayName(user) {
     (user.contact && user.contact.trim()) ||
     "Anónimo"
   );
+}
+
+// ========== Matrix (Dendrite) account provisioning ==========
+// Dendrite supports the Synapse-compatible shared-secret registration endpoint.
+// We create the Matrix account server-side (username + password) so the user
+// never needs a second password. The client then logs in with matrix-js-sdk
+// and generates its own E2E device keys in the browser.
+function matrixMac(nonce, username, password, admin = false) {
+  const parts = [nonce, username, password, admin ? "admin" : "notadmin"];
+  return crypto
+    .createHmac("sha1", MATRIX_SHARED_SECRET)
+    .update(parts.join("\0"))
+    .digest("hex");
+}
+
+async function provisionMatrixAccount(userId, displayName) {
+  if (!MATRIX_SHARED_SECRET) {
+    throw new Error("MATRIX_SHARED_SECRET not configured");
+  }
+  // Username is the collaborator id (stable, unique, no email/phone ambiguity).
+  const username = userId;
+  const password = crypto.randomBytes(24).toString("base64url");
+
+  // 1. Fetch a one-time nonce.
+  const nonceRes = await fetch(`${MATRIX_HOMESERVER_URL}/_synapse/admin/v1/register`);
+  if (!nonceRes.ok) throw new Error(`nonce fetch failed: ${nonceRes.status}`);
+  const { nonce } = await nonceRes.json();
+
+  // 2. Register the account with the HMAC-SHA1 MAC.
+  const mac = matrixMac(nonce, username, password, false);
+  const regRes = await fetch(`${MATRIX_HOMESERVER_URL}/_synapse/admin/v1/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      nonce,
+      username,
+      password,
+      displayname: displayName,
+      admin: false,
+      mac,
+    }),
+  });
+  if (!regRes.ok) {
+    const body = await regRes.text().catch(() => "");
+    throw new Error(`register failed: ${regRes.status} ${body}`);
+  }
+  const data = await regRes.json();
+  return {
+    user_id: data.user_id || `@${username}:${MATRIX_DOMAIN}`,
+    password,
+  };
 }
 
 // Helper for PATCH /:id/photo endpoints
@@ -173,6 +227,59 @@ db.exec(`
     lat REAL NOT NULL,
     lng REAL NOT NULL,
     label TEXT,
+    created_at TEXT NOT NULL
+  )
+`);
+// --- Tablas privadas de la pestaña Colaboradores (requieren login) ---
+// Donaciones ofrecidas por colaboradores (comida, ropa, insumos, etc.)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS donaciones (
+    id TEXT PRIMARY KEY,
+    item_type TEXT NOT NULL,      -- 'comida' | 'ropa' | 'insumos' | 'medicinas' | 'transporte' | 'otro'
+    quantity TEXT,
+    description TEXT NOT NULL,
+    status TEXT DEFAULT 'disponible',  -- 'disponible' | 'reservado' | 'entregado' | 'vencido'
+    location TEXT,
+    lat REAL,
+    lng REAL,
+    contact TEXT,
+    donor_id TEXT,                -- FK a collaborators (quién la ofrece)
+    created_at TEXT NOT NULL
+  )
+`);
+// Necesidades reportadas por punto de rescate
+db.exec(`
+  CREATE TABLE IF NOT EXISTS necesidades (
+    id TEXT PRIMARY KEY,
+    item_type TEXT NOT NULL,      -- 'comida' | 'ropa' | 'carpas' | 'medicinas' | 'aseo' | 'otro'
+    quantity TEXT,
+    description TEXT NOT NULL,
+    urgency TEXT DEFAULT 'media', -- 'alta' | 'media' | 'baja'
+    status TEXT DEFAULT 'abierta',-- 'abierta' | 'en_proceso' | 'cubierta'
+    point_name TEXT,              -- 'Cantabria', 'Cámbulos', 'Guadalupe', etc.
+    location TEXT,
+    lat REAL,
+    lng REAL,
+    contact TEXT,
+    reporter_id TEXT,             -- FK a collaborators (quién la reporta)
+    created_at TEXT NOT NULL
+  )
+`);
+// Tareas de logística: entregas, recogidas, transporte
+db.exec(`
+  CREATE TABLE IF NOT EXISTS logistica (
+    id TEXT PRIMARY KEY,
+    task_type TEXT NOT NULL,      -- 'entrega' | 'recogida' | 'transporte' | 'voluntario'
+    item_ref TEXT,                -- referencia a donación/necesidad (opcional)
+    description TEXT NOT NULL,
+    status TEXT DEFAULT 'pendiente', -- 'pendiente' | 'en_ruta' | 'completado' | 'cancelado'
+    origin TEXT,
+    destination TEXT,
+    lat REAL,
+    lng REAL,
+    contact TEXT,
+    assignee_id TEXT,             -- FK a collaborators (quién lo ejecuta)
+    creator_id TEXT,              -- FK a collaborators (quién lo crea)
     created_at TEXT NOT NULL
   )
 `);
@@ -280,6 +387,12 @@ try {
 } catch (e) { }
 try {
   db.exec("ALTER TABLE collaborators ADD COLUMN display_name TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE collaborators ADD COLUMN matrix_user_id TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE collaborators ADD COLUMN matrix_password TEXT");
 } catch (e) { }
 // ========== Comentarios ==========
 app.get("/api/comments", (req, res) => {
@@ -862,6 +975,36 @@ app.get("/api/auth/me", requireAuth, (req, res) => {
   if (!user) return res.status(404).json({ error: "not found" });
   res.json({ ...user, chat_name: resolveDisplayName(user) });
 });
+// Provision (or return) Matrix credentials for the logged-in collaborator.
+// The account is created on first call; subsequent calls return the stored
+// credentials so the client can re-login without a second password.
+app.post("/api/auth/matrix", requireAuth, async (req, res) => {
+  try {
+    const user = db.prepare("SELECT id, name, contact, display_name, matrix_user_id, matrix_password FROM collaborators WHERE id = ?").get(req.userId);
+    if (!user) return res.status(404).json({ error: "not found" });
+
+    let matrixUserId = user.matrix_user_id;
+    let matrixPassword = user.matrix_password;
+
+    if (!matrixUserId || !matrixPassword) {
+      const displayName = resolveDisplayName(user);
+      const provisioned = await provisionMatrixAccount(user.id, displayName);
+      matrixUserId = provisioned.user_id;
+      matrixPassword = provisioned.password;
+      db.prepare("UPDATE collaborators SET matrix_user_id = ?, matrix_password = ? WHERE id = ?")
+        .run(matrixUserId, matrixPassword, user.id);
+    }
+
+    res.json({
+      homeserver_url: MATRIX_HOMESERVER_URL,
+      user_id: matrixUserId,
+      password: matrixPassword,
+    });
+  } catch (e) {
+    console.error("Matrix provisioning error:", e);
+    res.status(502).json({ error: "matrix provisioning failed" });
+  }
+});
 app.patch("/api/auth/me", requireAuth, (req, res) => {
   const { display_name } = req.body || {};
   if (display_name !== undefined && display_name !== null && typeof display_name !== "string") {
@@ -968,7 +1111,175 @@ app.patch("/api/anuncios/:id/photo", handlePhotoPatch("anuncios"));
 app.delete("/api/anuncios/:id", requireAdmin, (req, res) => {
   const result = db
     .prepare("DELETE FROM anuncios WHERE id = ?")
-    .run(req.params.id);
+// ========== Donaciones (privado: requiere login) ==========
+app.get("/api/donaciones", requireAuth, (req, res) => {
+  const rows = db
+    .prepare(`
+      SELECT d.*,
+        (SELECT text FROM comments WHERE item_id = d.id AND item_type = 'donaciones' ORDER BY created_at DESC LIMIT 1) AS last_comment,
+        (SELECT COUNT(*) FROM comments WHERE item_id = d.id AND item_type = 'donaciones') AS comment_count
+      FROM donaciones d ORDER BY d.created_at DESC
+    `)
+    .all();
+  res.json(rows);
+});
+app.post("/api/donaciones", requireAuth, (req, res) => {
+  const { item_type, quantity, description, status, location, lat, lng, contact } = req.body || {};
+  if (!item_type || !item_type.trim()) return res.status(400).json({ error: "item_type is required" });
+  if (!description || !description.trim()) return res.status(400).json({ error: "description is required" });
+  const finalId = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  db.prepare(
+    "INSERT INTO donaciones (id, item_type, quantity, description, status, location, lat, lng, contact, donor_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  ).run(
+    finalId,
+    item_type.trim(),
+    quantity && quantity.trim() ? quantity.trim() : null,
+    description.trim(),
+    status || "disponible",
+    location && location.trim() ? location.trim() : null,
+    lat ?? null,
+    lng ?? null,
+    contact && contact.trim() ? contact.trim() : null,
+    req.userId,
+    createdAt,
+  );
+  res.status(201).json({ id: finalId, created_at: createdAt });
+});
+app.patch("/api/donaciones/:id", requireAuth, (req, res) => {
+  const { status, quantity, description, location } = req.body || {};
+  const existing = db.prepare("SELECT id FROM donaciones WHERE id = ?").get(req.params.id);
+  if (!existing) return res.status(404).json({ error: "not found" });
+  const fields = [];
+  const values = [];
+  if (status !== undefined) { fields.push("status = ?"); values.push(status); }
+  if (quantity !== undefined) { fields.push("quantity = ?"); values.push(quantity); }
+  if (description !== undefined) { fields.push("description = ?"); values.push(description); }
+  if (location !== undefined) { fields.push("location = ?"); values.push(location); }
+  if (fields.length === 0) return res.status(400).json({ error: "no fields to update" });
+  values.push(req.params.id);
+  db.prepare(`UPDATE donaciones SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+  res.json({ ok: true });
+});
+app.delete("/api/donaciones/:id", requireAdmin, (req, res) => {
+  const result = db.prepare("DELETE FROM donaciones WHERE id = ?").run(req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.status(204).end();
+});
+
+// ========== Necesidades (privado: requiere login) ==========
+app.get("/api/necesidades", requireAuth, (req, res) => {
+  const rows = db
+    .prepare(`
+      SELECT n.*,
+        (SELECT text FROM comments WHERE item_id = n.id AND item_type = 'necesidades' ORDER BY created_at DESC LIMIT 1) AS last_comment,
+        (SELECT COUNT(*) FROM comments WHERE item_id = n.id AND item_type = 'necesidades') AS comment_count
+      FROM necesidades n ORDER BY n.created_at DESC
+    `)
+    .all();
+  res.json(rows);
+});
+app.post("/api/necesidades", requireAuth, (req, res) => {
+  const { item_type, quantity, description, urgency, status, point_name, location, lat, lng, contact } = req.body || {};
+  if (!item_type || !item_type.trim()) return res.status(400).json({ error: "item_type is required" });
+  if (!description || !description.trim()) return res.status(400).json({ error: "description is required" });
+  const finalId = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  db.prepare(
+    "INSERT INTO necesidades (id, item_type, quantity, description, urgency, status, point_name, location, lat, lng, contact, reporter_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  ).run(
+    finalId,
+    item_type.trim(),
+    quantity && quantity.trim() ? quantity.trim() : null,
+    description.trim(),
+    urgency || "media",
+    status || "abierta",
+    point_name && point_name.trim() ? point_name.trim() : null,
+    location && location.trim() ? location.trim() : null,
+    lat ?? null,
+    lng ?? null,
+    contact && contact.trim() ? contact.trim() : null,
+    req.userId,
+    createdAt,
+  );
+  res.status(201).json({ id: finalId, created_at: createdAt });
+});
+app.patch("/api/necesidades/:id", requireAuth, (req, res) => {
+  const { status, urgency, quantity, description } = req.body || {};
+  const existing = db.prepare("SELECT id FROM necesidades WHERE id = ?").get(req.params.id);
+  if (!existing) return res.status(404).json({ error: "not found" });
+  const fields = [];
+  const values = [];
+  if (status !== undefined) { fields.push("status = ?"); values.push(status); }
+  if (urgency !== undefined) { fields.push("urgency = ?"); values.push(urgency); }
+  if (quantity !== undefined) { fields.push("quantity = ?"); values.push(quantity); }
+  if (description !== undefined) { fields.push("description = ?"); values.push(description); }
+  if (fields.length === 0) return res.status(400).json({ error: "no fields to update" });
+  values.push(req.params.id);
+  db.prepare(`UPDATE necesidades SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+  res.json({ ok: true });
+});
+app.delete("/api/necesidades/:id", requireAdmin, (req, res) => {
+  const result = db.prepare("DELETE FROM necesidades WHERE id = ?").run(req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.status(204).end();
+});
+
+// ========== Logística (privado: requiere login) ==========
+app.get("/api/logistica", requireAuth, (req, res) => {
+  const rows = db
+    .prepare(`
+      SELECT l.*,
+        (SELECT text FROM comments WHERE item_id = l.id AND item_type = 'logistica' ORDER BY created_at DESC LIMIT 1) AS last_comment,
+        (SELECT COUNT(*) FROM comments WHERE item_id = l.id AND item_type = 'logistica') AS comment_count
+      FROM logistica l ORDER BY l.created_at DESC
+    `)
+    .all();
+  res.json(rows);
+});
+app.post("/api/logistica", requireAuth, (req, res) => {
+  const { task_type, item_ref, description, status, origin, destination, lat, lng, contact, assignee_id } = req.body || {};
+  if (!task_type || !task_type.trim()) return res.status(400).json({ error: "task_type is required" });
+  if (!description || !description.trim()) return res.status(400).json({ error: "description is required" });
+  const finalId = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  db.prepare(
+    "INSERT INTO logistica (id, task_type, item_ref, description, status, origin, destination, lat, lng, contact, assignee_id, creator_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  ).run(
+    finalId,
+    task_type.trim(),
+    item_ref && item_ref.trim() ? item_ref.trim() : null,
+    description.trim(),
+    status || "pendiente",
+    origin && origin.trim() ? origin.trim() : null,
+    destination && destination.trim() ? destination.trim() : null,
+    lat ?? null,
+    lng ?? null,
+    contact && contact.trim() ? contact.trim() : null,
+    assignee_id || null,
+    req.userId,
+    createdAt,
+  );
+  res.status(201).json({ id: finalId, created_at: createdAt });
+});
+app.patch("/api/logistica/:id", requireAuth, (req, res) => {
+  const { status, assignee_id, description, origin, destination } = req.body || {};
+  const existing = db.prepare("SELECT id FROM logistica WHERE id = ?").get(req.params.id);
+  if (!existing) return res.status(404).json({ error: "not found" });
+  const fields = [];
+  const values = [];
+  if (status !== undefined) { fields.push("status = ?"); values.push(status); }
+  if (assignee_id !== undefined) { fields.push("assignee_id = ?"); values.push(assignee_id); }
+  if (description !== undefined) { fields.push("description = ?"); values.push(description); }
+  if (origin !== undefined) { fields.push("origin = ?"); values.push(origin); }
+  if (destination !== undefined) { fields.push("destination = ?"); values.push(destination); }
+  if (fields.length === 0) return res.status(400).json({ error: "no fields to update" });
+  values.push(req.params.id);
+  db.prepare(`UPDATE logistica SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+  res.json({ ok: true });
+});
+app.delete("/api/logistica/:id", requireAdmin, (req, res) => {
+  const result = db.prepare("DELETE FROM logistica WHERE id = ?").run(req.params.id);
   if (result.changes === 0) return res.status(404).json({ error: "not found" });
   res.status(204).end();
 });
