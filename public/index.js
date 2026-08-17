@@ -287,18 +287,12 @@ async function startMatrixChat() {
     const { base_url, user_id, password } = await res.json();
 
     // 2. Login en Matrix (genera claves E2E en el navegador).
-    // Olm (motor criptográfico) debe inicializarse antes de initCrypto.
+    // v42: initCrypto() configura Olm y el crypto store (IndexedDB) solo.
+    // Inicializamos Olm explícitamente por robustez (idempotente).
     if (window.Olm && typeof window.Olm.init === "function") {
       await window.Olm.init();
     }
-    // Crypto store en IndexedDB para persistir las claves E2E entre sesiones.
-    // En v28.2.0 el store se pasa como opción al crear el cliente (no hay setter).
-    let cryptoStore = null;
-    if (sdk.IndexedDBCryptoStore && window.indexedDB) {
-      cryptoStore = new sdk.IndexedDBCryptoStore(window.indexedDB, "sismo-matrix-crypto");
-      await cryptoStore.startup();
-    }
-    matrixClient = sdk.createClient({ baseUrl: base_url, cryptoStore });
+    matrixClient = sdk.createClient({ baseUrl: base_url });
     await matrixClient.login("m.login.password", {
       identifier: { type: "m.id.user", user: user_id.split(":")[0].replace("@", "") },
       password,

@@ -18,10 +18,8 @@
   <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
   <!-- ECharts (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-  <!-- Olm (motor criptográfico E2E) — debe cargar antes que matrix-js-sdk -->
-  <script src="https://cdn.jsdelivr.net/npm/@matrix-org/olm@3.2.15/olm.js"></script>
-  <!-- Matrix JS SDK (chat E2E) — v28.2.0 es la última con bundle UMD -->
-  <script src="https://cdn.jsdelivr.net/npm/matrix-js-sdk@28.2.0/dist/browser-matrix.js"></script>
+  <!-- Matrix chat bundle (matrix-js-sdk + Olm, generado con `npm run build`) -->
+  <script src="matrix-bundle.js"></script>
 </head>
 
 <body>
@@ -158,12 +156,13 @@
     </div>
 
     <!-- Contenido privado (con sesión) -->
-    <div id="colabPrivateWrapper" style="display:none;flex-direction:column;flex:1;overflow:hidden;min-height:0;">
+    <div id="colabPrivateWrapper" style="display:none;flex-direction:column;flex:1;min-height:0;">
       <div id="connContainer"></div>
       <!-- Sub-tabs -->
-      <div class="sub-tabs">
+      <div class="sub-tabs"
+        style="position:sticky;top:calc(var(--top-bar-height) + 5px);z-index:9999;backdrop-filter:blur(10px);">
         <button class="sub-tab-btn active" data-subtab="chat" style="margin-right:auto;">💬<span
-            class="n">Chat</span></button>
+            class="tab-label">Chat</span></button>
         <button class="crear-btn sub-action" data-action-for="donaciones" onclick="openCrearModal('donacion')">🎁
           DONAR</button>
         <button class="crear-btn sub-action" data-action-for="necesidades" onclick="openCrearModal('necesidad')">🆘
@@ -172,10 +171,10 @@
           CREAR</button>
         <button class="crear-btn sub-action" data-action-for="voluntarios" onclick="openCrearModal('colaborador')">🤝
           COLABORAR</button>
-        <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="n">Donaciones</span></button>
-        <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="n">Necesidades</span></button>
-        <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="n">Logística</span></button>
-        <button class="sub-tab-btn" data-subtab="voluntarios">🤝<span class="n">Voluntarios</span></button>
+        <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="tab-label">Donaciones</span></button>
+        <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="tab-label">Necesidades</span></button>
+        <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="tab-label">Logística</span></button>
+        <button class="sub-tab-btn" data-subtab="voluntarios">🤝<span class="tab-label">Voluntarios</span></button>
       </div>
 
       <!-- Panel Chat (lo implementará otra persona) -->

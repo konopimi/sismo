@@ -1,13 +1,23 @@
 {
-  "dependencies": {},
   "name": "sismo",
   "version": "1.0.0",
-  "description": "https://sismoinfo.co",
-  "main": "dev-loop.js",
-  "devDependencies": {},
+  "description": "https://sismoinfo.co — emergency reporting backend + frontend",
+  "type": "module",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "esbuild matrix-entry.js --bundle --format=iife --outfile=public/matrix-bundle.js --minify",
+    "build:watch": "esbuild matrix-entry.js --bundle --format=iife --outfile=public/matrix-bundle.js --minify --watch"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.0",
+    "matrix-js-sdk": "^42.1.0",
+    "@matrix-org/olm": "^3.2.15"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
   },
   "repository": {
     "type": "git",
@@ -16,7 +26,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/konopimi/sismo/issues"
   },
