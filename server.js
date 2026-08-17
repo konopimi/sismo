@@ -9,6 +9,8 @@ const PORT = process.env.PORT || 3000;
 const MATRIX_HOMESERVER_URL = process.env.MATRIX_HOMESERVER_URL || "http://localhost:8008";
 const MATRIX_SHARED_SECRET = process.env.MATRIX_SHARED_SECRET || "";
 const MATRIX_DOMAIN = process.env.MATRIX_DOMAIN || "matrix.sismoinfo.co";
+// Public base URL the browser uses to reach Matrix (reverse proxy).
+const MATRIX_PUBLIC_URL = process.env.MATRIX_PUBLIC_URL || `https://${MATRIX_DOMAIN}`;
 const DB_PATH = process.env.DB_PATH || "/opt/sismo-api/data.db";
 app.use(cors());
 app.use(express.json());
@@ -996,7 +998,7 @@ app.post("/api/auth/matrix", requireAuth, async (req, res) => {
     }
 
     res.json({
-      homeserver_url: MATRIX_HOMESERVER_URL,
+      base_url: MATRIX_PUBLIC_URL,
       user_id: matrixUserId,
       password: matrixPassword,
     });
