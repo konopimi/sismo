@@ -347,7 +347,11 @@ function renderChatUI() {
   if (!container) return;
   container.style.display = "flex";
   container.innerHTML = `
-    <div style="display:flex;flex-direction:column;flex:1;min-height:0;">
+    <div style="display:flex;flex-direction:column;flex:1;min-height:100%;">
+      <div style="padding:10px 12px;border-bottom:1px solid rgba(120,120,120,0.3);font-weight:600;display:flex;align-items:center;gap:8px;">
+        <span>💬</span>
+        <span id="chatRoomName">Sismo General</span>
+      </div>
       <div id="chatMessages" style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;"></div>
       <div style="display:flex;gap:6px;padding:8px;border-top:1px solid rgba(120,120,120,0.3);">
         <input id="chatInput" type="text" placeholder="Escribe un mensaje..." style="flex:1;border-radius:6px;padding:8px;" />
