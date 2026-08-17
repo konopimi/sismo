@@ -782,7 +782,8 @@ textarea {
 }
 
 /* live count badge on category tabs */
-.tab-btn .n {
+.tab-btn .n,
+.sub-tab-btn .n {
   position: absolute;
   top: -10px;
   right: 2px;
@@ -1532,4 +1533,121 @@ textarea {
   padding: 12px;
   font-size: 13px;
   color: #999;
+}
+
+/* ============================================================
+   SUB-TABS de la pestaña Colaboradores (privada)
+   ============================================================ */
+.sub-tabs {
+  display: flex;
+  /* flex-direction: column; */
+  gap: 4px;
+  padding: 5px;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(var(--surface), 0.62);
+  /* background: rgba(var(--surface), 0.23); */
+  flex-shrink: 0;
+  height: 100%;
+}
+
+.sub-tab-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #999;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.sub-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ccc;
+}
+
+.sub-tab-btn.active {
+  background: rgba(69, 214, 214, 0.15);
+  color: #45d6d6;
+}
+
+.sub-tab-panel {
+  display: none;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.sub-tab-panel.active {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+   Status tags por tipo (donaciones / necesidades / logística)
+   ============================================================ */
+/* Donaciones */
+.status-tag.donacion-disponible {
+  background: rgba(63, 163, 77, 0.2);
+  color: #3fa34d;
+}
+
+.status-tag.donacion-reservado {
+  background: rgba(240, 173, 78, 0.2);
+  color: #f0ad4e;
+}
+
+.status-tag.donacion-entregado {
+  background: rgba(128, 128, 128, 0.2);
+  color: #888;
+}
+
+.status-tag.donacion-vencido {
+  background: rgba(214, 48, 49, 0.2);
+  color: #d63031;
+}
+
+/* Necesidades */
+.status-tag.necesidad-abierta {
+  background: rgba(214, 48, 49, 0.2);
+  color: #d63031;
+}
+
+.status-tag.necesidad-en_proceso {
+  background: rgba(240, 173, 78, 0.2);
+  color: #f0ad4e;
+}
+
+.status-tag.necesidad-cubierta {
+  background: rgba(63, 163, 77, 0.2);
+  color: #3fa34d;
+}
+
+.status-tag.necesidad-urgente {
+  background: rgba(214, 48, 49, 0.25);
+  color: #ff5050;
+}
+
+/* Logística */
+.status-tag.logistica-pendiente {
+  background: rgba(128, 128, 128, 0.2);
+  color: #888;
+}
+
+.status-tag.logistica-en_ruta {
+  background: rgba(69, 214, 214, 0.2);
+  color: #45d6d6;
+}
+
+.status-tag.logistica-completado {
+  background: rgba(63, 163, 77, 0.2);
+  color: #3fa34d;
+}
+
+.status-tag.logistica-cancelado {
+  background: rgba(214, 48, 49, 0.2);
+  color: #d63031;
 }
