@@ -207,7 +207,25 @@ function showChat() {
   // Show the collaborators count badge now that we're logged in.
   if (typeof updateTabCounts === "function") updateTabCounts();
   // Conectar el chat Matrix (E2E) una vez autenticado.
-  if (typeof startMatrixChat === "function") startMatrixChat();
+  // matrix-chat.js es un <script type="module"> (diferido), así que puede
+  // no estar listo aún; esperamos a que window.startMatrixChat exista.
+  connectMatrixWhenReady();
+}
+function connectMatrixWhenReady() {
+  if (typeof window.startMatrixChat === "function") {
+    window.startMatrixChat();
+    return;
+  }
+  let tries = 0;
+  const timer = setInterval(() => {
+    if (typeof window.startMatrixChat === "function") {
+      clearInterval(timer);
+      window.startMatrixChat();
+    } else if (++tries > 100) {
+      clearInterval(timer);
+      console.error("matrix-chat.js no cargó a tiempo");
+    }
+  }, 100);
 }
 async function attemptLogin() {
   const identifier = document.getElementById("loginIdentifier")?.value.trim();
