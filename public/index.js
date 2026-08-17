@@ -291,10 +291,22 @@ async function startMatrixChat() {
     if (window.Olm && typeof window.Olm.init === "function") {
       await window.Olm.init();
     }
-    matrixClient = sdk.createClient({ baseUrl: base_url });
-    await matrixClient.login("m.login.password", {
+    // Login temporal para obtener device_id (necesario para initCrypto).
+    // Reutilizamos un device_id persistente para no perder las claves E2E.
+    const storedDeviceId = localStorage.getItem("sismo_matrix_device_id");
+    const tmpClient = sdk.createClient({ baseUrl: base_url });
+    const loginResp = await tmpClient.login("m.login.password", {
       identifier: { type: "m.id.user", user: user_id.split(":")[0].replace("@", "") },
       password,
+      ...(storedDeviceId ? { device_id: storedDeviceId } : {}),
+    });
+    localStorage.setItem("sismo_matrix_device_id", loginResp.device_id);
+    // Re-crear el cliente con deviceId + accessToken + userId.
+    matrixClient = sdk.createClient({
+      baseUrl: base_url,
+      accessToken: loginResp.access_token,
+      userId: loginResp.user_id,
+      deviceId: loginResp.device_id,
     });
     await matrixClient.initCrypto();
     matrixClient.setGlobalErrorOnUnknownDevices(false);
