@@ -61,8 +61,8 @@
 }
 
 :focus-visible {
-  outline: 2px solid rgba(214, 69, 69, 0.6);
-  outline-offset: 2px;
+  outline: 2px solid rgba(69, 214, 214, 0.6);
+  outline-offset: 0px;
 }
 
 :root {
@@ -263,7 +263,9 @@ h1 {
   flex-shrink: 0;
   /* Background and left border are derived from the status color (set
      inline as --status-color) via color-mix, matching the main cards. */
-  background: color-mix(in srgb, var(--status-color, #e57373) 12%, rgba(26, 29, 36, 0.85));
+  background: color-mix(in srgb,
+      var(--status-color, #e57373) 12%,
+      rgba(26, 29, 36, 0.85));
   border-left: 3px solid var(--status-color, #e57373);
   border-radius: 8px;
   cursor: pointer;
@@ -271,7 +273,9 @@ h1 {
 }
 
 .map-sidebar-card:hover {
-  background: color-mix(in srgb, var(--status-color, #e57373) 20%, rgba(34, 38, 46, 0.85));
+  background: color-mix(in srgb,
+      var(--status-color, #e57373) 20%,
+      rgba(34, 38, 46, 0.85));
 }
 
 /* Angel is a special light-blue case (deceased), not a dark status tint. */
@@ -356,7 +360,7 @@ h1 {
   position: sticky;
   top: 0px;
   gap: 5px;
-  background: rgba(62, 62, 62, 0.8);
+  background: rgba(var(--surface), 0.38);
   backdrop-filter: blur(10px);
   border-bottom: 2px solid rgb(var(--surface), 0.62);
   padding: 5px;
@@ -781,7 +785,7 @@ textarea {
 .tab-btn .n {
   position: absolute;
   top: -10px;
-  right: -6px;
+  right: 2px;
   min-width: 16px;
   height: 16px;
   font-family: ui-monospace, monospace;

@@ -125,6 +125,7 @@
   </div>
   <!-- ===== PANEL COLABORADORES ===== -->
   <div id="tabColab" class="tab-panel">
+
     <!-- Chat de colaboradores (requiere login) -->
     <div id="chatAuth" style="margin-bottom:10px;">
       <div id="loginForm"
@@ -152,6 +153,17 @@
       <div id="chatContainer" style="display:none;flex:1;overflow:hidden;min-height:0;"></div>
     </div>
     <div id="colabListWrapper" style="display:none;">
+
+      <div class="tool-bar">
+        <div style="display:none;" class="filter-row" data-tab="colaborador">
+          <select class="filter-select" data-filter="city" disabled>
+            <option value="">📍 TODAS</option>
+          </select>
+        </div>
+        <button id="crear-top" class="crear-btn" onclick="openCrearModal('colaborador')">
+          🤝 COLABORAR
+        </button>
+      </div>
       <div id="listColab" class="list"></div>
     </div>
     <div id="colabLoginPrompt" style="padding:16px;text-align:center;color:#999;font-size:0.9rem;">
@@ -389,97 +401,97 @@
         </button>
       </div>
       <div data-modal-body style="padding:5px;flex:1;display:flex;flex-direction:column;width:100%;">
-      <!-- PERSONA -->
-      <div class="crear-form-wrap" data-type="person">
-        <form id="addForm">
-          <input type="text" id="nameInput" placeholder="Nombre de la persona" required />
-          <input type="text" id="locationInput" placeholder="Ubicación (opcional)" />
-          <select id="cityInput">
-            <option value="">Ciudad</option>
-          </select>
-          <button type="button" id="gpsBtn" class="gps-btn" title="Usar mi ubicación">
-            📍
-          </button>
-          <span id="locationDisplay" style="font-size: 62%; color: #666; min-width: 120px"></span>
-          <div style="min-width: 100%">
-            🖼️ Dos opciones (URL o Subir imagen)
-            <br />
-            <input type="text" id="imageInput" placeholder="URL de imagen (opcional)" />
-            <img id="urlPreview" class="photo-preview" style="display: none" alt="Vista previa URL" />
-            <label class="custom-file-upload">
-              📷 Subir foto
-              <input type="file" id="photoInput" accept="image/*" />
-            </label>
-            <span class="file-name" id="fileLabel">Sube una foto</span>
-            <img id="photoPreview" class="photo-preview" style="display: none" alt="Vista previa" />
-          </div>
-          <button type="submit">Reportar</button>
-        </form>
-      </div>
-      <!-- MASCOTA -->
-      <div class="crear-form-wrap" data-type="pet">
-        <form id="addFormP">
-          <input type="text" id="nameInputP" placeholder="Nombre de la mascota" required />
-          <div style="display: flex; gap: 5px; width: 100%">
-            <button type="button" id="gpsBtnP" class="gps-btn" title="Usar mi ubicación">
-              📍
-            </button>
-            <input type="text" id="locationInputP" placeholder="Ubicación (opcional)" style="flex: 1" />
-            <select id="cityInputP">
+        <!-- PERSONA -->
+        <div class="crear-form-wrap" data-type="person">
+          <form id="addForm">
+            <input type="text" id="nameInput" placeholder="Nombre de la persona" required />
+            <input type="text" id="locationInput" placeholder="Ubicación (opcional)" />
+            <select id="cityInput">
               <option value="">Ciudad</option>
             </select>
-          </div>
-          <div id="locationDisplayP" style="font-size: 0.8rem; color: #666; min-width: 120px"></div>
-          <div style="min-width: 100%">
-            🖼️ Dos opciones (URL o Subir imagen)
-            <br />
-            <input type="text" id="imageInputP" placeholder="URL de imagen (opcional)" />
-            <img id="urlPreviewP" class="photo-preview" style="display: none" alt="Vista previa URL" />
-            <label class="custom-file-upload">
-              📷 Subir foto
-              <input type="file" id="photoInputP" accept="image/*" />
+            <button type="button" id="gpsBtn" class="gps-btn" title="Usar mi ubicación">
+              📍
+            </button>
+            <span id="locationDisplay" style="font-size: 62%; color: #666; min-width: 120px"></span>
+            <div style="min-width: 100%">
+              🖼️ Dos opciones (URL o Subir imagen)
+              <br />
+              <input type="text" id="imageInput" placeholder="URL de imagen (opcional)" />
+              <img id="urlPreview" class="photo-preview" style="display: none" alt="Vista previa URL" />
+              <label class="custom-file-upload">
+                📷 Subir foto
+                <input type="file" id="photoInput" accept="image/*" />
+              </label>
+              <span class="file-name" id="fileLabel">Sube una foto</span>
+              <img id="photoPreview" class="photo-preview" style="display: none" alt="Vista previa" />
+            </div>
+            <button type="submit">Reportar</button>
+          </form>
+        </div>
+        <!-- MASCOTA -->
+        <div class="crear-form-wrap" data-type="pet">
+          <form id="addFormP">
+            <input type="text" id="nameInputP" placeholder="Nombre de la mascota" required />
+            <div style="display: flex; gap: 5px; width: 100%">
+              <button type="button" id="gpsBtnP" class="gps-btn" title="Usar mi ubicación">
+                📍
+              </button>
+              <input type="text" id="locationInputP" placeholder="Ubicación (opcional)" style="flex: 1" />
+              <select id="cityInputP">
+                <option value="">Ciudad</option>
+              </select>
+            </div>
+            <div id="locationDisplayP" style="font-size: 0.8rem; color: #666; min-width: 120px"></div>
+            <div style="min-width: 100%">
+              🖼️ Dos opciones (URL o Subir imagen)
+              <br />
+              <input type="text" id="imageInputP" placeholder="URL de imagen (opcional)" />
+              <img id="urlPreviewP" class="photo-preview" style="display: none" alt="Vista previa URL" />
+              <label class="custom-file-upload">
+                📷 Subir foto
+                <input type="file" id="photoInputP" accept="image/*" />
+              </label>
+              <span class="file-name" id="fileLabelP">Sube una foto</span>
+              <img id="photoPreviewP" class="photo-preview" style="display: none" alt="Vista previa" />
+            </div>
+            <button type="submit">Reportar</button>
+          </form>
+        </div>
+        <!-- UBICACIÓN / EDIFICIO -->
+        <div class="crear-form-wrap" data-type="building">
+          <form id="addFormB">
+            <input type="text" id="nameInputB" placeholder="Nombre o dirección del edificio" required />
+            <input type="text" id="locationInputB" placeholder="Ubicación (opcional)" />
+            <select id="cityInputB">
+              <option value="">Ciudad</option>
+            </select>
+            <button type="button" id="gpsBtnB" class="gps-btn" title="Usar mi ubicación">
+              📍
+            </button>
+            <span id="locationDisplayB" style="font-size: 62%; color: #666; min-width: 120px"></span>
+            <label style="display:flex; align-items:center; gap:8px; margin-top:8px; font-size:0.85rem; color:#ccc;">
+              <input type="checkbox" id="privateInputB" />
+              🔒 Privado (solo colaboradores registrados)
             </label>
-            <span class="file-name" id="fileLabelP">Sube una foto</span>
-            <img id="photoPreviewP" class="photo-preview" style="display: none" alt="Vista previa" />
-          </div>
-          <button type="submit">Reportar</button>
-        </form>
-      </div>
-      <!-- UBICACIÓN / EDIFICIO -->
-      <div class="crear-form-wrap" data-type="building">
-        <form id="addFormB">
-          <input type="text" id="nameInputB" placeholder="Nombre o dirección del edificio" required />
-          <input type="text" id="locationInputB" placeholder="Ubicación (opcional)" />
-          <select id="cityInputB">
-            <option value="">Ciudad</option>
-          </select>
-          <button type="button" id="gpsBtnB" class="gps-btn" title="Usar mi ubicación">
-            📍
-          </button>
-          <span id="locationDisplayB" style="font-size: 62%; color: #666; min-width: 120px"></span>
-          <label style="display:flex; align-items:center; gap:8px; margin-top:8px; font-size:0.85rem; color:#ccc;">
-            <input type="checkbox" id="privateInputB" />
-            🔒 Privado (solo colaboradores registrados)
-          </label>
-          <div style="min-width: 100%">
-            🖼️ Dos opciones (URL o Subir imagen)
-            <br />
-            <input type="text" id="imageInputB" placeholder="URL de imagen (opcional)" />
-            <img id="urlPreviewB" class="photo-preview" style="display: none" alt="Vista previa URL" />
-            <label class="custom-file-upload">
-              📷 Subir foto
-              <input type="file" id="photoInputB" accept="image/*" />
-            </label>
-            <span class="file-name" id="fileLabelB">Sube una foto</span>
-            <img id="photoPreviewB" class="photo-preview" style="display: none" alt="Vista previa" />
-          </div>
-          <button type="submit">Reportar</button>
-        </form>
-      </div>
-      <!-- ANUNCIO -->
-      <div class="crear-form-wrap" data-type="anuncio">
-        <form id="addFormA" style="flex-direction: column; align-items: stretch">
-          <input type="text" id="anuncioTitleInput" placeholder="Título del anuncio" style="
+            <div style="min-width: 100%">
+              🖼️ Dos opciones (URL o Subir imagen)
+              <br />
+              <input type="text" id="imageInputB" placeholder="URL de imagen (opcional)" />
+              <img id="urlPreviewB" class="photo-preview" style="display: none" alt="Vista previa URL" />
+              <label class="custom-file-upload">
+                📷 Subir foto
+                <input type="file" id="photoInputB" accept="image/*" />
+              </label>
+              <span class="file-name" id="fileLabelB">Sube una foto</span>
+              <img id="photoPreviewB" class="photo-preview" style="display: none" alt="Vista previa" />
+            </div>
+            <button type="submit">Reportar</button>
+          </form>
+        </div>
+        <!-- ANUNCIO -->
+        <div class="crear-form-wrap" data-type="anuncio">
+          <form id="addFormA" style="flex-direction: column; align-items: stretch">
+            <input type="text" id="anuncioTitleInput" placeholder="Título del anuncio" style="
                 padding: 12px;
                 border-radius: 8px;
                 border: 1px solid #333;
@@ -489,7 +501,7 @@
                 width: 100%;
                 margin-bottom: 8px;
               " />
-          <textarea id="anuncioInput" rows="3" placeholder="Escribe un anuncio..." required style="
+            <textarea id="anuncioInput" rows="3" placeholder="Escribe un anuncio..." required style="
                 padding: 12px;
                 border-radius: 8px;
                 border: 1px solid #333;
@@ -501,38 +513,39 @@
                 width: 100%;
                 margin-bottom: 8px;
               "></textarea>
-          <div style="min-width: 100%">
-            🖼️ Dos opciones (URL o Subir imagen)
-            <br />
-            <input type="text" id="imageInputA" placeholder="URL de imagen (opcional)" />
-            <img id="urlPreviewA" class="photo-preview" style="display: none" alt="Vista previa URL" />
-            <label class="custom-file-upload">
-              📷 Subir fotos
-              <input type="file" id="photoInputA" accept="image/*" multiple />
-            </label>
-            <span class="file-name" id="fileLabelA">Sube una o más fotos</span>
-            <img id="photoPreviewA" class="photo-preview" style="display: none" alt="Vista previa" />
-          </div>
-          <button type="submit" style="width: 100%">Publicar</button>
-        </form>
-      </div>
-      <!-- COLABORADOR -->
-      <div class="crear-form-wrap" data-type="colaborador">
-        <form id="addFormColab">
-          <input type="text" id="nameInputColab" placeholder="Nombre" required />
-          <input type="text" id="skillInputColab"
-            placeholder="¿Cómo puedes ayudar? (ej: transporte, primeros auxilios)" />
-          <input type="text" id="contactInputColab" placeholder="Contacto (teléfono/WhatsApp, opcional)" />
-          <select id="cityInputColab">
-            <option value="">Ciudad</option>
-          </select>
-          <hr style="width:100%;border-color:rgba(60,60,60,0.4);margin:8px 0;" />
-          <small style="color:#999;width:100%;">Opcional: crea una cuenta para acceder al chat de colaboradores</small>
-          <input type="email" id="emailInputColab" placeholder="Email (opcional)" />
-          <input type="password" id="passwordInputColab" placeholder="Contraseña (opcional, mín 6 chars)" />
-          <button type="submit">Unirme</button>
-        </form>
-      </div>
+            <div style="min-width: 100%">
+              🖼️ Dos opciones (URL o Subir imagen)
+              <br />
+              <input type="text" id="imageInputA" placeholder="URL de imagen (opcional)" />
+              <img id="urlPreviewA" class="photo-preview" style="display: none" alt="Vista previa URL" />
+              <label class="custom-file-upload">
+                📷 Subir fotos
+                <input type="file" id="photoInputA" accept="image/*" multiple />
+              </label>
+              <span class="file-name" id="fileLabelA">Sube una o más fotos</span>
+              <img id="photoPreviewA" class="photo-preview" style="display: none" alt="Vista previa" />
+            </div>
+            <button type="submit" style="width: 100%">Publicar</button>
+          </form>
+        </div>
+        <!-- COLABORADOR -->
+        <div class="crear-form-wrap" data-type="colaborador">
+          <form id="addFormColab">
+            <input type="text" id="nameInputColab" placeholder="Nombre" required />
+            <input type="text" id="skillInputColab"
+              placeholder="¿Cómo puedes ayudar? (ej: transporte, primeros auxilios)" />
+            <input type="text" id="contactInputColab" placeholder="Contacto (teléfono/WhatsApp, opcional)" />
+            <select id="cityInputColab">
+              <option value="">Ciudad</option>
+            </select>
+            <hr style="width:100%;border-color:rgba(60,60,60,0.4);margin:8px 0;" />
+            <small style="color:#999;width:100%;">Opcional: crea una cuenta para acceder al chat de
+              colaboradores</small>
+            <input type="email" id="emailInputColab" placeholder="Email (opcional)" />
+            <input type="password" id="passwordInputColab" placeholder="Contraseña (opcional, mín 6 chars)" />
+            <button type="submit">Unirme</button>
+          </form>
+        </div>
       </div>
       <div class="modal-actions" data-modal-footer>
         <button type="button" class="btn-small" onclick="closeCrearModal()">Cancelar</button>
@@ -699,14 +712,3 @@
 </body>
 
 </html>
-
-<!-- <div class="tool-bar"> -->
-<!--   <div class="filter-row" data-tab="colaborador"> -->
-<!--     <select class="filter-select" data-filter="city" disabled> -->
-<!--       <option value="">📍 TODAS</option> -->
-<!--     </select> -->
-<!--   </div> -->
-<!--   <button id="crear-top" class="crear-btn" onclick="openCrearModal('colaborador')" disabled> -->
-<!--     🤝 COLABORAR -->
-<!--   </button> -->
-<!-- </div> -->

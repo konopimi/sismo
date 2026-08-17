@@ -1,3 +1,709 @@
+//===== public/index.html =====
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SISMOINFO.CO</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="modal.css" />
+  <!-- Leaflet CSS y JS para el mapa -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet.markercluster plugin -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <!-- Leaflet.heat plugin -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <!-- ECharts (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+</head>
+<body>
+  <!-- ===== HEADER ===== -->
+  <div class="top-bar" style="display: flex; align-items: center">
+    <img src="logo.png" style="
+          max-height: 30px;
+          margin-right: 13px;
+          transform: scale(162%) translate(-5px, 3px);
+          z-index: 999;
+        " />
+    <b style="display:flex;flex: 1; font-size: 110%">
+      <div style="color: #ffff46">SISMO</div>
+      <div style="color: #7a9df5">INFO</div>
+      <div style="color: #fe5166">.CO</div>
+    </b>
+    <button id="copyLinkBtn">🔗 <span class="tab-label">LINK</span></button>
+    <button id="shareAppBtn">📤 <span class="tab-label">Compartir</span></button>
+    <!-- <div id="apiTargetToggle" style="display:none;margin-left:auto;"> -->
+    <!-- <button type="button" id="apiTargetRemote" class="btn-small" style="border-radius: 6px 0 0 6px;">🌏 </button> -->
+    <!-- <button type="button" id="apiTargetLocal" class="btn-small" style="border-radius: 0 6px 6px 0;">🖥️ </button> -->
+    <!-- </div> -->
+  </div>
+  <div style="display: none; padding: 5px">
+    <div>+57 3153410282 @neokpm</div>
+    <a style="
+          margin-left: auto;
+          border-radius: 5px;
+          padding: 3px;
+          background: rgb(200, 200, 200);
+        " href="https://colombiatebusca.com/">
+      https://colombiatebusca.com/</a>
+  </div>
+  <!-- ===== DRIVER (TABS + SEARCH) ===== -->
+  <!-- ===== PANEL PERSONAS ===== -->
+  <div id="tabPersonas" class="tab-panel active">
+    <div class="tool-bar">
+      <div class="filter-row" data-tab="person">
+        <button id="crear-top" class="crear-btn" onclick="openCrearModal('person')">
+          🫂 NUEVO
+        </button>
+        <div class="filter-pills">
+          <button class="filter-pill active" data-status="">Todo</button>
+          <button class="filter-pill" data-status="desaparecido">🔍 <span class="pill-label">Desap.</span></button>
+          <button class="filter-pill" data-status="encontrado">✅ <span class="pill-label">Encont.</span></button>
+          <button class="filter-pill" data-status="angel">👼</button>
+        </div>
+        <select class="filter-select" data-filter="city">
+          <option value="">📍</option>
+        </select>
+      </div>
+    </div>
+    <div id="list" class="list"></div>
+  </div>
+  <!-- ===== PANEL MASCOTAS ===== -->
+  <div id="tabPets" class="tab-panel">
+    <div class="tool-bar">
+      <div class="filter-row" data-tab="pet">
+        <button id="crear-top" class="crear-btn" onclick="openCrearModal('pet')">
+          🐾 NUEVO
+        </button>
+        <div class="filter-pills">
+          <button class="filter-pill active" data-status="">Todos</button>
+          <button class="filter-pill" data-status="desaparecido">🔍 <span
+              class="pill-label">Desaparecido</span></button>
+          <button class="filter-pill" data-status="encontrado">✅ <span class="pill-label">Encontrado</span></button>
+        </div>
+        <select class="filter-select" data-filter="city">
+          <option value="">📍 TODAS</opton>
+        </select>
+      </div>
+    </div>
+    <div id="listP" class="list"></div>
+  </div>
+  <!-- ===== PANEL EDIFICIOS ===== -->
+  <div id="tabEdificios" class="tab-panel">
+    <div class="tool-bar">
+      <div class="filter-row" data-tab="building">
+        <button id="crear-top" class="crear-btn" onclick="openCrearModal('building')">
+          📍 CREAR UBICACIÓN
+        </button>
+        <div class="filter-pills">
+          <button class="filter-pill active" data-status="">Todos</button>
+          <button class="filter-pill" data-status="seguro">🫶 <span class="pill-label">Seguro</span></button>
+          <button class="filter-pill" data-status="danado">⚠️ <span class="pill-label">Dañado</span></button>
+          <button class="filter-pill" data-status="colapsado">💥 <span class="pill-label">Colapsado</span></button>
+          <button class="filter-pill" data-status="acopio">📦 <span class="pill-label">Acopio</span></button>
+        </div>
+        <select class="filter-select" data-filter="city">
+          <option value="">📍 TODAS</option>
+        </select>
+      </div>
+    </div>
+    <div id="listB" class="list"></div>
+  </div>
+  <!-- ===== PANEL ANUNCIOS ===== -->
+  <div id="tabAnuncios" class="tab-panel">
+    <div class="tool-bar">
+      <!-- Anuncios are free-text only; no filters beyond search. -->
+      <button id="crear-top" class="crear-btn" onclick="openCrearModal('anuncio')">
+        📣 CREAR ANUNCIO
+      </button>
+    </div>
+    <div id="listA" class="list"></div>
+  </div>
+  <!-- ===== PANEL COLABORADORES ===== -->
+  <div id="tabColab" class="tab-panel">
+    <!-- Chat de colaboradores (requiere login) -->
+    <div id="chatAuth" style="margin-bottom:10px;">
+      <div id="loginForm"
+        style="margin:auto;margin-top:20px;max-width:600px;display:flex;flex-direction:column;gap:10px;padding:20px;background:rgba(var(--surface),0.38);border-radius:10px;">
+        <b style="color:#ccc;">💬 Chat de colaboradores</b>
+        <input type="text" id="loginIdentifier" placeholder="Email o usuario" />
+        <input type="password" id="loginPassword" placeholder="Contraseña" />
+        <button id="loginBtn">Entrar</button>
+        <button id="privacyInfoBtn"
+          style="background:none;margin-top:20px;border:none;cursor:pointer;font-size:0.75rem;padding:10px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+            <small style="color:#999;font-size:100%;">
+              🔒 Cifrado E2E con Matrix · Sin federación · Las conversaciones son encriptadas, no se guardan en base de
+              datos, solo son legibles desde el dispositivo de quien haga parte de la conversación. Tu contraseña está
+              encriptada con "scrypt".
+            </small>
+          </div>
+          <div style="color:#3a5dc5;text-decoration:underline;">
+            Click para más
+            información
+          </div>
+        </button>
+        <div id="loginError" style="color:#f66;font-size:0.85rem;"></div>
+      </div>
+      <div id="chatContainer" style="display:none;flex:1;overflow:hidden;min-height:0;"></div>
+    </div>
+    <div id="colabListWrapper" style="display:none;">
+      <div id="listColab" class="list"></div>
+    </div>
+    <div id="colabLoginPrompt" style="padding:16px;text-align:center;color:#999;font-size:0.9rem;">
+      🔒 Inicia sesión para ver la lista de colaboradores
+    </div>
+  </div>
+  <!-- ===== PANEL MAPA ===== -->
+  <div id="tabMapPanel" class="tab-panel">
+    <div id="map">
+      <!-- <label for="citySelectorMap" style="color:#ccc; margin-right:8px;">Ir a ciudad:</label> -->
+      <div id="mapTypeFilter" style="
+              display: flex;
+              /* flex-direction: column; */
+              position:absolute;
+              /* top:calc(var(--top-bar-height) + 3px); */
+              top:3px;
+              right:3px;
+              justify-content:right;
+              gap: 4px;
+              background: rgba(10, 10, 10, 0.38);
+              border-radius: 10px 10px 10px 10px ;
+              padding:3px;
+              border: 1px solid rgba(var(--surface), 0.6);
+              z-index:99999999999999999999999999;
+            ">
+        <button class="filter-pill active" data-map-type="person">🫂</button>
+        <button class="filter-pill active" data-map-type="pet">🐕</button>
+        <button class="filter-pill active" data-map-type="building">🏢</button>
+        <button class="filter-pill active" data-map-type="sismo">🌋</button>
+        <button class="filter-pill active" id="heatmapToggle" title="Mapa de calor">🔥</button>
+        <select id="citySelectorMap" style="
+              padding: 3px 5px;
+              border-radius: 8px;
+              border: 1px solid #333;
+              background: rgba(10, 10, 10, 0.8);
+              color: #eaeaea;
+              min-width: 150px;
+            ">
+          <option value="">-- 📍 IR A --</option>
+        </select>
+      </div>
+      <div id="mapSidebar" class="map-sidebar">
+        <div class="map-sidebar-title">🫂 Personas · 🐕 Mascotas</div>
+        <div id="mapSidebarList" class="map-sidebar-list"></div>
+      </div>
+      <div id="offscreenArrows"></div>
+    </div>
+  </div>
+  <!-- ===== PANEL SISMOS ===== -->
+  <div id="tabSismos" class="tab-panel">
+    <!-- ===== ÚLTIMO SISMO (card, consistente con el resto) ===== -->
+    <div class="sismo-head">
+      <div id="sismoLive" class="sismo-live" style="margin-top:10px;">
+        <div class="sismo-live-head">
+          <span class="sismo-live-dot" aria-hidden="true"></span>
+          <span class="sismo-live-title">En vivo · últimos 72 h</span>
+          <span id="sismoLiveUpdated" class="sismo-live-updated">—</span>
+        </div>
+        <div id="sismoLiveList" class="sismo-live-list"></div>
+      </div>
+      <div id="sismoAlert" class="alerta">
+        <div class="alerta-head">
+          <span class="alerta-title">Último sismo</span>
+          <span id="ultimoRel" class="alerta-rel">—</span>
+        </div>
+        <div class="alerta-body">
+          <span id="ultimoMag" class="alerta-mag">--</span>
+          <span class="alerta-info">
+            <span id="ultimoLugar" class="alerta-lugar"></span>
+            <span id="ultimoHora" class="alerta-hora"></span>
+          </span>
+        </div>
+      </div>
+      <!-- ===== FILTROS (misma familia visual: pills + selects) ===== -->
+      <div class="tool-bar"
+        style="background:rgba(var(--surface),0.38);position:static;top:auto;backdrop-filter: blur(10px);border-radius:10px;padding:5px 10px;">
+        <!-- ===== HISTORIAL ===== -->
+        <div style="font-weight:600;color:#ccc;font-size=60%;">📜</div>
+        <div class="filter-row" data-tab="sismos">
+          <select class="filter-select" id="sismoMagFilter">
+            <option value="0">Magn.: todas</option>
+            <option value="3">Magn.: M3+</option>
+            <option value="4">Magn.: M4+</option>
+            <option value="5">Magn.: M5+</option>
+            <option value="6">Magn.: M6+</option>
+          </select>
+          <select class="filter-select" id="sismoDepthFilter">
+            <option value="">Prof.: todas</option>
+            <option value="shallow">Superf. (&lt;30 km)</option>
+            <option value="mid">Media (30–70 km)</option>
+            <option value="deep">Alta (70–150 km)</option>
+            <option value="vdeep">Muy (&gt;150 km)</option>
+          </select>
+          <select class="filter-select" id="sismoDateFilter">
+            <option value="0">Hace:--</option>
+            <option value="1">24 h</option>
+            <option value="7">7 días</option>
+            <option value="30">30 días</option>
+            <option value="365">Un año</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <!-- ===== FEED EN VIVO (ventana corta, poll 60s) ===== -->
+    <div id="sismoChart"
+      style="display:none;height:400px;width:100%;background:#222;border-radius:0px 0px 10px 10px;border-bottom:1px solid #e9ecef;">
+    </div>
+    <div id="sismosList" class="sismos-list" style="margin-top:10px;"></div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:14px;color:#999;">
+      <span>Fuente: USGS | En vivo cada 60s</span>
+      <span id="totalSismos">0 sismos</span>
+    </div>
+  </div>
+  <!-- ===== PANEL WIKI ===== -->
+  <div id="tabWiki" class="tab-panel">
+    <div class="wiki">
+      <details open>
+        <summary>📞 Líneas de emergencia</summary>
+        <div class="wiki-body">
+          <p><b>123</b> — Emergencias / Policía</p>
+          <p><b>119</b> — Cruz Roja / Ambulancia</p>
+          <p><b>132</b> — Bomberos</p>
+          <p><b>165</b> — Línea de atención sismos (Colombia)</p>
+          <p><b>141</b> — Fijación telefónica de personas desaparecidas</p>
+        </div>
+      </details>
+      <details>
+        <summary>🫂 Qué hacer si una persona desaparece</summary>
+        <div class="wiki-body">
+          <ol>
+            <li>
+              Reporta inmediatamente en la pestaña <b>Personas</b> de esta
+              app.
+            </li>
+            <li>
+              Llama al <b>123</b> y a la línea <b>141</b> para fijar el
+              reporte.
+            </li>
+            <li>
+              Reúne una foto reciente y datos: nombre, edad, vestimenta,
+              última ubicación.
+            </li>
+            <li>Comparte el enlace del reporte por WhatsApp y redes.</li>
+            <li>
+              Acude a la fiscalía o comisaría más cercana con el reporte.
+            </li>
+          </ol>
+        </div>
+      </details>
+      <details>
+        <summary>🐕 Qué hacer si pierdes tu mascota</summary>
+        <div class="wiki-body">
+          <ol>
+            <li>
+              Reporta en la pestaña <b>Mascotas</b> con foto y última
+              ubicación.
+            </li>
+            <li>
+              Busca en un radio de 1 km; deja prendas con tu olor en el lugar.
+            </li>
+            <li>
+              Pega carteles en veterinarias, tiendas y parques cercanos.
+            </li>
+            <li>Publica en grupos locales de Facebook y WhatsApp.</li>
+          </ol>
+        </div>
+      </details>
+      <details>
+        <summary>🏢 Cómo reportar el estado de un edificio</summary>
+        <div class="wiki-body">
+          <p>Usa la pestaña <b>Lugar</b> y marca el estado:</p>
+          <ul>
+            <li><b>Seguro</b> — sin daños visibles, habitable.</li>
+            <li>
+              <b>Dañado</b> — grietas o daños parciales, requiere revisión.
+            </li>
+            <li><b>Colapso</b> — estructura comprometida, NO ingresar.</li>
+          </ul>
+        </div>
+      </details>
+      <details>
+        <summary>🛡️ Durante un sismo</summary>
+        <div class="wiki-body">
+          <ul>
+            <li>
+              <b>Agáchate, cubrete, agárrate.</b> Mantente bajo una mesa
+              resistente.
+            </li>
+            <li>Aleja de ventanas, espejos y objetos que puedan caer.</li>
+            <li>
+              Si estás en la calle, busca un espacio abierto lejos de
+              edificios.
+            </li>
+            <li>
+              No uses ascensores. Si estás en uno, sal en el primer piso
+              seguro.
+            </li>
+          </ul>
+        </div>
+      </details>
+      <details>
+        <summary>📦 Kit de emergencia recomendado</summary>
+        <div class="wiki-body">
+          <ul>
+            <li>
+              Agua (4 L por persona por día) y alimentos no perecederos.
+            </li>
+            <li>Botiquín de primeros auxilios y medicamentos básicos.</li>
+            <li>Linterna, pilas, radio a batería.</li>
+            <li>Copias de documentos en bolsa impermeable.</li>
+            <li>Cargador portátil para el celular.</li>
+          </ul>
+        </div>
+      </details>
+      <details>
+        <summary>🤝 Cómo colaborar</summary>
+        <div class="wiki-body">
+          <p>
+            Únete en la pestaña <b>Voluntad</b> indicando cómo puedes ayudar:
+            transporte, primeros auxilios, albergue, búsqueda, etc.
+          </p>
+        </div>
+      </details>
+    </div>
+  </div>
+  <!-- ===== CREAR MODAL (all creation forms) ===== -->
+  <div id="crearModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="crearModalTitle">
+    <div class="modal-content" style="max-width: 560px; max-height: 90vh">
+      <div class="modal-header" data-modal-header>
+        <h2 id="crearModalTitle" style="flex:1;">Crear</h2>
+        <button class="modal-close" id="crearModalClose" data-modal-close aria-label="Cerrar">
+          ✕
+        </button>
+      </div>
+      <div data-modal-body style="padding:5px;flex:1;display:flex;flex-direction:column;width:100%;">
+      <!-- PERSONA -->
+      <div class="crear-form-wrap" data-type="person">
+        <form id="addForm">
+          <input type="text" id="nameInput" placeholder="Nombre de la persona" required />
+          <input type="text" id="locationInput" placeholder="Ubicación (opcional)" />
+          <select id="cityInput">
+            <option value="">Ciudad</option>
+          </select>
+          <button type="button" id="gpsBtn" class="gps-btn" title="Usar mi ubicación">
+            📍
+          </button>
+          <span id="locationDisplay" style="font-size: 62%; color: #666; min-width: 120px"></span>
+          <div style="min-width: 100%">
+            🖼️ Dos opciones (URL o Subir imagen)
+            <br />
+            <input type="text" id="imageInput" placeholder="URL de imagen (opcional)" />
+            <img id="urlPreview" class="photo-preview" style="display: none" alt="Vista previa URL" />
+            <label class="custom-file-upload">
+              📷 Subir foto
+              <input type="file" id="photoInput" accept="image/*" />
+            </label>
+            <span class="file-name" id="fileLabel">Sube una foto</span>
+            <img id="photoPreview" class="photo-preview" style="display: none" alt="Vista previa" />
+          </div>
+          <button type="submit">Reportar</button>
+        </form>
+      </div>
+      <!-- MASCOTA -->
+      <div class="crear-form-wrap" data-type="pet">
+        <form id="addFormP">
+          <input type="text" id="nameInputP" placeholder="Nombre de la mascota" required />
+          <div style="display: flex; gap: 5px; width: 100%">
+            <button type="button" id="gpsBtnP" class="gps-btn" title="Usar mi ubicación">
+              📍
+            </button>
+            <input type="text" id="locationInputP" placeholder="Ubicación (opcional)" style="flex: 1" />
+            <select id="cityInputP">
+              <option value="">Ciudad</option>
+            </select>
+          </div>
+          <div id="locationDisplayP" style="font-size: 0.8rem; color: #666; min-width: 120px"></div>
+          <div style="min-width: 100%">
+            🖼️ Dos opciones (URL o Subir imagen)
+            <br />
+            <input type="text" id="imageInputP" placeholder="URL de imagen (opcional)" />
+            <img id="urlPreviewP" class="photo-preview" style="display: none" alt="Vista previa URL" />
+            <label class="custom-file-upload">
+              📷 Subir foto
+              <input type="file" id="photoInputP" accept="image/*" />
+            </label>
+            <span class="file-name" id="fileLabelP">Sube una foto</span>
+            <img id="photoPreviewP" class="photo-preview" style="display: none" alt="Vista previa" />
+          </div>
+          <button type="submit">Reportar</button>
+        </form>
+      </div>
+      <!-- UBICACIÓN / EDIFICIO -->
+      <div class="crear-form-wrap" data-type="building">
+        <form id="addFormB">
+          <input type="text" id="nameInputB" placeholder="Nombre o dirección del edificio" required />
+          <input type="text" id="locationInputB" placeholder="Ubicación (opcional)" />
+          <select id="cityInputB">
+            <option value="">Ciudad</option>
+          </select>
+          <button type="button" id="gpsBtnB" class="gps-btn" title="Usar mi ubicación">
+            📍
+          </button>
+          <span id="locationDisplayB" style="font-size: 62%; color: #666; min-width: 120px"></span>
+          <label style="display:flex; align-items:center; gap:8px; margin-top:8px; font-size:0.85rem; color:#ccc;">
+            <input type="checkbox" id="privateInputB" />
+            🔒 Privado (solo colaboradores registrados)
+          </label>
+          <div style="min-width: 100%">
+            🖼️ Dos opciones (URL o Subir imagen)
+            <br />
+            <input type="text" id="imageInputB" placeholder="URL de imagen (opcional)" />
+            <img id="urlPreviewB" class="photo-preview" style="display: none" alt="Vista previa URL" />
+            <label class="custom-file-upload">
+              📷 Subir foto
+              <input type="file" id="photoInputB" accept="image/*" />
+            </label>
+            <span class="file-name" id="fileLabelB">Sube una foto</span>
+            <img id="photoPreviewB" class="photo-preview" style="display: none" alt="Vista previa" />
+          </div>
+          <button type="submit">Reportar</button>
+        </form>
+      </div>
+      <!-- ANUNCIO -->
+      <div class="crear-form-wrap" data-type="anuncio">
+        <form id="addFormA" style="flex-direction: column; align-items: stretch">
+          <input type="text" id="anuncioTitleInput" placeholder="Título del anuncio" style="
+                padding: 12px;
+                border-radius: 8px;
+                border: 1px solid #333;
+                background: #1a1d24;
+                color: #eaeaea;
+                font-family: inherit;
+                width: 100%;
+                margin-bottom: 8px;
+              " />
+          <textarea id="anuncioInput" rows="3" placeholder="Escribe un anuncio..." required style="
+                padding: 12px;
+                border-radius: 8px;
+                border: 1px solid #333;
+                background: #1a1d24;
+                color: #eaeaea;
+                resize: vertical;
+                min-height: 80px;
+                font-family: inherit;
+                width: 100%;
+                margin-bottom: 8px;
+              "></textarea>
+          <div style="min-width: 100%">
+            🖼️ Dos opciones (URL o Subir imagen)
+            <br />
+            <input type="text" id="imageInputA" placeholder="URL de imagen (opcional)" />
+            <img id="urlPreviewA" class="photo-preview" style="display: none" alt="Vista previa URL" />
+            <label class="custom-file-upload">
+              📷 Subir fotos
+              <input type="file" id="photoInputA" accept="image/*" multiple />
+            </label>
+            <span class="file-name" id="fileLabelA">Sube una o más fotos</span>
+            <img id="photoPreviewA" class="photo-preview" style="display: none" alt="Vista previa" />
+          </div>
+          <button type="submit" style="width: 100%">Publicar</button>
+        </form>
+      </div>
+      <!-- COLABORADOR -->
+      <div class="crear-form-wrap" data-type="colaborador">
+        <form id="addFormColab">
+          <input type="text" id="nameInputColab" placeholder="Nombre" required />
+          <input type="text" id="skillInputColab"
+            placeholder="¿Cómo puedes ayudar? (ej: transporte, primeros auxilios)" />
+          <input type="text" id="contactInputColab" placeholder="Contacto (teléfono/WhatsApp, opcional)" />
+          <select id="cityInputColab">
+            <option value="">Ciudad</option>
+          </select>
+          <hr style="width:100%;border-color:rgba(60,60,60,0.4);margin:8px 0;" />
+          <small style="color:#999;width:100%;">Opcional: crea una cuenta para acceder al chat de colaboradores</small>
+          <input type="email" id="emailInputColab" placeholder="Email (opcional)" />
+          <input type="password" id="passwordInputColab" placeholder="Contraseña (opcional, mín 6 chars)" />
+          <button type="submit">Unirme</button>
+        </form>
+      </div>
+      </div>
+      <div class="modal-actions" data-modal-footer>
+        <button type="button" class="btn-small" onclick="closeCrearModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+  <!-- ===== MODAL (detail) ===== -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-content">
+      <div class="modal-header" data-modal-header>
+        <button class="modal-random" id="modalRandom" type="button" aria-label="Ver otro al azar"
+          title="Ver otro al azar">🎲</button>
+        <div id="modalTitle" style="flex:1;text-transform:uppercase;"></div>
+        <button class="modal-close" id="modalClose" data-modal-close aria-label="Cerrar">
+          ✕
+        </button>
+      </div>
+      <div data-modal-body style="padding:5px;flex:1;display:flex;flex-direction:column;width:100%;">
+        <div class="modal-status" id="modalStatus" style="margin-left:auto;">
+        </div>
+        <div id="modalMeta" class="modal-meta">
+        </div>
+        <div id="modalBody"></div>
+        <div id="commentsContainer">
+          <div id="commentsList"></div>
+          <form id="commentForm" style="display:flex;flex-direction:column;">
+            <textarea id="commentInput" rows="2" placeholder="Escribe un comentario..." required></textarea>
+            <button type="submit">Comentar</button>
+          </form>
+        </div>
+      </div>
+      <div id="modalActions" class="modal-actions" data-modal-footer></div>
+    </div>
+  </div>
+  <div id="mapModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="mapModalTitle">
+    <div class="modal-content" data-modal-body>
+      <div class="modal-header" data-modal-header>
+        <h2 id="mapModalTitle" style="flex:1;">Marca la ubicación</h2>
+        <button class="modal-close" id="mapModalClose" data-modal-close aria-label="Cerrar">
+          ✕
+        </button>
+      </div>
+      <div style="padding:5px;">
+        <div id="mapPickerContext" style="display: none"></div>
+        <div style="position: relative; margin-bottom: 10px">
+          <input type="text" id="mapSearchInput" placeholder="🔍 Buscar dirección o lugar..." style="
+              width: 100%;
+              padding: 10px;
+              border-radius: 8px;
+              border: 1px solid #333;
+              background: #1a1d24;
+              color: #eaeaea;
+            " />
+          <div id="mapSearchResults" style="
+              display: none;
+              position: absolute;
+              top: 100%;
+              left: 0;
+              right: 0;
+              background: #1a1d24;
+              border: 1px solid #333;
+              border-radius: 8px;
+              margin-top: 4px;
+              z-index: 2000;
+              max-height: 220px;
+              overflow-y: auto;
+            "></div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+          <input type="number" id="mapPickerLatInput" step="any" placeholder="Latitud" style="
+              flex: 1 1 120px;
+              padding: 10px;
+              border-radius: 8px;
+              border: 1px solid #333;
+              background: #1a1d24;
+              color: #eaeaea;
+            " />
+          <input type="number" id="mapPickerLngInput" step="any" placeholder="Longitud" style="
+              flex: 1 1 120px;
+              padding: 10px;
+              border-radius: 8px;
+              border: 1px solid #333;
+              background: #1a1d24;
+              color: #eaeaea;
+            " />
+          <button type="button" id="mapPickerGoBtn">
+            Ir
+          </button>
+        </div>
+      </div>
+      <div id="mapPickerContainer"></div>
+      <div class="modal-actions" data-modal-footer>
+        <button type="button" id="mapPickerConfirm">
+          📍 Usar esta ubicación
+        </button>
+      </div>
+    </div>
+  </div>
+  <div id="driver" style="">
+    <div class="driver-inner">
+      <div id="searchBar" class="search-row">
+        <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
+      </div>
+      <div class="tabs">
+        <button id="crear" style="
+            border: 2px solid palegoldenrod;
+            background: teal;
+            color: palegoldenrod;
+          ">
+          <b>NUEVO</b>
+        </button>
+        <button class="tab-btn active" id="tabPersonasBtn">
+          🫂 <span class="tab-label">Personas</span><span class="n">0</span>
+        </button>
+        <button class="tab-btn" id="tabPetsBtn">
+          🐕 <span class="tab-label">Mascotas</span><span class="n">0</span>
+        </button>
+        <button class="tab-btn" id="tabEdificiosBtn">
+          🏢 <span class="tab-label">Lugar</span><span class="n">0</span>
+        </button>
+        <button class="tab-btn" id="tabAnunciosBtn">
+          📣 <span class="tab-label">Anuncios</span><span class="n">0</span>
+        </button>
+        <button class="tab-btn" id="tabColabBtn">
+          🤝 <span class="tab-label">Voluntad</span><span class="n">0</span>
+        </button>
+        <button class="tab-btn" id="tabMapBtn">🗺️ <span class="tab-label">Mapa</span></button>
+        <button class="tab-btn" id="tabSismosBtn">📊 <span class="tab-label">Sismos</span></button>
+        <button class="tab-btn" id="wikiBtn">📚 <span class="tab-label">WIKI</span></button>
+      </div>
+    </div>
+  </div>
+  <!-- ===== MODAL PRIVACIDAD ===== -->
+  <div id="privacyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="privacyModalTitle">
+    <div class="modal-content" style="max-width: 520px; max-height: 85vh">
+      <div class="modal-header" data-modal-header>
+        <h2 id="privacyModalTitle">🔒 Privacidad del chat</h2>
+        <button class="modal-close" data-modal-close aria-label="Cerrar">✕</button>
+      </div>
+      <div data-modal-body style="padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto;">
+        <p style="margin: 0; color: #ccc; line-height: 1.6;">
+          Este chat usa <b>Matrix</b> con cifrado de extremo a extremo (E2E) mediante el protocolo <b>Olm/Megolm</b>.
+        </p>
+        <ul style="margin: 0; padding-left: 18px; color: #ccc; line-height: 1.8;">
+          <li>Las conversaciones son <b>encriptadas</b> en tu dispositivo antes de enviarse.</li>
+          <li>No se guardan en texto plano en ninguna base de datos.</li>
+          <li>Solo son legibles por los participantes de la conversación, en sus propios dispositivos.</li>
+          <li>El servidor <b>Dendrite</b> solo almacena y retransmite mensajes cifrados; no puede leer su contenido.
+          </li>
+          <li>Sin federación: no se comparte información con otros servidores Matrix.</li>
+        </ul>
+        <p style="margin: 0; color: #999; font-size: 0.85rem; line-height: 1.5;">
+          Si perdés tu dispositivo o tus claves de sesión, no podrás recuperar el historial de conversaciones.
+        </p>
+      </div>
+    </div>
+  </div>
+  <script src="modal.js"></script>
+  <script src="map.js"></script>
+  <script src="sismos.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
+<!-- <div class="tool-bar"> -->
+<!--   <div class="filter-row" data-tab="colaborador"> -->
+<!--     <select class="filter-select" data-filter="city" disabled> -->
+<!--       <option value="">📍 TODAS</option> -->
+<!--     </select> -->
+<!--   </div> -->
+<!--   <button id="crear-top" class="crear-btn" onclick="openCrearModal('colaborador')" disabled> -->
+<!--     🤝 COLABORAR -->
+<!--   </button> -->
+<!-- </div> -->
+//===== public/index.js =====
 // DIAGNÓSTICO TEMPORAL: verifica si ECharts cargó.
 console.log("[sismos] typeof echarts =", typeof echarts);
 // Keep CSS variables --top-bar-height and --driver-height in sync with
@@ -1967,8 +2673,11 @@ function entityCardHtml(item, type, placeholderImg) {
   const cardStatusClass = found ? "encontrado" : statusCssClass(item.status);
   const statusTagLabel = isAngel ? "👼" : statusLabel(item.status);
   const statusTagClass = found ? "encontrado" : statusCssClass(item.status);
+  // Expose the status color as a CSS var so the card background/border are
+  // derived automatically (color-mix) instead of hardcoded per status.
+  const statusColorHex = statusColor(item.status);
   return `
-        <div class="card ${cardStatusClass}" data-id="${item.id}" data-type="${type}" style = "${isAngel && "background:#6fa8dc; color: white; opacity: 0.62; border-left: 4px solid white; "}" >
+        <div class="card ${cardStatusClass}" data-id="${item.id}" data-type="${type}" style="--status-color:${statusColorHex};${isAngel ? "background:#7fb8ec; color: white; opacity: 0.62; border-left: 4px solid white;" : ""}" >
     <div style="padding:5px;background:rgba(var(--surface),0.38)">
       <span class="name"
         style="${isAngel && " color:white;"}"
@@ -2009,7 +2718,7 @@ function render() {
     "person",
   );
   if (!items.length) {
-    listEl.innerHTML = `< div class="empty" > ${personsData.length ? "Sin resultados." : "No hay reportes todavía."}</div > `;
+    listEl.innerHTML = `<div class="empty">${personsData.length ? "Sin resultados." : "No hay reportes todavía."}</div>`;
     return;
   }
   renderVirtualList(listEl, items, personCardHtml);
@@ -2293,6 +3002,7 @@ function buildingCardHtml(item) {
   const statusClass = item.status || "seguro";
   const statusTagLabel = statusLabel(statusClass);
   const statusTagClass = statusCssClass(statusClass);
+  const statusColorHex = statusColor(statusClass);
   let imgHtml = "";
   if (item.photo_url) {
     imgHtml = `<img class="card-photo" src="${escapeHtml(item.photo_url)}" alt="Foto" />`;
@@ -2302,7 +3012,7 @@ function buildingCardHtml(item) {
     imgHtml = `<img style="opacity:0.62;" class="card-photo" src="${BUILDING_PLACEHOLDER}" alt="Imagen" />`;
   }
   return `
-        <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
+        <div class="card ${statusClass}" data-id="${item.id}" data-type="building" style="--status-color:${statusColorHex};">
 <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
               <span class="name">${escapeHtml(item.name)}${item.private ? " 🔒" : ""}</span>
 </div>
@@ -2519,7 +3229,7 @@ function renderA() {
         ? `<div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);"><span class="name">${escapeHtml(item.title)}</span></div>`
         : "";
       return `
-      <div class="card" data-id="${item.id}" style="display:flex;flex-direction:column;">
+      <div class="card" data-id="${item.id}" style="display:flex;flex-direction:column;--status-color:#888;">
         ${titleHtml}
         ${imgHtml}
         <div class="info" style="padding:5px;">
@@ -2708,7 +3418,7 @@ function colabCardHtml(item) {
   metaParts.push(date);
   const imgHtml = `<img style="opacity:0.62;filter:${placeholderFilter("colaborador")};" class="card-photo" src="${COLAB_PLACEHOLDER}" alt="Colaborador" />`;
   return `
-        <div class="card colaborador" data-id="${item.id}" data-type="colaborador">
+        <div class="card colaborador" data-id="${item.id}" data-type="colaborador" style="--status-color:${statusColor("colaborador")};">
 <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
               <span class="name">${escapeHtml(item.name)}</span>
 </div>
@@ -2936,3 +3646,1323 @@ handleAnuncioDeepLink();
 trackLayoutHeights();
 // Ejecutar después de que todo esté cargado
 setTimeout(tryOpenModalFromUrl, 100);
+//===== public/modal.js =====
+// modal.js — reusable modal shell.
+// Loaded before map.js and index.js. Defines window.Modal, a factory
+// that wraps a .modal element and provides open/close with focus
+// management, scroll-lock, backdrop-click, Escape, and a basic Tab trap.
+// Slots (header/body/footer) are opt-in via data-modal-* attributes;
+// they are null until the HTML is refactored in later stages.
+(function () {
+  "use strict";
+  // Stack of all created instances; used for Escape dispatch and
+  // scroll-lock refcounting.
+  const instances = [];
+  let escapeWired = false;
+  function wireEscape() {
+    if (escapeWired) return;
+    escapeWired = true;
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape") return;
+      // Close the topmost open modal (most recently pushed).
+      for (let i = instances.length - 1; i >= 0; i--) {
+        if (instances[i].isOpen()) {
+          instances[i].close();
+          break;
+        }
+      }
+    });
+  }
+  function lockScroll() {
+    document.body.style.overflow = "hidden";
+  }
+  function unlockScroll() {
+    // Only release the scroll lock when no modal remains open.
+    if (!instances.some(function (m) { return m.isOpen(); })) {
+      document.body.style.overflow = "";
+    }
+  }
+  function focusableEls(root) {
+    return root.querySelectorAll(
+      'button:not([disabled]), [href], input, select, textarea, ' +
+      '[tabindex]:not([tabindex="-1"])'
+    );
+  }
+  /**
+   * @param {Object} opts
+   * @param {string} opts.id            — element id of the .modal wrapper
+   * @param {Function} [opts.onOpen]   — called after opening
+   * @param {Function} [opts.onClose]   — called after closing
+   * @returns {{el, header, body, footer, open, close, isOpen}|null}
+   */
+  function Modal(opts) {
+    var el = document.getElementById(opts.id);
+    if (!el) {
+      console.warn("Modal: #" + opts.id + " not found");
+      return null;
+    }
+    var header = el.querySelector("[data-modal-header]");
+    var body = el.querySelector("[data-modal-body]");
+    var footer = el.querySelector("[data-modal-footer]");
+    var closeBtn = el.querySelector("[data-modal-close]");
+    var onOpen = opts.onOpen || null;
+    var onClose = opts.onClose || null;
+    var previousFocus = null;
+    wireEscape();
+    var api = {
+      el: el,
+      header: header,
+      body: body,
+      footer: footer,
+      previousFocus: null,
+      isOpen: isOpen,
+      open: open,
+      close: close
+    };
+    instances.push(api);
+    function isOpen() {
+      return el.classList.contains("open");
+    }
+    function open() {
+      previousFocus = document.activeElement;
+      el.classList.add("open");
+      lockScroll();
+      // Move focus into the modal for keyboard users.
+      var f = focusableEls(el);
+      if (f.length) f[0].focus();
+      if (onOpen) onOpen();
+    }
+    function close() {
+      if (!isOpen()) return;
+      el.classList.remove("open");
+      unlockScroll();
+      if (previousFocus && typeof previousFocus.focus === "function") {
+        previousFocus.focus();
+        previousFocus = null;
+      }
+      if (onClose) onClose();
+    }
+    // Backdrop click: close only when the click lands on the wrapper
+    // itself (not an inner element).
+    el.addEventListener("click", function (e) {
+      if (e.target === el) close();
+    });
+    // Explicit close button.
+    if (closeBtn) closeBtn.addEventListener("click", close);
+    // Basic focus trap: keep Tab cycling inside the modal while open.
+    el.addEventListener("keydown", function (e) {
+      if (e.key !== "Tab" || !isOpen()) return;
+      var f = focusableEls(el);
+      if (!f.length) return;
+      var first = f[0];
+      var last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    });
+    return api;
+  }
+  window.Modal = Modal;
+})();
+//===== public/virtue.js =====
+/**
+ * GIT:konopimi IG:neokpm
+ * virte.js — minimal windowed virtualization for long HTML lists.
+ *
+ * Keeps only the DOM nodes near the viewport rendered. Two spacer
+ * elements (top/bottom) simulate the height of everything that's
+ * currently scrolled out of view. Item heights are measured per node
+ * (so variable-height cards, e.g. with/without a photo, work fine) and
+ * refined as they render or as their images load.
+ *
+ * Usage:
+ *   import { VirtualList } from "./virtual-list.js";
+ *
+ *   const vlist = new VirtualList(containerEl, {
+ *     overscan: 6,          // extra items rendered beyond the viewport edge
+ *     estimatedHeight: 160, // initial guess before anything is measured
+ *   });
+ *
+ *   vlist.setItems(items, (item) => `<div class="card">...</div>`);
+ *
+ *   // later, e.g. after a search filter changes the array:
+ *   vlist.setItems(filteredItems, cardHtmlFn);
+ *
+ *   // if the container becomes visible again after being display:none
+ *   // (e.g. a tab switch), force a recalculation:
+ *   vlist.refresh();
+ *
+ *   // cleanup if the container is ever removed from the DOM:
+ *   vlist.destroy();
+ */
+export class VirtualList {
+  /**
+   * @param {HTMLElement} containerEl - element that will hold the list.
+   *   Its content is fully managed by VirtualList once constructed.
+   * @param {Object} [options]
+   * @param {number} [options.overscan=6] - extra items rendered past each viewport edge.
+   * @param {number} [options.estimatedHeight=160] - initial per-item height guess (px).
+   */
+  constructor(containerEl, options = {}) {
+    this.containerEl = containerEl;
+    this.overscan = options.overscan ?? 6;
+    this.avgHeight = options.estimatedHeight ?? 160;
+    this.items = [];
+    this.cardHtmlFn = null;
+    this.heights = [];
+    this.start = 0;
+    this.end = 0;
+    this.nodes = new Map(); // index -> element
+    this.scrollParent = null;
+    this._onScroll = null;
+    this._rafScheduled = false;
+    this._destroyed = false;
+    this.containerEl.style.position = "relative";
+    this.containerEl.innerHTML = "";
+    this.topSpacer = document.createElement("div");
+    this.bottomSpacer = document.createElement("div");
+    this.containerEl.appendChild(this.topSpacer);
+    this.containerEl.appendChild(this.bottomSpacer);
+  }
+  /**
+   * Replace the items and/or the card renderer. Safe to call repeatedly
+   * (e.g. every time a search filter changes the array) — if the array
+   * reference differs from the last call, previously rendered nodes are
+   * discarded and heights are reset to the last known estimates.
+   *
+   * @param {Array} items
+   * @param {(item: any, index: number) => string} cardHtmlFn - returns
+   *   HTML for a single item; must produce exactly one root element.
+   */
+  setItems(items, cardHtmlFn) {
+    if (this._destroyed) return;
+    if (this.items !== items) {
+      this.nodes.forEach((node) => node.remove());
+      this.nodes.clear();
+      const oldHeights = this.heights;
+      this.heights = items.map((_, i) => oldHeights[i] || this.avgHeight);
+      this.start = 0;
+      this.end = 0;
+    }
+    this.items = items;
+    this.cardHtmlFn = cardHtmlFn;
+    if (!this.scrollParent) {
+      this.scrollParent = VirtualList._getScrollParent(this.containerEl);
+      this._onScroll = () => this._scheduleUpdate();
+      this.scrollParent.addEventListener("scroll", this._onScroll, { passive: true });
+      window.addEventListener("resize", this._onScroll, { passive: true });
+    }
+    this._update(true);
+  }
+  /** Force a full recalculation — call after the container becomes
+   * visible again (e.g. a tab switch away from display:none). */
+  refresh() {
+    if (this._destroyed) return;
+    this._update(true);
+  }
+  /** Detach listeners and clear rendered nodes. */
+  destroy() {
+    if (this._destroyed) return;
+    this._destroyed = true;
+    if (this.scrollParent && this._onScroll) {
+      this.scrollParent.removeEventListener("scroll", this._onScroll);
+      window.removeEventListener("resize", this._onScroll);
+    }
+    this.nodes.forEach((node) => node.remove());
+    this.nodes.clear();
+  }
+  // ---- internals ----
+  static _getScrollParent(el) {
+    let node = el.parentElement;
+    while (node) {
+      const style = getComputedStyle(node);
+      if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight) {
+        return node;
+      }
+      node = node.parentElement;
+    }
+    return document.scrollingElement || document.documentElement;
+  }
+  _getContainerOffsetTop(isWindowScroll) {
+    if (isWindowScroll) {
+      return this.containerEl.getBoundingClientRect().top + window.scrollY;
+    }
+    let top = 0;
+    let node = this.containerEl;
+    while (node && node !== this.scrollParent) {
+      top += node.offsetTop;
+      node = node.offsetParent;
+    }
+    return top;
+  }
+  _scheduleUpdate() {
+    if (this._rafScheduled) return;
+    this._rafScheduled = true;
+    requestAnimationFrame(() => {
+      this._rafScheduled = false;
+      this._update(false);
+    });
+  }
+  _update(force) {
+    if (this._destroyed) return;
+    const items = this.items;
+    if (!items.length) {
+      this.topSpacer.style.height = "0px";
+      this.bottomSpacer.style.height = "0px";
+      this.nodes.forEach((node) => node.remove());
+      this.nodes.clear();
+      this.start = 0;
+      this.end = 0;
+      return;
+    }
+    const scrollParent = this.scrollParent;
+    const isWindowScroll = scrollParent === document.scrollingElement || scrollParent === document.documentElement;
+    const viewportTop = isWindowScroll ? window.scrollY : scrollParent.scrollTop;
+    const viewportHeight = isWindowScroll ? window.innerHeight : scrollParent.clientHeight;
+    const containerTop = this._getContainerOffsetTop(isWindowScroll);
+    const relativeScroll = Math.max(0, viewportTop - containerTop);
+    const relativeBottom = relativeScroll + viewportHeight;
+    const heights = this.heights;
+    let acc = 0;
+    let start = 0;
+    for (; start < heights.length; start++) {
+      if (acc + heights[start] > relativeScroll) break;
+      acc += heights[start];
+    }
+    let end = start;
+    let visAcc = acc;
+    for (; end < heights.length; end++) {
+      if (visAcc > relativeBottom) break;
+      visAcc += heights[end];
+    }
+    start = Math.max(0, start - this.overscan);
+    end = Math.min(heights.length, end + this.overscan);
+    if (!force && start === this.start && end === this.end) return;
+    let topSpacerHeight = 0;
+    for (let i = 0; i < start; i++) topSpacerHeight += heights[i];
+    let bottomSpacerHeight = 0;
+    for (let i = end; i < heights.length; i++) bottomSpacerHeight += heights[i];
+    this.topSpacer.style.height = topSpacerHeight + "px";
+    this.bottomSpacer.style.height = bottomSpacerHeight + "px";
+    this.nodes.forEach((node, idx) => {
+      if (idx < start || idx >= end) {
+        node.remove();
+        this.nodes.delete(idx);
+      }
+    });
+    for (let i = start; i < end; i++) {
+      if (!this.nodes.has(i) && items[i] !== undefined) {
+        const wrapper = document.createElement("div");
+        wrapper.innerHTML = this.cardHtmlFn(items[i], i).trim();
+        const node = wrapper.firstElementChild;
+        if (node) {
+          node.dataset.vIndex = i;
+          this.nodes.set(i, node);
+          node.querySelectorAll("img").forEach((img) => {
+            if (!img.complete) {
+              const bump = () => this._scheduleUpdate();
+              img.addEventListener("load", bump, { once: true });
+              img.addEventListener("error", bump, { once: true });
+            }
+          });
+        }
+      }
+    }
+    const orderedIndices = Array.from(this.nodes.keys()).sort((a, b) => a - b);
+    orderedIndices.forEach((idx) => {
+      this.containerEl.insertBefore(this.nodes.get(idx), this.bottomSpacer);
+    });
+    this.start = start;
+    this.end = end;
+    requestAnimationFrame(() => {
+      if (this._destroyed) return;
+      let changed = false;
+      let total = 0;
+      let count = 0;
+      this.nodes.forEach((node, idx) => {
+        const h = node.offsetHeight;
+        if (h > 0) {
+          if (Math.abs((this.heights[idx] || 0) - h) > 1) {
+            this.heights[idx] = h;
+            changed = true;
+          }
+          total += h;
+          count++;
+        }
+      });
+      if (count) this.avgHeight = total / count;
+      if (changed) this._update(true);
+    });
+  }
+}
+//===== server.js =====
+// Tiny emergency backend: Express + SQLite
+// Run with systemd. Reports of people, pets, buildings, and announcements.
+import express from "express";
+import cors from "cors";
+import Database from "better-sqlite3";
+import crypto from "crypto";
+const app = express();
+const PORT = process.env.PORT || 3000;
+const DB_PATH = process.env.DB_PATH || "/opt/sismo-api/data.db";
+app.use(cors());
+app.use(express.json());
+// Admin auth middleware
+function requireAdmin(req, res, next) {
+  if (!process.env.ADMIN_KEY || req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
+    return res.status(403).json({ error: "forbidden" });
+  }
+  next();
+}
+// ========== Auth (zero deps: Node built-in crypto) ==========
+const AUTH_SECRET = process.env.AUTH_SECRET || crypto.randomBytes(32).toString("hex");
+const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1 };
+const SCRYPT_KEYLEN = 32;
+const TOKEN_TTL_MS = 15 * 24 * 60 * 60 * 1000; // 15 days
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16);
+  const hash = crypto.scryptSync(password, salt, SCRYPT_KEYLEN, SCRYPT_PARAMS);
+  return `scrypt$${salt.toString("hex")}$${hash.toString("hex")}`;
+}
+function verifyPassword(password, stored) {
+  if (!stored || typeof stored !== "string") return false;
+  const parts = stored.split("$");
+  if (parts.length !== 3 || parts[0] !== "scrypt") return false;
+  const salt = Buffer.from(parts[1], "hex");
+  const hash = Buffer.from(parts[2], "hex");
+  const test = crypto.scryptSync(password, salt, SCRYPT_KEYLEN, SCRYPT_PARAMS);
+  return crypto.timingSafeEqual(hash, test);
+}
+function createToken(userId) {
+  const ts = Date.now();
+  const payload = `${userId}.${ts}`;
+  const sig = crypto.createHmac("sha256", AUTH_SECRET).update(payload).digest("hex");
+  return `${payload}.${sig}`;
+}
+function verifyToken(token) {
+  if (!token || typeof token !== "string") return null;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const [userId, tsStr, sig] = parts;
+  const ts = parseInt(tsStr, 10);
+  if (!Number.isFinite(ts)) return null;
+  if (Date.now() - ts > TOKEN_TTL_MS) return null; // expired
+  const expected = crypto.createHmac("sha256", AUTH_SECRET).update(`${userId}.${ts}`).digest("hex");
+  if (sig.length !== expected.length) return null;
+  if (!crypto.timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(expected, "hex"))) return null;
+  return userId;
+}
+function requireAuth(req, res, next) {
+  const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  const userId = verifyToken(token);
+  if (!userId) return res.status(401).json({ error: "unauthorized" });
+  req.userId = userId;
+  next();
+}
+// Helper for PATCH /:id/photo endpoints
+function handlePhotoPatch(tableName) {
+  return (req, res) => {
+    const { photo_url } = req.body || {};
+    if (
+      !photo_url ||
+      typeof photo_url !== "string" ||
+      !/^https:\/\/res\.cloudinary\.com\//.test(photo_url)
+    ) {
+      return res.status(400).json({ error: "invalid photo_url" });
+    }
+    const result = db
+      .prepare(`UPDATE ${tableName} SET photo_url = ? WHERE id = ?`)
+      .run(photo_url, req.params.id);
+    if (result.changes === 0) return res.status(404).json({ error: "not found" });
+    res.json({ id: req.params.id, photo_url });
+  };
+}
+const db = new Database(DB_PATH);
+db.pragma("journal_mode = WAL");
+// --- Create tables ---
+db.exec(`
+  CREATE TABLE IF NOT EXISTS buildings (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'seguro',
+    location TEXT,
+    city TEXT,
+    image TEXT,
+    created_at TEXT NOT NULL
+  )
+`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS disappeared (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'desaparecido',
+    location TEXT,
+    city TEXT,
+    image TEXT,
+    created_at TEXT NOT NULL
+  )
+`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS pets (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'desaparecido',
+    location TEXT,
+    city TEXT,
+    image TEXT,
+    created_at TEXT NOT NULL
+  )
+`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS collaborators (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    skill TEXT,
+    contact TEXT,
+    city TEXT,
+    created_at TEXT NOT NULL
+  )
+`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS anuncios (
+    id TEXT PRIMARY KEY,
+    title TEXT,
+    text TEXT NOT NULL,
+    image TEXT,
+    photo_url TEXT,
+    images TEXT,
+    created_at TEXT NOT NULL
+  )
+`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS comments (
+    id TEXT PRIMARY KEY,
+    item_id TEXT NOT NULL,
+    item_type TEXT NOT NULL,  -- 'disappeared', 'pets', 'buildings'
+    text TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )
+`);
+// Ubicaciones adicionales posibles (además de lat/lng principal) para
+// personas y mascotas: un item puede haber sido visto en más de un lugar.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS item_locations (
+    id TEXT PRIMARY KEY,
+    item_id TEXT NOT NULL,
+    item_type TEXT NOT NULL,  -- 'disappeared' o 'pets'
+    lat REAL NOT NULL,
+    lng REAL NOT NULL,
+    label TEXT,
+    created_at TEXT NOT NULL
+  )
+`);
+// --- Migrations for existing columns (city and image) ---
+try {
+  db.exec("ALTER TABLE disappeared ADD COLUMN city TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE buildings ADD COLUMN city TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE pets ADD COLUMN city TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE disappeared ADD COLUMN image TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE buildings ADD COLUMN image TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE pets ADD COLUMN image TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE disappeared ADD COLUMN photo_url TEXT");
+} catch (e) { }
+// Add photo_url to pets (for file uploads)
+try {
+  db.exec("ALTER TABLE pets ADD COLUMN photo_url TEXT");
+} catch (e) { }
+// Add photo_url to buildings (for file uploads)
+try {
+  db.exec("ALTER TABLE buildings ADD COLUMN photo_url TEXT");
+} catch (e) { }
+// Add private flag to buildings (only logged-in collaborators can see them)
+try {
+  db.exec("ALTER TABLE buildings ADD COLUMN private INTEGER DEFAULT 0");
+} catch (e) { }
+// --- lat/lng for map picker (separate from free-text location) ---
+for (const t of ["disappeared", "pets", "buildings"]) {
+  try {
+    db.exec(`ALTER TABLE ${t} ADD COLUMN lat REAL`);
+  } catch (e) { }
+  try {
+    db.exec(`ALTER TABLE ${t} ADD COLUMN lng REAL`);
+  } catch (e) { }
+}
+try {
+  db.exec("ALTER TABLE disappeared ADD COLUMN source_url TEXT");
+  db.exec("ALTER TABLE disappeared ADD COLUMN age INTEGER");
+  db.exec("ALTER TABLE disappeared ADD COLUMN physical_description TEXT");
+  db.exec("ALTER TABLE disappeared ADD COLUMN department TEXT");
+  db.exec("ALTER TABLE disappeared ADD COLUMN category TEXT");
+  db.exec("ALTER TABLE disappeared ADD COLUMN report_count INTEGER");
+  db.exec("ALTER TABLE disappeared ADD COLUMN time_elapsed TEXT");
+  db.exec("ALTER TABLE disappeared ADD COLUMN source_type TEXT");
+  db.exec("ALTER TABLE disappeared ADD COLUMN reporter TEXT");
+} catch (e) { }
+// Add new deep-scrape columns to pets table
+const newPetCols = [
+  "description",
+  "breed",
+  "color",
+  "sex",
+  "size",
+  "contact_name",
+  "contact_phone",
+  "contact_email",
+  "contact_whatsapp",
+  "meta",
+  "source_url",
+];
+for (const col of newPetCols) {
+  try {
+    db.exec(`ALTER TABLE pets ADD COLUMN ${col} TEXT`);
+  } catch (e) { }
+}
+// Add meta column for tags (e.g., "angel")
+try {
+  db.exec("ALTER TABLE disappeared ADD COLUMN meta TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE disappeared ADD COLUMN description TEXT");
+} catch (e) { }
+// Add image/photo_url to anuncios (for image support)
+try {
+  db.exec("ALTER TABLE anuncios ADD COLUMN image TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE anuncios ADD COLUMN photo_url TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE anuncios ADD COLUMN images TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE anuncios ADD COLUMN title TEXT");
+} catch (e) { }
+// Auth columns for collaborators (email + password hash)
+try {
+  db.exec("ALTER TABLE collaborators ADD COLUMN email TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE collaborators ADD COLUMN password_hash TEXT");
+} catch (e) { }
+// ========== Comentarios ==========
+app.get("/api/comments", (req, res) => {
+  const { itemId, itemType } = req.query;
+  if (!itemId || !itemType) {
+    return res.status(400).json({ error: "itemId and itemType are required" });
+  }
+  const rows = db
+    .prepare(
+      "SELECT id, text, created_at FROM comments WHERE item_id = ? AND item_type = ? ORDER BY created_at DESC",
+    )
+    .all(itemId, itemType);
+  res.json(rows);
+});
+app.post("/api/comments", (req, res) => {
+  const { itemId, itemType, text } = req.body || {};
+  if (!itemId || !itemType || !text || !text.trim()) {
+    return res
+      .status(400)
+      .json({ error: "itemId, itemType and text are required" });
+  }
+  const finalId = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  db.prepare(
+    "INSERT INTO comments (id, item_id, item_type, text, created_at) VALUES (?, ?, ?, ?, ?)",
+  ).run(finalId, itemId, itemType, text.trim(), createdAt);
+  res
+    .status(201)
+    .json({ id: finalId, text: text.trim(), created_at: createdAt });
+});
+app.delete("/api/comments/:id", requireAdmin, (req, res) => {
+  const result = db
+    .prepare("DELETE FROM comments WHERE id = ?")
+    .run(req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.status(204).end();
+});
+// ========== Ubicaciones adicionales (personas y mascotas) ==========
+app.get("/api/item-locations", (req, res) => {
+  const { itemId, itemType } = req.query;
+  if (!itemId || !itemType) {
+    return res.status(400).json({ error: "itemId and itemType are required" });
+  }
+  if (!["disappeared", "pets"].includes(itemType)) {
+    return res.status(400).json({ error: "invalid itemType" });
+  }
+  const rows = db
+    .prepare(
+      "SELECT id, lat, lng, label, created_at FROM item_locations WHERE item_id = ? AND item_type = ? ORDER BY created_at ASC",
+    )
+    .all(itemId, itemType);
+  res.json(rows);
+});
+app.post("/api/item-locations", (req, res) => {
+  const { itemId, itemType, lat, lng, label } = req.body || {};
+  if (!itemId || !itemType || !["disappeared", "pets"].includes(itemType)) {
+    return res
+      .status(400)
+      .json({ error: "itemId and a valid itemType are required" });
+  }
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return res.status(400).json({ error: "lat and lng are required" });
+  }
+  const finalId = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  const lbl = label && label.trim() ? label.trim() : null;
+  db.prepare(
+    "INSERT INTO item_locations (id, item_id, item_type, lat, lng, label, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+  ).run(finalId, itemId, itemType, lat, lng, lbl, createdAt);
+  res
+    .status(201)
+    .json({ id: finalId, lat, lng, label: lbl, created_at: createdAt });
+});
+app.delete("/api/item-locations/:id", requireAdmin, (req, res) => {
+  const result = db
+    .prepare("DELETE FROM item_locations WHERE id = ?")
+    .run(req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.status(204).end();
+});
+// ========== Personas ==========
+app.get("/api/disappeared", (req, res) => {
+  const rows = db
+    .prepare(
+      `
+      SELECT id, name, status, location, city, image, photo_url, created_at, lat, lng, meta, description,
+             (SELECT text FROM comments WHERE item_id = disappeared.id AND item_type = 'disappeared' ORDER BY created_at DESC LIMIT 1) AS last_comment,
+             (SELECT COUNT(*) FROM comments WHERE item_id = disappeared.id AND item_type = 'disappeared') AS comment_count
+      FROM disappeared ORDER BY RANDOM()
+    `,
+    )
+    .all();
+  res.json(rows);
+});
+// The photo itself is uploaded straight from the browser to Cloudinary
+// (unsigned preset); this just records the resulting URL against the report.
+app.patch("/api/disappeared/:id/photo", handlePhotoPatch("disappeared"));
+app.post("/api/disappeared", (req, res) => {
+  const {
+    id,
+    name,
+    status,
+    location,
+    city,
+    image,
+    lat,
+    lng,
+    meta,
+    description,
+    source_url,
+    age,
+    physical_description,
+    department,
+    category,
+    report_count,
+    time_elapsed,
+    source_type,
+    reporter,
+  } = req.body || {};
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: "name is required" });
+  }
+  // 🛡️ Prevent duplicates: If we already scraped this exact URL, skip it!
+  if (source_url) {
+    const existing = db
+      .prepare("SELECT id FROM disappeared WHERE source_url = ?")
+      .get(source_url);
+    if (existing) {
+      return res
+        .status(200)
+        .json({ id: existing.id, status: "already_exists" });
+    }
+  }
+  const finalId = id || crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  const loc = location && location.trim() ? location.trim() : null;
+  const cty = city && city.trim() ? city.trim() : null;
+  const img = image && image.trim() ? image.trim() : null;
+  const latVal = Number.isFinite(lat) ? lat : null;
+  const lngVal = Number.isFinite(lng) ? lng : null;
+  const metaVal = meta && typeof meta === "string" ? meta.trim() : null;
+  const descVal =
+    description && typeof description === "string" ? description.trim() : null;
+  const ageVal = Number.isFinite(age) ? age : null;
+  const physDescVal =
+    physical_description && typeof physical_description === "string"
+      ? physical_description.trim()
+      : null;
+  const deptVal = department && typeof department === "string" ? department.trim() : null;
+  const catVal = category && typeof category === "string" ? category.trim() : null;
+  const reportCountVal = Number.isFinite(report_count) ? report_count : null;
+  const timeElapsedVal = time_elapsed && typeof time_elapsed === "string" ? time_elapsed.trim() : null;
+  const sourceTypeVal = source_type && typeof source_type === "string" ? source_type.trim() : null;
+  const reporterVal = reporter && typeof reporter === "string" ? reporter.trim() : null;
+  const sourceUrlVal = source_url && typeof source_url === "string" ? source_url.trim() : null;
+  // Map and validate status
+  const validStatuses = ["desaparecido", "encontrado", "angel"];
+  const finalStatus = validStatuses.includes(status) ? status : "desaparecido";
+  db.prepare(
+    `INSERT INTO disappeared (
+      id, name, status, location, city, image, created_at, lat, lng, meta, description,
+      source_url, age, physical_description, department, category, report_count,
+      time_elapsed, source_type, reporter
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    finalId,
+    name.trim(),
+    finalStatus,
+    loc,
+    cty,
+    img,
+    createdAt,
+    latVal,
+    lngVal,
+    metaVal,
+    descVal,
+    sourceUrlVal,
+    ageVal,
+    physDescVal,
+    deptVal,
+    catVal,
+    reportCountVal,
+    timeElapsedVal,
+    sourceTypeVal,
+    reporterVal,
+  );
+  res.status(201).json({
+    id: finalId,
+    name: name.trim(),
+    status: finalStatus,
+    location: loc,
+    city: cty,
+    image: img,
+    created_at: createdAt,
+    lat: latVal,
+    lng: lngVal,
+    meta: metaVal,
+    description: descVal,
+    source_url: sourceUrlVal,
+    age: ageVal,
+    physical_description: physDescVal,
+    department: deptVal,
+    category: catVal,
+    report_count: reportCountVal,
+    time_elapsed: timeElapsedVal,
+    source_type: sourceTypeVal,
+    reporter: reporterVal,
+  });
+});
+app.patch("/api/disappeared/:id", (req, res) => {
+  const { status, image, lat, lng } = req.body || {};
+  if (status && !["desaparecido", "encontrado", "angel"].includes(status)) {
+    return res.status(400).json({ error: "invalid status" });
+  }
+  const fields = [];
+  const values = [];
+  if (status !== undefined) {
+    fields.push("status = ?");
+    values.push(status);
+  }
+  if (image !== undefined) {
+    fields.push("image = ?");
+    values.push(image && image.trim() ? image.trim() : null);
+  }
+  if (lat !== undefined) {
+    fields.push("lat = ?");
+    values.push(Number.isFinite(lat) ? lat : null);
+  }
+  if (lng !== undefined) {
+    fields.push("lng = ?");
+    values.push(Number.isFinite(lng) ? lng : null);
+  }
+  if (fields.length === 0) {
+    return res.status(400).json({ error: "no fields to update" });
+  }
+  values.push(req.params.id);
+  const result = db
+    .prepare(`UPDATE disappeared SET ${fields.join(", ")} WHERE id = ?`)
+    .run(...values);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.json({ id: req.params.id, status, image, lat, lng });
+});
+app.delete("/api/disappeared/:id", requireAdmin, (req, res) => {
+  const result = db
+    .prepare("DELETE FROM disappeared WHERE id = ?")
+    .run(req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.status(204).end();
+});
+// ========== Mascotas (Pets) ==========
+app.get("/api/pets", (req, res) => {
+  const rows = db
+    .prepare(
+      `
+      SELECT id, name, status, location, city, image, photo_url, created_at, lat, lng,
+             description, breed, color, sex, size, 
+             contact_name, contact_phone, contact_email, contact_whatsapp, 
+             meta, source_url,
+             (SELECT text FROM comments WHERE item_id = pets.id AND item_type = 'pets' ORDER BY created_at DESC LIMIT 1) AS last_comment,
+             (SELECT COUNT(*) FROM comments WHERE item_id = pets.id AND item_type = 'pets') AS comment_count
+      FROM pets ORDER BY RANDOM()
+    `,
+    )
+    .all();
+  res.json(rows);
+});
+// Endpoint para actualizar photo_url de mascotas (similar a personas)
+app.patch("/api/pets/:id/photo", handlePhotoPatch("pets"));
+app.post("/api/pets", (req, res) => {
+  const {
+    id,
+    name,
+    location,
+    city,
+    image,
+    lat,
+    lng,
+    status,
+    description,
+    breed,
+    color,
+    sex,
+    size,
+    contact_name,
+    contact_phone,
+    contact_email,
+    contact_whatsapp,
+    meta,
+    source_url,
+  } = req.body || {};
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: "name is required" });
+  }
+  // 🛡️ Prevent duplicates: If we already scraped this exact URL, skip it!
+  if (source_url) {
+    const existing = db
+      .prepare("SELECT id FROM pets WHERE source_url = ?")
+      .get(source_url);
+    if (existing) {
+      return res
+        .status(200)
+        .json({ id: existing.id, status: "already_exists" });
+    }
+  }
+  const finalId = id || crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  // Map and validate status
+  const validStatuses = ["desaparecido", "encontrado"];
+  const finalStatus = validStatuses.includes(status) ? status : "desaparecido";
+  db.prepare(
+    `
+    INSERT INTO pets (
+      id, name, status, location, city, image, created_at, lat, lng,
+      description, breed, color, sex, size, contact_name, contact_phone, 
+      contact_email, contact_whatsapp, meta, source_url
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `,
+  ).run(
+    finalId,
+    name.trim(),
+    finalStatus,
+    location?.trim() || null,
+    city?.trim() || null,
+    image?.trim() || null,
+    createdAt,
+    Number.isFinite(lat) ? lat : null,
+    Number.isFinite(lng) ? lng : null,
+    description?.trim() || null,
+    breed?.trim() || null,
+    color?.trim() || null,
+    sex?.trim() || null,
+    size?.trim() || null,
+    contact_name?.trim() || null,
+    contact_phone?.trim() || null,
+    contact_email?.trim() || null,
+    contact_whatsapp?.trim() || null,
+    meta?.trim() || null,
+    source_url?.trim() || null,
+  );
+  res.status(201).json({ id: finalId, name: name.trim(), status: finalStatus });
+});
+app.patch("/api/pets/:id", (req, res) => {
+  const { status, image, lat, lng } = req.body || {};
+  if (status && !["desaparecido", "encontrado", "angel"].includes(status)) {
+    return res.status(400).json({ error: "invalid status" });
+  }
+  const fields = [];
+  const values = [];
+  if (status !== undefined) {
+    fields.push("status = ?");
+    values.push(status);
+  }
+  if (image !== undefined) {
+    fields.push("image = ?");
+    values.push(image && image.trim() ? image.trim() : null);
+  }
+  if (lat !== undefined) {
+    fields.push("lat = ?");
+    values.push(Number.isFinite(lat) ? lat : null);
+  }
+  if (lng !== undefined) {
+    fields.push("lng = ?");
+    values.push(Number.isFinite(lng) ? lng : null);
+  }
+  if (fields.length === 0) {
+    return res.status(400).json({ error: "no fields to update" });
+  }
+  values.push(req.params.id);
+  const result = db
+    .prepare(`UPDATE pets SET ${fields.join(", ")} WHERE id = ?`)
+    .run(...values);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.json({ id: req.params.id, status, image, lat, lng });
+});
+app.delete("/api/pets/:id", requireAdmin, (req, res) => {
+  const result = db.prepare("DELETE FROM pets WHERE id = ?").run(req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.status(204).end();
+});
+// ========== Edificios ==========
+app.get("/api/buildings", (req, res) => {
+  // Private buildings are only visible to logged-in collaborators.
+  const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  const userId = verifyToken(token);
+  const rows = db
+    .prepare(
+      `
+      SELECT id, name, status, location, city, image, photo_url, created_at, lat, lng, private,
+        (SELECT text FROM comments WHERE item_id = buildings.id AND item_type = 'buildings' ORDER BY created_at DESC LIMIT 1) AS last_comment,
+        (SELECT COUNT(*) FROM comments WHERE item_id = buildings.id AND item_type = 'buildings') AS comment_count
+      FROM buildings
+      ${userId ? "" : "WHERE private = 0"}
+      ORDER BY RANDOM()
+    `,
+    )
+    .all();
+  res.json(rows);
+});
+app.post("/api/buildings", (req, res) => {
+  const { id, name, location, city, image, lat, lng, private: isPrivate } = req.body || {};
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: "name is required" });
+  }
+  const finalId = id || crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  const loc = location && location.trim() ? location.trim() : null;
+  const cty = city && city.trim() ? city.trim() : null;
+  const img = image && image.trim() ? image.trim() : null;
+  const latVal = Number.isFinite(lat) ? lat : null;
+  const lngVal = Number.isFinite(lng) ? lng : null;
+  const privateVal = isPrivate ? 1 : 0;
+  db.prepare(
+    "INSERT INTO buildings (id, name, status, location, city, image, created_at, lat, lng, private) VALUES (?, ?, 'seguro', ?, ?, ?, ?, ?, ?, ?)",
+  ).run(finalId, name.trim(), loc, cty, img, createdAt, latVal, lngVal, privateVal);
+  res.status(201).json({
+    id: finalId,
+    name: name.trim(),
+    status: "seguro",
+    location: loc,
+    city: cty,
+    image: img,
+    created_at: createdAt,
+    lat: latVal,
+    lng: lngVal,
+    private: privateVal,
+  });
+});
+// Endpoint para actualizar photo_url de edificios (similar a personas y mascotas)
+app.patch("/api/buildings/:id/photo", handlePhotoPatch("buildings"));
+app.patch("/api/buildings/:id", (req, res) => {
+  const { status, image, lat, lng, private: isPrivate } = req.body || {};
+  if (status && !["seguro", "danado", "colapsado", "acopio"].includes(status)) {
+    return res.status(400).json({ error: "invalid status" });
+  }
+  const fields = [];
+  const values = [];
+  if (status !== undefined) {
+    fields.push("status = ?");
+    values.push(status);
+  }
+  if (image !== undefined) {
+    fields.push("image = ?");
+    values.push(image && image.trim() ? image.trim() : null);
+  }
+  if (lat !== undefined) {
+    fields.push("lat = ?");
+    values.push(Number.isFinite(lat) ? lat : null);
+  }
+  if (lng !== undefined) {
+    fields.push("lng = ?");
+    values.push(Number.isFinite(lng) ? lng : null);
+  }
+  if (isPrivate !== undefined) {
+    fields.push("private = ?");
+    values.push(isPrivate ? 1 : 0);
+  }
+  if (fields.length === 0) {
+    return res.status(400).json({ error: "no fields to update" });
+  }
+  values.push(req.params.id);
+  const result = db
+    .prepare(`UPDATE buildings SET ${fields.join(", ")} WHERE id = ?`)
+    .run(...values);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.json({ id: req.params.id, status, image, lat, lng, private: isPrivate });
+});
+app.delete("/api/buildings/:id", requireAdmin, (req, res) => {
+  const result = db
+    .prepare("DELETE FROM buildings WHERE id = ?")
+    .run(req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.status(204).end();
+});
+// ========== Colaboradores (voluntarios) ==========
+app.get("/api/collaborators", (req, res) => {
+  const rows = db
+    .prepare(
+      "SELECT id, name, skill, contact, city, created_at FROM collaborators ORDER BY created_at DESC",
+    )
+    .all();
+  res.json(rows);
+});
+app.post("/api/collaborators", (req, res) => {
+  const { name, skill, contact, city, email, password } = req.body || {};
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: "name is required" });
+  }
+  const finalId = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  const sk = skill && skill.trim() ? skill.trim() : null;
+  const ct = contact && contact.trim() ? contact.trim() : null;
+  const cty = city && city.trim() ? city.trim() : null;
+  // Email optional; if provided, normalize + check uniqueness
+  let emailVal = null;
+  if (email && email.trim()) {
+    emailVal = email.trim().toLowerCase();
+    const exists = db.prepare("SELECT id FROM collaborators WHERE email = ?").get(emailVal);
+    if (exists) return res.status(409).json({ error: "email already registered" });
+  }
+  // Password optional; if provided, hash it
+  let passwordHash = null;
+  if (password) {
+    if (password.length < 6) return res.status(400).json({ error: "password must be at least 6 chars" });
+    passwordHash = hashPassword(password);
+  }
+  db.prepare(
+    "INSERT INTO collaborators (id, name, skill, contact, city, email, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+  ).run(finalId, name.trim(), sk, ct, cty, emailVal, passwordHash, createdAt);
+  res.status(201).json({
+    id: finalId,
+    name: name.trim(),
+    skill: sk,
+    contact: ct,
+    city: cty,
+    email: emailVal,
+    created_at: createdAt,
+  });
+});
+// Authorize a volunteer: set email + provisional password (admin only)
+app.post("/api/collaborators/:id/authorize", requireAdmin, (req, res) => {
+  const { email, password } = req.body || {};
+  if (!email || !email.trim()) return res.status(400).json({ error: "email is required to authorize" });
+  if (!password || password.length < 6) return res.status(400).json({ error: "password must be at least 6 chars" });
+  const emailVal = email.trim().toLowerCase();
+  const dup = db.prepare("SELECT id FROM collaborators WHERE email = ? AND id != ?").get(emailVal, req.params.id);
+  if (dup) return res.status(409).json({ error: "email already in use" });
+  const result = db.prepare("UPDATE collaborators SET email = ?, password_hash = ? WHERE id = ?")
+    .run(emailVal, hashPassword(password), req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.json({ ok: true });
+});
+// Admin password reset
+app.post("/api/collaborators/:id/reset-password", requireAdmin, (req, res) => {
+  const { password } = req.body || {};
+  if (!password || password.length < 6) return res.status(400).json({ error: "password must be at least 6 chars" });
+  const result = db.prepare("UPDATE collaborators SET password_hash = ? WHERE id = ?")
+    .run(hashPassword(password), req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.json({ ok: true });
+});
+// ========== Auth endpoints ==========
+app.post("/api/auth/login", (req, res) => {
+  const { identifier, password } = req.body || {};
+  if (!identifier || !password) return res.status(400).json({ error: "identifier and password are required" });
+  const id = identifier.trim().toLowerCase();
+  const user = db.prepare(
+    "SELECT id, name, email, password_hash FROM collaborators WHERE LOWER(email) = ? OR LOWER(name) = ?",
+  ).get(id, id);
+  if (!user || !verifyPassword(password, user.password_hash)) {
+    return res.status(401).json({ error: "invalid credentials" });
+  }
+  const token = createToken(user.id);
+  res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+});
+app.get("/api/auth/me", requireAuth, (req, res) => {
+  const user = db.prepare("SELECT id, name, email, skill, contact, city FROM collaborators WHERE id = ?").get(req.userId);
+  if (!user) return res.status(404).json({ error: "not found" });
+  res.json(user);
+});
+app.delete("/api/collaborators/:id", requireAdmin, (req, res) => {
+  const result = db
+    .prepare("DELETE FROM collaborators WHERE id = ?")
+    .run(req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.status(204).end();
+});
+// ========== Anuncios ==========
+// Helper: parse the JSON `images` column into an array (or [] if null/invalid).
+function parseImages(raw) {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((u) => typeof u === "string" && u.trim()) : [];
+  } catch {
+    return [];
+  }
+}
+app.get("/api/anuncios", (req, res) => {
+  const rows = db
+    .prepare("SELECT id, title, text, image, photo_url, images, created_at FROM anuncios ORDER BY RANDOM()")
+    .all();
+  res.json(
+    rows.map((r) => ({ ...r, images: parseImages(r.images) })),
+  );
+});
+app.post("/api/anuncios", (req, res) => {
+  const { title, text, image, images } = req.body || {};
+  if (!text || !text.trim()) {
+    return res.status(400).json({ error: "text is required" });
+  }
+  const finalId = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  const ttl = title && title.trim() ? title.trim() : null;
+  const img = image && image.trim() ? image.trim() : null;
+  const imgs = Array.isArray(images)
+    ? images.filter((u) => typeof u === "string" && u.trim()).map((u) => u.trim())
+    : [];
+  // Ensure the main image is part of the gallery.
+  if (img && !imgs.includes(img)) imgs.unshift(img);
+  db.prepare(
+    "INSERT INTO anuncios (id, title, text, image, images, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+  ).run(finalId, ttl, text.trim(), img, JSON.stringify(imgs), createdAt);
+  res.status(201).json({
+    id: finalId,
+    title: ttl,
+    text: text.trim(),
+    image: img,
+    images: imgs,
+    created_at: createdAt,
+  });
+});
+// Update main image and/or gallery for an anuncio.
+app.patch("/api/anuncios/:id", (req, res) => {
+  const { image, images } = req.body || {};
+  const existing = db
+    .prepare("SELECT id, image, images FROM anuncios WHERE id = ?")
+    .get(req.params.id);
+  if (!existing) return res.status(404).json({ error: "not found" });
+  const fields = [];
+  const values = [];
+  if (image !== undefined) {
+    const img = image && image.trim() ? image.trim() : null;
+    fields.push("image = ?");
+    values.push(img);
+  }
+  if (images !== undefined) {
+    const imgs = Array.isArray(images)
+      ? images.filter((u) => typeof u === "string" && u.trim()).map((u) => u.trim())
+      : [];
+    fields.push("images = ?");
+    values.push(JSON.stringify(imgs));
+  }
+  if (fields.length === 0) {
+    return res.status(400).json({ error: "no fields to update" });
+  }
+  values.push(req.params.id);
+  db.prepare(`UPDATE anuncios SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+  const updated = db
+    .prepare("SELECT id, title, text, image, photo_url, images, created_at FROM anuncios WHERE id = ?")
+    .get(req.params.id);
+  res.json({ ...updated, images: parseImages(updated.images) });
+});
+// Endpoint para actualizar photo_url de anuncios (similar a personas/mascotas/edificios)
+app.patch("/api/anuncios/:id/photo", handlePhotoPatch("anuncios"));
+app.delete("/api/anuncios/:id", requireAdmin, (req, res) => {
+  const result = db
+    .prepare("DELETE FROM anuncios WHERE id = ?")
+    .run(req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.status(204).end();
+});
+// ========== Health ==========
+app.get("/api/health", (req, res) => res.json({ ok: true }));
+// ============================================================
+// NUEVO: Endpoint para obtener sismos en tiempo real (USGS)
+// ============================================================
+app.get("/api/earthquakes", async (req, res) => {
+  try {
+    // Parámetros: magnitud mínima (default 0) y límite (default 500).
+    // USGS permite hasta 20000 resultados por petición.
+    const minmag = parseFloat(req.query.minmagnitude) || 0;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 500, 20000);
+    // Ventana temporal: USGS por defecto solo devuelve los últimos 30 días
+    // si no se pasa starttime/endtime. Ampliamos a 365 días por defecto.
+    // `hours` permite ventanas cortas (p. ej. ?hours=24) para el feed "en vivo".
+    const hours = parseFloat(req.query.hours);
+    const days = Number.isFinite(hours) && hours > 0
+      ? hours / 24
+      : (parseInt(req.query.days, 10) || 365);
+    const end = new Date();
+    const start = new Date(end.getTime() - days * 86400000);
+    // Bounding box aproximado de Colombia (puedes ajustarlo)
+    const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&minlatitude=-4&maxlatitude=12&minlongitude=-80&maxlongitude=-66&minmagnitude=${minmag}&limit=${limit}&orderby=time&starttime=${start.toISOString()}&endtime=${end.toISOString()}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Error al consultar USGS");
+    const data = await response.json();
+    // Transformamos los datos a un formato liviano para el frontend
+    const earthquakes = data.features.map((f) => ({
+      id: f.id,
+      mag: f.properties.mag,
+      place: f.properties.place,
+      time: new Date(f.properties.time).toLocaleString("es-CO", {
+        timeZone: "America/Bogota",
+      }),
+      timestamp: f.properties.time, // Unix en milisegundos
+      lat: f.geometry.coordinates[1],
+      lng: f.geometry.coordinates[0],
+      depth: f.geometry.coordinates[2],
+      url: f.properties.url,
+    }));
+    // Extraemos el último sismo para mostrarlo como alerta
+    const lastQuake = earthquakes.length > 0 ? earthquakes[0] : null;
+    res.json({
+      count: earthquakes.length,
+      lastQuake,
+      earthquakes,
+    });
+  } catch (error) {
+    console.error("Error en /api/earthquakes:", error);
+    res.status(500).json({ error: "No se pudo obtener la data sísmica" });
+  }
+});
+// Static files AFTER all API routes so /api/* is never intercepted
+app.use(express.static("public"));
+app.listen(PORT, () => {
+  console.log(`sismo-api listening on :${PORT}`);
+});
