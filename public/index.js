@@ -161,6 +161,8 @@ function showLoginForm() {
   if (colabListWrapper) colabListWrapper.style.display = "none";
   if (colabLoginPrompt) colabLoginPrompt.style.display = "block";
   window.currentUser = null;
+  // Hide the collaborators count badge now that we're logged out.
+  if (typeof updateTabCounts === "function") updateTabCounts();
 }
 function showChat() {
   const loginForm = document.getElementById("loginForm");
@@ -173,6 +175,8 @@ function showChat() {
   if (colabListWrapper) colabListWrapper.style.display = "block";
   if (colabLoginPrompt) colabLoginPrompt.style.display = "none";
   if (!colabData.length) loadListColab();
+  // Show the collaborators count badge now that we're logged in.
+  if (typeof updateTabCounts === "function") updateTabCounts();
 }
 async function attemptLogin() {
   const identifier = document.getElementById("loginIdentifier")?.value.trim();
@@ -2661,7 +2665,16 @@ function updateTabCounts() {
   set("tabPetsBtn", petsData.length);
   set("tabEdificiosBtn", buildingsData.length);
   set("tabAnunciosBtn", anunciosData.length);
-  set("tabColabBtn", colabData.length);
+  // Collaborators count is only shown to logged-in users.
+  const colabBadge = document.querySelector("#tabColabBtn .n");
+  if (colabBadge) {
+    if (window.currentUser) {
+      colabBadge.textContent = colabData.length;
+      colabBadge.style.display = "";
+    } else {
+      colabBadge.style.display = "none";
+    }
+  }
 }
 const COLAB_PLACEHOLDER =
   "person.png";
