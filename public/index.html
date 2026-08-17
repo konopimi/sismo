@@ -29,10 +29,10 @@
           transform: scale(162%) translate(-5px, 3px);
           z-index: 999;
         " />
-    <b style="flex: 1; font-size: 110%">
-      <span style="color: #fcd116">SISMO</span>
-      <span style="color: #3a5dc5">INFO</span>
-      <span style="color: #ce1126">.CO</span>
+    <b style="display:flex;flex: 1; font-size: 110%">
+      <div style="color: #ffff46">SISMO</div>
+      <div style="color: #7a9df5">INFO</div>
+      <div style="color: #fe5166">.CO</div>
     </b>
     <button id="copyLinkBtn">🔗 <span class="tab-label">LINK</span></button>
     <button id="shareAppBtn">📤 <span class="tab-label">Compartir</span></button>
@@ -125,33 +125,28 @@
   </div>
   <!-- ===== PANEL COLABORADORES ===== -->
   <div id="tabColab" class="tab-panel">
-    <div class="tool-bar">
-      <div class="filter-row" data-tab="colaborador">
-        <select class="filter-select" data-filter="city" disabled>
-          <option value="">📍 TODAS</option>
-        </select>
-      </div>
-      <button id="crear-top" class="crear-btn" onclick="openCrearModal('colaborador')" disabled>
-        🤝 COLABORAR
-      </button>
-    </div>
     <!-- Chat de colaboradores (requiere login) -->
     <div id="chatAuth" style="margin-bottom:10px;">
       <div id="loginForm"
-        style="display:flex;flex-direction:column;gap:6px;padding:10px;background:rgba(20,20,20,0.6);border-radius:10px;">
+        style="margin:auto;margin-top:20px;max-width:600px;display:flex;flex-direction:column;gap:10px;padding:20px;background:rgba(var(--surface),0.38);border-radius:10px;">
         <b style="color:#ccc;">💬 Chat de colaboradores</b>
         <input type="text" id="loginIdentifier" placeholder="Email o usuario" />
         <input type="password" id="loginPassword" placeholder="Contraseña" />
         <button id="loginBtn">Entrar</button>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-          <small style="color:#999;font-size:0.75rem;">
-            🔒 Cifrado E2E con Matrix · Sin federación · Las conversaciones son encriptadas, no se guardan en base de
-            datos, solo son legibles desde el dispositivo de quien haga parte de la conversación
-          </small>
-        </div>
         <button id="privacyInfoBtn"
-          style="background:none;border:none;color:#3a5dc5;cursor:pointer;font-size:0.75rem;text-decoration:underline;padding:0;">Más
-          información</button>
+          style="background:none;margin-top:20px;border:none;cursor:pointer;font-size:0.75rem;padding:10px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+            <small style="color:#999;font-size:100%;">
+              🔒 Cifrado E2E con Matrix · Sin federación · Las conversaciones son encriptadas, no se guardan en base de
+              datos, solo son legibles desde el dispositivo de quien haga parte de la conversación. Tu contraseña está
+              encriptada con "scrypt".
+            </small>
+          </div>
+          <div style="color:#3a5dc5;text-decoration:underline;">
+            Click para más
+            información
+          </div>
+        </button>
         <div id="loginError" style="color:#f66;font-size:0.85rem;"></div>
       </div>
       <div id="chatContainer" style="display:none;flex:1;overflow:hidden;min-height:0;"></div>
@@ -186,15 +181,7 @@
         <button class="filter-pill active" data-map-type="pet">🐕</button>
         <button class="filter-pill active" data-map-type="building">🏢</button>
         <button class="filter-pill active" data-map-type="sismo">🌋</button>
-        <label style="
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                cursor: pointer;
-              ">
-          <span style="font-size: 0.75rem; color: #ccc">🔥</span>
-          <input type="checkbox" id="heatmapToggle" checked onchange="toggleHeatmap(this.checked)" />
-        </label>
+        <button class="filter-pill active" id="heatmapToggle" title="Mapa de calor">🔥</button>
         <select id="citySelectorMap" style="
               padding: 3px 5px;
               border-radius: 8px;
@@ -707,3 +694,14 @@
 </body>
 
 </html>
+
+<!-- <div class="tool-bar"> -->
+<!--   <div class="filter-row" data-tab="colaborador"> -->
+<!--     <select class="filter-select" data-filter="city" disabled> -->
+<!--       <option value="">📍 TODAS</option> -->
+<!--     </select> -->
+<!--   </div> -->
+<!--   <button id="crear-top" class="crear-btn" onclick="openCrearModal('colaborador')" disabled> -->
+<!--     🤝 COLABORAR -->
+<!--   </button> -->
+<!-- </div> -->

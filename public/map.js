@@ -42,9 +42,7 @@ function isTypeVisible(type) {
 function visibleMapItems() {
   return Object.entries(MAP_MARKER_META)
     .filter(([type]) => isTypeVisible(type))
-    .flatMap(([type, meta]) =>
-      meta.data().map((item) => ({ item, type })),
-    )
+    .flatMap(([type, meta]) => meta.data().map((item) => ({ item, type })))
     .filter(({ item, type }) => mapItemMatchesSearch(item, type));
 }
 
@@ -67,14 +65,39 @@ function mapItemMatchesSearch(item, type) {
 // Single source of truth for status semantics (color, CSS class, label).
 // Exposed on window so index.js can also use it.
 const STATUS_META = {
-  desaparecido: { color: "#d64545", cssClass: "desaparecido", label: "desaparecido", icon: "🔍" },
-  encontrado:   { color: "#3fa34d", cssClass: "encontrado", label: "encontrado", icon: "✅" },
-  seguro:       { color: "#3fa34d", cssClass: "seguro", label: "seguro", icon: "🫶" },
-  danado:       { color: "#e0a63c", cssClass: "danado", label: "dañado", icon: "⚠️" },
-  colapsado:    { color: "#b53838", cssClass: "colapsado", label: "colapsado", icon: "💥" },
-  acopio:       { color: "#ffffff", cssClass: "acopio", label: "📦 acopio", icon: "📦" },
-  angel:        { color: "#add8e6", cssClass: "angel", label: "👼", icon: "👼" },
-  colaborador:  { color: "#9b59b6", cssClass: "colaborador", label: "colaborador", icon: "🤝" },
+  desaparecido: {
+    color: "#d64545",
+    cssClass: "desaparecido",
+    label: "desaparecido",
+    icon: "🔍",
+  },
+  encontrado: {
+    color: "#3fa34d",
+    cssClass: "encontrado",
+    label: "encontrado",
+    icon: "✅",
+  },
+  seguro: { color: "#3fa34d", cssClass: "seguro", label: "seguro", icon: "🫶" },
+  danado: { color: "#e0a63c", cssClass: "danado", label: "dañado", icon: "⚠️" },
+  colapsado: {
+    color: "#b53838",
+    cssClass: "colapsado",
+    label: "colapsado",
+    icon: "💥",
+  },
+  acopio: {
+    color: "#ffffff",
+    cssClass: "acopio",
+    label: "📦 acopio",
+    icon: "📦",
+  },
+  angel: { color: "#add8e6", cssClass: "angel", label: "👼", icon: "👼" },
+  colaborador: {
+    color: "#9b59b6",
+    cssClass: "colaborador",
+    label: "colaborador",
+    icon: "🤝",
+  },
 };
 window.STATUS_META = STATUS_META;
 
@@ -413,16 +436,23 @@ function renderSismoMarkers() {
   // Ensure sismo data is loaded (fetch on first map visit if empty).
   if (typeof window.fetchSismos === "function") window.fetchSismos();
 
-  const sismos = (typeof window.getSismosData === "function"
-    ? window.getSismosData()
-    : []) || [];
+  const sismos =
+    (typeof window.getSismosData === "function"
+      ? window.getSismosData()
+      : []) || [];
 
   sismos.forEach((q) => {
     if (q.lat == null || q.lng == null) return;
     if (!mapItemMatchesSearch(q, "sismo")) return;
     const mag = q.mag || 0;
     const color =
-      mag >= 6 ? "#d63031" : mag >= 5 ? "#e17055" : mag >= 4 ? "#fdcb6e" : "#74b9ff";
+      mag >= 6
+        ? "#d63031"
+        : mag >= 5
+          ? "#e17055"
+          : mag >= 4
+            ? "#fdcb6e"
+            : "#74b9ff";
     const size = Math.max(16, Math.min(34, 12 + mag * 3));
     L.circleMarker([q.lat, q.lng], {
       radius: size / 2,
@@ -430,9 +460,7 @@ function renderSismoMarkers() {
       weight: 1,
       fillColor: color,
       fillOpacity: 0.85,
-    })
-      .addTo(sismoMarkersLayer)
-      .bindPopup(`
+    }).addTo(sismoMarkersLayer).bindPopup(`
         🌋 <strong>${escapeHtml(q.place || "Sismo")}</strong><br>
         Magnitud: <strong>${mag.toFixed(1)}</strong><br>
         Profundidad: ${q.depth != null ? q.depth.toFixed(1) + " km" : "—"}<br>
@@ -483,12 +511,12 @@ function initMap() {
   renderMapSidebar();
   renderOffscreenArrows();
 
-  // Apply the heatmap toggle on first init (the checkbox is checked by
-  // default, but toggleHeatmap was never called on load, so the heatmap
-  // never actually rendered until the user toggled it). Respects the
-  // restored state from setMapFilterState().
+  // Apply the heatmap toggle on first init (the pill is active by default,
+  // but toggleHeatmap was never called on load, so the heatmap never
+  // actually rendered until the user toggled it). Respects the restored
+  // state from setMapFilterState().
   const heatmapEl = document.getElementById("heatmapToggle");
-  if (heatmapEl && heatmapEl.checked) toggleHeatmap(true);
+  if (heatmapEl && heatmapEl.classList.contains("active")) toggleHeatmap(true);
 
   // Re-render the sidebar and off-screen arrows whenever the viewport
   // changes. Arrows are rAF-throttled so the burst of move/zoom events
@@ -521,7 +549,7 @@ function initMap() {
       if (!item) return;
       const [lat, lng] = resolveItemCoords(item);
       if (lat != null && lng != null) {
-        map.flyTo([lat, lng], 17);
+        map.flyTo([lat, lng], 17, { duration: 0.3 });
       }
     });
   }
@@ -550,7 +578,7 @@ function refreshMap() {
 // Set the shared search-bar query for the map and re-render. Called by
 // index.js when the user types in the search bar while on the map tab.
 // Debounced so a burst of keystrokes coalesces into one re-render.
-window.setMapSearchQuery = function(q) {
+window.setMapSearchQuery = function (q) {
   mapSearchQuery = q || "";
   if (!window.sismoMap) return;
   if (mapSearchDebounce) clearTimeout(mapSearchDebounce);
@@ -563,7 +591,7 @@ window.setMapSearchQuery = function(q) {
 };
 
 // Re-render sismo markers when new earthquake data arrives.
-window.onSismosUpdate = function() {
+window.onSismosUpdate = function () {
   if (!window.sismoMap) return;
   renderSismoMarkers();
 };
@@ -625,17 +653,17 @@ function toggleHeatmap(enabled) {
 }
 
 // Read the current map filter state (type filter + heatmap) for persistence.
-window.getMapFilterState = function() {
+window.getMapFilterState = function () {
   const heatmapEl = document.getElementById("heatmapToggle");
   return {
     types: [...mapTypeFilter],
-    heatmap: heatmapEl ? heatmapEl.checked : true,
+    heatmap: heatmapEl ? heatmapEl.classList.contains("active") : true,
   };
 };
 
 // Restore map filter state (type filter + heatmap) from persisted data.
 // Called by index.js on startup, before the map is first initialized.
-window.setMapFilterState = function(state) {
+window.setMapFilterState = function (state) {
   if (!state) return;
   // Type filter: rebuild the Set from the saved array.
   if (Array.isArray(state.types)) {
@@ -644,15 +672,20 @@ window.setMapFilterState = function(state) {
     // Reflect into the pill UI.
     const container = document.getElementById("mapTypeFilter");
     if (container) {
-      container.querySelectorAll(".filter-pill[data-map-type]").forEach((pill) => {
-        pill.classList.toggle("active", mapTypeFilter.has(pill.dataset.mapType));
-      });
+      container
+        .querySelectorAll(".filter-pill[data-map-type]")
+        .forEach((pill) => {
+          pill.classList.toggle(
+            "active",
+            mapTypeFilter.has(pill.dataset.mapType),
+          );
+        });
     }
   }
   // Heatmap toggle.
   if (typeof state.heatmap === "boolean") {
     const heatmapEl = document.getElementById("heatmapToggle");
-    if (heatmapEl) heatmapEl.checked = state.heatmap;
+    if (heatmapEl) heatmapEl.classList.toggle("active", state.heatmap);
   }
 };
 
@@ -686,6 +719,15 @@ function wireMapTypeFilter() {
       if (typeof saveFilters === "function") saveFilters();
     });
   });
+  // Heatmap toggle: same pill styling, toggles the heatmap layer.
+  const heatmapBtn = document.getElementById("heatmapToggle");
+  if (heatmapBtn) {
+    heatmapBtn.addEventListener("click", () => {
+      const enabled = !heatmapBtn.classList.contains("active");
+      heatmapBtn.classList.toggle("active", enabled);
+      toggleHeatmap(enabled);
+    });
+  }
 }
 
 // Event listener para el sidebar del mapa
@@ -702,7 +744,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (!item) return;
       const [lat, lng] = resolveItemCoords(item);
       if (lat != null && lng != null && window.sismoMap) {
-        window.sismoMap.flyTo([lat, lng], 17);
+        window.sismoMap.flyTo([lat, lng], 17, { duration: 0.3 });
       }
     });
   }
