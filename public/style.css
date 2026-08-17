@@ -325,9 +325,13 @@ h1 {
     bottom: var(--driver-height);
     width: auto;
     max-width: 100%;
+    /* Fixed height so the horizontal strip doesn't collapse (flex:1 child
+       in an auto-height column flex container shrinks to 0). */
+    height: 56px;
   }
 
   .map-sidebar-list {
+    flex: 0 0 auto;
     flex-direction: row;
     overflow-x: auto;
     overflow-y: hidden;
@@ -336,6 +340,7 @@ h1 {
   .map-sidebar-card {
     flex: 0 0 auto;
     width: 190px;
+    height: 100%;
   }
 }
 
