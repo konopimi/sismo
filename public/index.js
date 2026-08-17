@@ -1719,6 +1719,44 @@ function loadFilters() {
     return null;
   }
 }
+// Restore saved filters (city, search, status) into live state on startup.
+// Must run BEFORE the loadList*() calls so the first render applies them.
+function restoreFilters() {
+  const saved = loadFilters();
+  if (!saved) return;
+  // Shared city filter.
+  if (typeof saved.city === "string") sharedCity = saved.city;
+  // Search bar.
+  if (searchInput && typeof saved.search === "string") {
+    searchInput.value = saved.search;
+  }
+  // Per-tab status filters.
+  if (saved.status) {
+    for (const tab of Object.keys(filterState)) {
+      const arr = saved.status[tab];
+      if (Array.isArray(arr)) {
+        filterState[tab].status = new Set(arr);
+      }
+    }
+  }
+  // Reflect restored status into the pill UI (visual state).
+  document.querySelectorAll(".filter-row").forEach((row) => {
+    const tab = row.dataset.tab;
+    const f = filterState[tab];
+    if (!f) return;
+    const allStatuses = [...row.querySelectorAll(".filter-pill")]
+      .map((p) => p.dataset.status)
+      .filter(Boolean);
+    const isAll =
+      f.status.size === 0 ||
+      (allStatuses.length > 0 && allStatuses.every((s) => f.status.has(s)));
+    row.querySelectorAll(".filter-pill").forEach((p) => {
+      const s = p.dataset.status || "";
+      if (s === "") p.classList.toggle("active", isAll);
+      else p.classList.toggle("active", f.status.has(s));
+    });
+  });
+}
 // Apply the active tab's filter state to an already-search-filtered array.
 // status: empty set = all; otherwise item.status must be in the set (OR).
 function applyFilters(items, tab) {
@@ -2833,10 +2871,14 @@ function applyTabFromUrl() {
     wiki: [wikiBtn, tabWiki, "wiki"],
     sismos: [tabSismosBtn, tabSismos, "sismos"],
   };
-  if (tab && tabTargets[tab]) {
-    switchTab(...tabTargets[tab]);
+  // URL ?tab= takes priority; otherwise fall back to the saved tab.
+  const saved = loadFilters();
+  const targetTab = tab || (saved && saved.tab);
+  if (targetTab && tabTargets[targetTab]) {
+    switchTab(...tabTargets[targetTab]);
   }
 }
+restoreFilters();
 loadList();
 loadListP();
 loadListB();
