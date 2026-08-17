@@ -276,6 +276,27 @@ h1 {
   border-left-color: #add8e6;
 }
 
+/* Building statuses (seguro/danado/colapsado/acopio) — match STATUS_META colors. */
+.map-sidebar-card.seguro {
+  background: rgba(5, 21, 16, 0.85) !important;
+  border-left-color: #3fa34d;
+}
+
+.map-sidebar-card.danado {
+  background: rgba(30, 24, 8, 0.85) !important;
+  border-left-color: #e0a63c;
+}
+
+.map-sidebar-card.colapsado {
+  background: rgba(24, 6, 6, 0.85) !important;
+  border-left-color: #b53838;
+}
+
+.map-sidebar-card.acopio {
+  background: rgba(30, 30, 30, 0.85) !important;
+  border-left-color: #ffffff;
+}
+
 .map-sidebar-photo {
   width: 40px;
   height: 40px;

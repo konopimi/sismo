@@ -28,7 +28,7 @@ const MAP_MARKER_META = {
   },
 };
 
-const MAP_SIDEBAR_EMOJI = { person: "🫂", pet: "🐕" };
+const MAP_SIDEBAR_EMOJI = { person: "🫂", pet: "🐕", building: "🏢" };
 
 // Which marker types are currently visible on the map. Empty set = all.
 const mapTypeFilter = new Set(["person", "pet", "building", "sismo"]);
@@ -122,7 +122,14 @@ function mapSidebarCardHtml(item, type) {
   const found = item.status === "encontrado";
   const isAngel = item.status === "angel";
   const photo = item.photo_url || item.image;
-  const placeholder = type === "pet" ? PET_PLACEHOLDER : PERSON_PLACEHOLDER;
+  // Buildings use their own placeholder and default status ("seguro"),
+  // not the person placeholder / "desaparecido" fallback.
+  const placeholder =
+    type === "pet"
+      ? PET_PLACEHOLDER
+      : type === "building"
+        ? BUILDING_PLACEHOLDER
+        : PERSON_PLACEHOLDER;
   const imgHtml = isAngel
     ? `<img class="map-sidebar-photo" style="opacity:0.62;" src="angel.png" alt="" />`
     : photo
@@ -130,7 +137,8 @@ function mapSidebarCardHtml(item, type) {
       : `<img class="map-sidebar-photo" style="opacity:0.62;" src="${placeholder}" alt="" />`;
   const location = item.city || item.location || "Sin ubicación";
   const emoji = isAngel ? "👼" : MAP_SIDEBAR_EMOJI[type];
-  const statusClass = isAngel ? "angel" : item.status || "desaparecido";
+  const defaultStatus = type === "building" ? "seguro" : "desaparecido";
+  const statusClass = isAngel ? "angel" : item.status || defaultStatus;
   return `
     <div class="map-sidebar-card ${statusClass}" data-id="${item.id}" data-type="${type}">
       ${imgHtml}
