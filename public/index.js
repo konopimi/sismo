@@ -176,10 +176,8 @@ async function authFetch(url, opts = {}) {
 }
 function showLoginForm() {
   const loginForm = document.getElementById("loginForm");
-  const chatContainer = document.getElementById("chatContainer");
   const privateWrapper = document.getElementById("colabPrivateWrapper");
   if (loginForm) loginForm.style.display = "flex";
-  if (chatContainer) chatContainer.style.display = "none";
   if (privateWrapper) privateWrapper.style.display = "none";
   if (colabLoginPrompt) colabLoginPrompt.style.display = "block";
   window.currentUser = null;
@@ -188,13 +186,9 @@ function showLoginForm() {
 }
 function showChat() {
   const loginForm = document.getElementById("loginForm");
-  const chatContainer = document.getElementById("chatContainer");
   const privateWrapper = document.getElementById("colabPrivateWrapper");
   const connContainer = document.getElementById("connContainer");
   if (loginForm) loginForm.style.display = "none";
-  if (chatContainer) {
-    chatContainer.style.display = "flex";
-  }
   if (connContainer) {
     connContainer.innerHTML = `<div style="text-align:right;font-size:60%;">Conectado como ${escapeHtml(window.currentUser?.chat_name || window.currentUser?.name || "")}</div>`;
 }
@@ -342,30 +336,36 @@ async function joinOrCreateRoom() {
   }
 }
 
+// Renderiza la lista de conversaciones en el sub-tab "Chat".
 function renderChatUI() {
-  const container = document.getElementById("chatContainer");
+  const container = document.getElementById("chatListContainer");
   if (!container) return;
-  container.style.display = "flex";
   container.innerHTML = `
-    <div style="display:flex;flex-direction:column;flex:1;min-height:100%;">
-      <div style="padding:10px 12px;border-bottom:1px solid rgba(120,120,120,0.3);font-weight:600;display:flex;align-items:center;gap:8px;">
-        <span>💬</span>
-        <span id="chatRoomName">Sismo General</span>
+    <button class="chat-list-item" data-room-id="${escapeHtml(matrixRoom)}" style="
+      display:flex;align-items:center;gap:10px;padding:12px;border-radius:10px;
+      background:rgba(120,120,120,0.15);border:1px solid rgba(120,120,120,0.3);
+      cursor:pointer;text-align:left;width:100%;
+    ">
+      <span style="font-size:1.4em;">💬</span>
+      <div style="flex:1;">
+        <div style="font-weight:600;">Sismo General</div>
+        <div style="font-size:0.8em;opacity:0.7;">Canal general de colaboradores</div>
       </div>
-      <div id="chatMessages" style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;"></div>
-      <div style="display:flex;gap:6px;padding:8px;border-top:1px solid rgba(120,120,120,0.3);">
-        <input id="chatInput" type="text" placeholder="Escribe un mensaje..." style="flex:1;border-radius:6px;padding:8px;" />
-        <button id="chatSendBtn" style="border-radius:6px;padding:8px 14px;">Enviar</button>
-      </div>
-    </div>
+    </button>
   `;
+  container.querySelector(".chat-list-item").addEventListener("click", openChatModal);
 }
 
 function renderChatError(msg) {
-  const container = document.getElementById("chatContainer");
+  const container = document.getElementById("chatListContainer");
   if (!container) return;
-  container.style.display = "flex";
   container.innerHTML = `<div style="padding:20px;color:#f66;">${escapeHtml(msg)}</div>`;
+}
+
+// Abre el modal del chat (a pantalla completa).
+function openChatModal() {
+  const modal = Modal({ id: "chatModal" });
+  if (modal) modal.open();
 }
 
 function bindChatEvents() {
