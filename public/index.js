@@ -725,8 +725,12 @@ function switchTab(activeBtn, activePanel, tabType) {
   }
   // Re-render the newly active list so shared filters (city/search) apply.
   // map/sismos/wiki manage their own rendering; list tabs use currentRenderFn.
-  if (currentRenderFn && tabType !== "map" && tabType !== "sismos" && tabType !== "wiki") {
-    currentRenderFn();
+  // Defer to the next frame so the tab highlight + panel switch paint first
+  // (optimistic UI: instant feedback, list fills in a frame later).
+  // Capture the render fn now so rapid tab switches don't run the wrong one.
+  const renderFn = currentRenderFn;
+  if (renderFn && tabType !== "map" && tabType !== "sismos" && tabType !== "wiki") {
+    requestAnimationFrame(() => renderFn());
   }
   // Actualizar la URL con el parámetro "tab" (sin recargar)
   const url = new URL(window.location);
