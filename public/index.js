@@ -733,6 +733,11 @@ function switchTab(activeBtn, activePanel, tabType) {
       if (window.sismoMap) {
         window.sismoMap.invalidateSize();
         if (alreadyInit) renderMapMarkers();
+        // Fly to the shared city filter if one is selected (keeps the map
+        // in sync with a city chosen in another tab).
+        if (sharedCity && cityCoordinates[sharedCity]) {
+          window.sismoMap.flyTo(cityCoordinates[sharedCity], 13, { duration: 0.3 });
+        }
       }
     });
   } else if (tabType === "sismos") {
