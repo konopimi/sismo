@@ -701,21 +701,26 @@ function switchTab(activeBtn, activePanel, tabType) {
   currentRenderFn = TYPE_REGISTRY[tabType]?.renderFn || (() => {});
   // Side effects specific to certain tabs.
   if (tabType === "map") {
-    // Crear el mapa una sola vez
-    if (!window.sismoMap) {
-      initMap();
-    }
+    // Show the panel immediately (optimistic), then init/render the map on
+    // the next frame so the tab highlight + panel switch paint first.
     showMap();
     // Reset the map search query (the search bar was cleared above).
     if (typeof window.setMapSearchQuery === "function") {
       window.setMapSearchQuery("");
     }
-    setTimeout(() => {
+    requestAnimationFrame(() => {
+      // Crear el mapa una sola vez (heavy: tiles + markers + sidebar).
+      // initMap() already renders markers/sidebar, so only re-render when
+      // the map already existed (subsequent visits).
+      const alreadyInit = !!window.sismoMap;
+      if (!alreadyInit) {
+        initMap();
+      }
       if (window.sismoMap) {
         window.sismoMap.invalidateSize();
-        renderMapMarkers();
+        if (alreadyInit) renderMapMarkers();
       }
-    }, 200);
+    });
   } else if (tabType === "sismos") {
     window.initSismos();
     // Reset sismos location filter on tab switch
