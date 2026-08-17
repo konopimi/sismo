@@ -3273,7 +3273,7 @@ let logisticaData = [];
 const listElLogistica = document.getElementById("listLogistica");
 const formLogistica = document.getElementById("addFormLogistica");
 const LOGISTICA_STATUS_LABEL = { pendiente: "Pendiente", en_ruta: "En ruta", completado: "Completado", cancelado: "Cancelado" };
-const LOGISTICA_EMOJI = { entrega: "📦", recogida: "📥", transporte: "🚚", voluntario: "🙋" };
+const LOGISTICA_EMOJI = { entrega: "📦", recogida: "📥", transporte: "🚚", apoyo: "🙋" };
 async function loadListLogistica() {
   if (!getAuthToken()) { logisticaData = []; renderLogistica(); return; }
   try {

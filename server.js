@@ -271,7 +271,7 @@ db.exec(`
 db.exec(`
   CREATE TABLE IF NOT EXISTS logistica (
     id TEXT PRIMARY KEY,
-    task_type TEXT NOT NULL,      -- 'entrega' | 'recogida' | 'transporte' | 'voluntario'
+    task_type TEXT NOT NULL,      -- 'entrega' | 'recogida' | 'transporte' | 'apoyo'
     item_ref TEXT,                -- referencia a donación/necesidad (opcional)
     description TEXT NOT NULL,
     status TEXT DEFAULT 'pendiente', -- 'pendiente' | 'en_ruta' | 'completado' | 'cancelado'
