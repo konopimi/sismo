@@ -291,17 +291,18 @@ async function startMatrixChat() {
     if (window.Olm && typeof window.Olm.init === "function") {
       await window.Olm.init();
     }
-    matrixClient = sdk.createClient({ baseUrl: base_url });
+    // Crypto store en IndexedDB para persistir las claves E2E entre sesiones.
+    // En v28.2.0 el store se pasa como opción al crear el cliente (no hay setter).
+    let cryptoStore = null;
+    if (sdk.IndexedDBCryptoStore && window.indexedDB) {
+      cryptoStore = new sdk.IndexedDBCryptoStore(window.indexedDB, "sismo-matrix-crypto");
+      await cryptoStore.startup();
+    }
+    matrixClient = sdk.createClient({ baseUrl: base_url, cryptoStore });
     await matrixClient.login("m.login.password", {
       identifier: { type: "m.id.user", user: user_id.split(":")[0].replace("@", "") },
       password,
     });
-    // Crypto store en IndexedDB para persistir las claves E2E entre sesiones.
-    if (sdk.IndexedDBCryptoStore && window.indexedDB) {
-      const cryptoStore = new sdk.IndexedDBCryptoStore(window.indexedDB, "sismo-matrix-crypto");
-      await cryptoStore.startup();
-      matrixClient.setCryptoStore(cryptoStore);
-    }
     await matrixClient.initCrypto();
     matrixClient.setGlobalErrorOnUnknownDevices(false);
     await matrixClient.startClient({ initialSyncLimit: 20 });
