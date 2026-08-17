@@ -54,6 +54,17 @@
   box-sizing: border-box;
 }
 
+/* Remove the default (often white/blue) focus outline. Keyboard users
+   still get a subtle, theme-consistent indicator via :focus-visible. */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(214, 69, 69, 0.6);
+  outline-offset: 2px;
+}
+
 :root {
   /* Live-tracked heights (updated by JS via ResizeObserver).
      Defaults are fallbacks until the first measurement runs. */
@@ -210,7 +221,6 @@ h1 {
   top: 0px;
   left: 0px;
   bottom: var(--driver-height);
-
   width: 220px;
   max-width: calc(100% - 20px);
   background: rgba(40, 40, 40, 0.55);
@@ -748,7 +758,6 @@ h1 {
   border-top: 2px solid rgba(var(--surface), 0.62);
   display: flex;
   flex-direction: column;
-
   border-radius: 10px 10px 0px 0px;
   /* overflow: hidden; */
   /* gap: 10px; */
@@ -778,6 +787,7 @@ button {
 input,
 textarea {
   padding: 5px;
+  padding-left: 20px;
   border-radius: 8px;
   border: 2px solid rgba(var(--surface), 0.62);
   background: rgba(10, 10, 10, 0.8);
@@ -831,10 +841,9 @@ textarea {
   display: block;
 }
 
-.search-row>input {
+.search-row > input {
   border-radius: 0px !important;
   border: none !important;
-
   border-bottom: 2px solid rgba(var(--surface), 0.62) !important;
   padding: 10px 20px !important;
   text-align: center;
@@ -1187,7 +1196,6 @@ textarea {
 }
 
 @media (max-width: 480px) {
-
   .crear form input,
   .crear form select {
     flex: 1 1 100%;
@@ -1503,7 +1511,7 @@ textarea {
   font-size: 13px;
 }
 
-.sismo-live-item+.sismo-live-item {
+.sismo-live-item + .sismo-live-item {
   border-top: 1px solid #23272f;
 }
 
