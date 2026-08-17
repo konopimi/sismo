@@ -6,8 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "esbuild matrix-entry.js --bundle --format=iife --outfile=public/matrix-bundle.js --minify",
-    "build:watch": "esbuild matrix-entry.js --bundle --format=iife --outfile=public/matrix-bundle.js --minify --watch"
+    "build": "esbuild matrix-entry.js --bundle --format=iife --outfile=public/matrix-bundle.js --minify --platform=browser --external:crypto --external:path --external:fs",
+    "build:watch": "esbuild matrix-entry.js --bundle --format=iife --outfile=public/matrix-bundle.js --minify --platform=browser --external:crypto --external:path --external:fs --watch"
   },
   "dependencies": {
     "better-sqlite3": "^11.0.0",
