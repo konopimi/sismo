@@ -6,15 +6,14 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "esbuild matrix-entry.js --bundle --format=iife --outfile=public/matrix-bundle.js --minify --platform=browser --external:crypto --external:path --external:fs",
-    "build:watch": "esbuild matrix-entry.js --bundle --format=iife --outfile=public/matrix-bundle.js --minify --platform=browser --external:crypto --external:path --external:fs --watch"
+    "build": "esbuild matrix-entry.js --bundle --format=iife --outfile=public/matrix-bundle.js --minify --platform=browser --loader:.wasm=file --external:crypto --external:path --external:fs",
+    "build:watch": "esbuild matrix-entry.js --bundle --format=iife --outfile=public/matrix-bundle.js --minify --platform=browser --loader:.wasm=file --external:crypto --external:path --external:fs --watch"
   },
   "dependencies": {
     "express": "^5.2.1",
     "better-sqlite3": "^13.0.3",
     "cors": "^2.8.6",
-    "matrix-js-sdk": "^42.1.0",
-    "@matrix-org/olm": "^3.2.15"
+    "matrix-js-sdk": "^42.1.0"
   },
   "devDependencies": {
     "esbuild": "^0.24.2"
