@@ -377,14 +377,26 @@ function bindChatEvents() {
     try {
       await matrixClient.sendTextMessage(matrixRoom, text);
       input.value = "";
+      autoResizeChatInput();
     } catch (e) {
       console.error("send error:", e);
     }
   };
   sendBtn.addEventListener("click", send);
+  // Enter envía; Shift+Enter hace salto de línea.
   input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") send();
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
   });
+  // Auto-resize del textarea.
+  input.addEventListener("input", autoResizeChatInput);
+
+  function autoResizeChatInput() {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 120) + "px";
+  }
 
   // Escuchar mensajes nuevos.
   matrixClient.on("Room.timeline", (event, room) => {
