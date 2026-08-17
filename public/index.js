@@ -723,6 +723,11 @@ function switchTab(activeBtn, activePanel, tabType) {
       window.setSismosLocationFilter("");
     }
   }
+  // Re-render the newly active list so shared filters (city/search) apply.
+  // map/sismos/wiki manage their own rendering; list tabs use currentRenderFn.
+  if (currentRenderFn && tabType !== "map" && tabType !== "sismos" && tabType !== "wiki") {
+    currentRenderFn();
+  }
   // Actualizar la URL con el parámetro "tab" (sin recargar)
   const url = new URL(window.location);
   if (tabType) {
