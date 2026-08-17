@@ -329,7 +329,7 @@ async function joinOrCreateRoom() {
     const aliasRes = await matrixClient.getRoomIdForAlias(MATRIX_ROOM_ALIAS);
     const roomId = aliasRes.room_id;
     await matrixClient.joinRoom(roomId);
-    return matrixClient.getRoom(roomId);
+    return roomId;
   } catch (e) {
     // Room no existe: crearlo.
     const { room_id } = await matrixClient.createRoom({
@@ -338,7 +338,7 @@ async function joinOrCreateRoom() {
       visibility: "private",
       room_alias_name: "sismo-general",
     });
-    return matrixClient.getRoom(room_id);
+    return room_id;
   }
 }
 
@@ -371,7 +371,7 @@ function bindChatEvents() {
     const text = input.value.trim();
     if (!text || !matrixRoom) return;
     try {
-      await matrixClient.sendTextMessage(matrixRoom.roomId, text);
+      await matrixClient.sendTextMessage(matrixRoom, text);
       input.value = "";
     } catch (e) {
       console.error("send error:", e);
@@ -384,16 +384,19 @@ function bindChatEvents() {
 
   // Escuchar mensajes nuevos.
   matrixClient.on("Room.timeline", (event, room) => {
-    if (!room || room.roomId !== matrixRoom.roomId) return;
+    if (!room || room.roomId !== matrixRoom) return;
     if (event.getType() !== "m.room.message") return;
     appendMessage(event);
   });
 
-  // Cargar historial inicial.
-  const timeline = matrixRoom.getLiveTimeline().getEvents();
-  timeline.forEach((event) => {
-    if (event.getType() === "m.room.message") appendMessage(event);
-  });
+  // Cargar historial inicial (si el room ya está en el store).
+  const room = matrixClient.getRoom(matrixRoom);
+  if (room) {
+    const timeline = room.getLiveTimeline().getEvents();
+    timeline.forEach((event) => {
+      if (event.getType() === "m.room.message") appendMessage(event);
+    });
+  }
 }
 
 function appendMessage(event) {
