@@ -2011,7 +2011,7 @@ function render() {
     "person",
   );
   if (!items.length) {
-    listEl.innerHTML = `< div class="empty" > ${personsData.length ? "Sin resultados." : "No hay reportes todavía."}</div > `;
+    listEl.innerHTML = `<div class="empty">${personsData.length ? "Sin resultados." : "No hay reportes todavía."}</div>`;
     return;
   }
   renderVirtualList(listEl, items, personCardHtml);
