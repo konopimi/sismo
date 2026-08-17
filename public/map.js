@@ -483,6 +483,13 @@ function initMap() {
   renderMapSidebar();
   renderOffscreenArrows();
 
+  // Apply the heatmap toggle on first init (the checkbox is checked by
+  // default, but toggleHeatmap was never called on load, so the heatmap
+  // never actually rendered until the user toggled it). Respects the
+  // restored state from setMapFilterState().
+  const heatmapEl = document.getElementById("heatmapToggle");
+  if (heatmapEl && heatmapEl.checked) toggleHeatmap(true);
+
   // Re-render the sidebar and off-screen arrows whenever the viewport
   // changes. Arrows are rAF-throttled so the burst of move/zoom events
   // coalesces into one render per frame (max 60fps) instead of running
@@ -613,7 +620,41 @@ function toggleHeatmap(enabled) {
   } else if (heatmapLayer) {
     window.sismoMap.removeLayer(heatmapLayer);
   }
+  // Persist the heatmap toggle.
+  if (typeof saveFilters === "function") saveFilters();
 }
+
+// Read the current map filter state (type filter + heatmap) for persistence.
+window.getMapFilterState = function() {
+  const heatmapEl = document.getElementById("heatmapToggle");
+  return {
+    types: [...mapTypeFilter],
+    heatmap: heatmapEl ? heatmapEl.checked : true,
+  };
+};
+
+// Restore map filter state (type filter + heatmap) from persisted data.
+// Called by index.js on startup, before the map is first initialized.
+window.setMapFilterState = function(state) {
+  if (!state) return;
+  // Type filter: rebuild the Set from the saved array.
+  if (Array.isArray(state.types)) {
+    mapTypeFilter.clear();
+    state.types.forEach((t) => mapTypeFilter.add(t));
+    // Reflect into the pill UI.
+    const container = document.getElementById("mapTypeFilter");
+    if (container) {
+      container.querySelectorAll(".filter-pill[data-map-type]").forEach((pill) => {
+        pill.classList.toggle("active", mapTypeFilter.has(pill.dataset.mapType));
+      });
+    }
+  }
+  // Heatmap toggle.
+  if (typeof state.heatmap === "boolean") {
+    const heatmapEl = document.getElementById("heatmapToggle");
+    if (heatmapEl) heatmapEl.checked = state.heatmap;
+  }
+};
 
 window.__mapPopupOpen = function (id, type) {
   const meta = MAP_MARKER_META[type];
@@ -641,6 +682,8 @@ function wireMapTypeFilter() {
         renderMapSidebar();
         renderOffscreenArrows();
       }
+      // Persist the map type filter.
+      if (typeof saveFilters === "function") saveFilters();
     });
   });
 }

@@ -1714,6 +1714,10 @@ function saveFilters() {
       building: [...filterState.building.status],
       colaborador: [...filterState.colaborador.status],
     },
+    // Map filters (type pills + heatmap) — read from map.js.
+    map: typeof window.getMapFilterState === "function"
+      ? window.getMapFilterState()
+      : undefined,
   };
   try {
     localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(data));
@@ -1747,6 +1751,10 @@ function restoreFilters() {
         filterState[tab].status = new Set(arr);
       }
     }
+  }
+  // Map filters (type pills + heatmap) — restore into map.js state.
+  if (saved.map && typeof window.setMapFilterState === "function") {
+    window.setMapFilterState(saved.map);
   }
   // Reflect restored status into the pill UI (visual state).
   document.querySelectorAll(".filter-row").forEach((row) => {
