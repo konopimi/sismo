@@ -561,11 +561,21 @@ fetch("/cities.json")
       const el = document.getElementById(id);
       if (el) el.insertAdjacentHTML("beforeend", opts);
     });
-    // El selector del mapa además vuela a la ciudad elegida.
+    // Reflect any already-restored sharedCity into the map selector (and
+    // the other selectors) now that their options exist.
+    if (typeof syncCitySelects === "function") syncCitySelects();
+    // El selector del mapa vuela a la ciudad elegida Y actualiza el filtro
+    // de ciudad compartido (mantiene todos los selectores en sincronía).
     const citySelectorMap = document.getElementById("citySelectorMap");
     if (citySelectorMap) {
       citySelectorMap.addEventListener("change", function() {
         const city = this.value;
+        // Update the shared city filter (and sync every other selector).
+        sharedCity = city || "";
+        syncCitySelects();
+        if (currentRenderFn) currentRenderFn();
+        saveFilters();
+        // Fly the map to the chosen city.
         if (city && window.sismoMap && cityCoordinates[city]) {
           const coords = cityCoordinates[city];
           window.sismoMap.flyTo(coords, 13, { duration: 0.3 });
@@ -1819,6 +1829,10 @@ function syncCitySelects() {
     if (sharedCity && cities.includes(sharedCity)) sel.value = sharedCity;
     else sel.value = "";
   });
+  // The map's city selector is populated with ALL cities (from cities.json),
+  // so it can always reflect sharedCity directly.
+  const mapSel = document.getElementById("citySelectorMap");
+  if (mapSel) mapSel.value = sharedCity || "";
 }
 // Reset a tab's STATUS filters to default (city is shared and NOT reset here).
 function resetFilters(tab) {
