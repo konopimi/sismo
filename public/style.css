@@ -875,9 +875,12 @@ textarea {
   min-height: 150px;
   max-height: 150px;
   font-size: 62%;
-  background: #1a1d24;
+  /* Background and left border are derived from the status color (set
+     inline as --status-color by the card renderers) via color-mix, so
+     there's no per-status hardcoding to keep in sync. */
+  background: color-mix(in srgb, var(--status-color, #e57373) 12%, #1a1d24);
   border-radius: 10px;
-  border-left: 4px solid #e57373;
+  border-left: 4px solid var(--status-color, #e57373);
   cursor: default;
   overflow: hidden;
   transition: background 0.15s;
@@ -888,41 +891,7 @@ textarea {
 }
 
 .card:hover {
-  background: #22262e;
-}
-
-.card.desaparecido {
-  background: #150505 !important;
-}
-
-.card.encontrado {
-  background: #051510 !important;
-  border-left-color: #66bb6a;
-}
-
-.card.seguro {
-  background: #051510 !important;
-  border-left-color: #66bb6a;
-}
-
-.card.danado {
-  background: #151005 !important;
-  border-left-color: #f0c060;
-}
-
-.card.colapsado {
-  background: #150505 !important;
-  border-left-color: #d06060;
-}
-
-.card.acopio {
-  background: #101114 !important;
-  border-left-color: #ffffff;
-}
-
-.card.colaborador {
-  background: #150a1e !important;
-  border-left-color: #9b59b6;
+  background: color-mix(in srgb, var(--status-color, #e57373) 20%, #22262e);
 }
 
 .card.colaborador .card-photo {
