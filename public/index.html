@@ -18,6 +18,8 @@
   <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
   <!-- ECharts (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <!-- Matrix JS SDK (chat E2E) — v28.2.0 es la última con bundle UMD -->
+  <script src="https://cdn.jsdelivr.net/npm/matrix-js-sdk@28.2.0/dist/browser-matrix.js"></script>
 </head>
 
 <body>
@@ -159,10 +161,10 @@
       <!-- Sub-tabs -->
       <div class="sub-tabs">
         <button class="sub-tab-btn active" data-subtab="chat">💬<span class="n">Chat</span></button>
-        <button class="crear-btn" onclick="openCrearModal('donacion')">🎁 DONAR</button>
-        <button class="crear-btn" onclick="openCrearModal('necesidad')">🆘 REPORTAR</button>
-        <button class="crear-btn" onclick="openCrearModal('logistica')">🚚 CREAR</button>
-        <button class="crear-btn" onclick="openCrearModal('colaborador')">🤝 COLABORAR</button>
+        <button class="crear-btn sub-action" data-action-for="donaciones" onclick="openCrearModal('donacion')">🎁 DONAR</button>
+        <button class="crear-btn sub-action" data-action-for="necesidades" onclick="openCrearModal('necesidad')">🆘 REPORTAR</button>
+        <button class="crear-btn sub-action" data-action-for="logistica" onclick="openCrearModal('logistica')">🚚 CREAR</button>
+        <button class="crear-btn sub-action" data-action-for="voluntarios" onclick="openCrearModal('colaborador')">🤝 COLABORAR</button>
         <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="n">Donaciones</span></button>
         <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="n">Necesidades</span></button>
         <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="n">Logística</span></button>
@@ -796,7 +798,6 @@
     </div>
   </div>
 
-  <script type="module" src="matrix-chat.js"></script>
   <script src="modal.js"></script>
   <script src="map.js"></script>
   <script src="sismos.js"></script>

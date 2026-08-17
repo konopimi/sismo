@@ -207,25 +207,7 @@ function showChat() {
   // Show the collaborators count badge now that we're logged in.
   if (typeof updateTabCounts === "function") updateTabCounts();
   // Conectar el chat Matrix (E2E) una vez autenticado.
-  // matrix-chat.js es un <script type="module"> (diferido), así que puede
-  // no estar listo aún; esperamos a que window.startMatrixChat exista.
-  connectMatrixWhenReady();
-}
-function connectMatrixWhenReady() {
-  if (typeof window.startMatrixChat === "function") {
-    window.startMatrixChat();
-    return;
-  }
-  let tries = 0;
-  const timer = setInterval(() => {
-    if (typeof window.startMatrixChat === "function") {
-      clearInterval(timer);
-      window.startMatrixChat();
-    } else if (++tries > 100) {
-      clearInterval(timer);
-      console.error("matrix-chat.js no cargó a tiempo");
-    }
-  }, 100);
+  startMatrixChat();
 }
 async function attemptLogin() {
   const identifier = document.getElementById("loginIdentifier")?.value.trim();
@@ -3069,20 +3051,27 @@ async function removeColab(id) {
 // ================================================================
 const subTabBtns = document.querySelectorAll(".sub-tab-btn");
 const subTabPanels = document.querySelectorAll(".sub-tab-panel");
-subTabBtns.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const target = btn.dataset.subtab;
-    subTabBtns.forEach((b) => b.classList.toggle("active", b === btn));
-    subTabPanels.forEach((p) => {
-      p.classList.toggle("active", p.dataset.subtabPanel === target);
-    });
-    // Render the target list if it's a data sub-tab and empty.
-    if (target === "donaciones" && !donacionesData.length) loadListDonaciones();
-    else if (target === "necesidades" && !necesidadesData.length) loadListNecesidades();
-    else if (target === "logistica" && !logisticaData.length) loadListLogistica();
-    else if (target === "voluntarios" && !colabData.length) loadListColab();
+const subActionBtns = document.querySelectorAll(".sub-action");
+function setActiveSubTab(target) {
+  subTabBtns.forEach((b) => b.classList.toggle("active", b.dataset.subtab === target));
+  subTabPanels.forEach((p) => {
+    p.classList.toggle("active", p.dataset.subtabPanel === target);
   });
+  // Mostrar solo el botón de acción de la sub-tab activa.
+  subActionBtns.forEach((a) => {
+    a.style.display = a.dataset.actionFor === target ? "" : "none";
+  });
+  // Render the target list if it's a data sub-tab and empty.
+  if (target === "donaciones" && !donacionesData.length) loadListDonaciones();
+  else if (target === "necesidades" && !necesidadesData.length) loadListNecesidades();
+  else if (target === "logistica" && !logisticaData.length) loadListLogistica();
+  else if (target === "voluntarios" && !colabData.length) loadListColab();
+}
+subTabBtns.forEach((btn) => {
+  btn.addEventListener("click", () => setActiveSubTab(btn.dataset.subtab));
 });
+// Estado inicial: sub-tab "chat" activa, sin botón de acción visible.
+setActiveSubTab("chat");
 
 // ================================================================
 //  DONACIONES (privado)
