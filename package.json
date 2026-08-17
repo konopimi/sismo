@@ -1,5 +1,5 @@
 {
-  "name": "sismo",
+  "name": "sismo-api",
   "version": "1.0.0",
   "description": "https://sismoinfo.co — emergency reporting backend + frontend",
   "type": "module",
@@ -10,14 +10,17 @@
     "build:watch": "esbuild matrix-entry.js --bundle --format=iife --outfile=public/matrix-bundle.js --minify --platform=browser --external:crypto --external:path --external:fs --watch"
   },
   "dependencies": {
-    "better-sqlite3": "^11.0.0",
-    "cors": "^2.8.5",
-    "express": "^4.19.0",
+    "express": "^5.2.1",
+    "better-sqlite3": "^13.0.3",
+    "cors": "^2.8.6",
     "matrix-js-sdk": "^42.1.0",
     "@matrix-org/olm": "^3.2.15"
   },
   "devDependencies": {
-    "esbuild": "^0.24.0"
+    "esbuild": "^0.24.2"
+  },
+  "allowScripts": {
+    "better-sqlite3@13.0.3": true
   },
   "repository": {
     "type": "git",
