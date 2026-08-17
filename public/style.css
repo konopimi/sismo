@@ -262,7 +262,7 @@ h1 {
      of letting the list scroll. */
   flex-shrink: 0;
   background: rgba(26, 29, 36, 0.7);
-  border-left: 3px solid #d64545;
+  border-left: 3px solid #e57373;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
@@ -274,12 +274,12 @@ h1 {
 
 .map-sidebar-card.desaparecido {
   background: rgba(21, 5, 5, 0.85) !important;
-  border-left-color: #d64545;
+  border-left-color: #e57373;
 }
 
 .map-sidebar-card.encontrado {
   background: rgba(5, 21, 16, 0.85) !important;
-  border-left-color: #3fa34d;
+  border-left-color: #66bb6a;
 }
 
 .map-sidebar-card.angel {
@@ -290,17 +290,17 @@ h1 {
 /* Building statuses (seguro/danado/colapsado/acopio) — match STATUS_META colors. */
 .map-sidebar-card.seguro {
   background: rgba(5, 21, 16, 0.85) !important;
-  border-left-color: #3fa34d;
+  border-left-color: #66bb6a;
 }
 
 .map-sidebar-card.danado {
   background: rgba(30, 24, 8, 0.85) !important;
-  border-left-color: #e0a63c;
+  border-left-color: #f0c060;
 }
 
 .map-sidebar-card.colapsado {
   background: rgba(24, 6, 6, 0.85) !important;
-  border-left-color: #b53838;
+  border-left-color: #d06060;
 }
 
 .map-sidebar-card.acopio {
@@ -473,15 +473,15 @@ h1 {
 
 /* Status pills: active color follows the status color. */
 .filter-pill[data-status="desaparecido"].active {
-  background: #d64545;
+  background: #e57373;
   color: #fff;
-  border-color: #d64545;
+  border-color: #e57373;
 }
 
 .filter-pill[data-status="encontrado"].active {
-  background: #3fa34d;
+  background: #66bb6a;
   color: #fff;
-  border-color: #3fa34d;
+  border-color: #66bb6a;
 }
 
 .filter-pill[data-status="angel"].active {
@@ -491,21 +491,21 @@ h1 {
 }
 
 .filter-pill[data-status="seguro"].active {
-  background: #3fa34d;
+  background: #66bb6a;
   color: #fff;
-  border-color: #3fa34d;
+  border-color: #66bb6a;
 }
 
 .filter-pill[data-status="danado"].active {
-  background: #e0a63c;
+  background: #f0c060;
   color: #222;
-  border-color: #e0a63c;
+  border-color: #f0c060;
 }
 
 .filter-pill[data-status="colapsado"].active {
-  background: #b53838;
+  background: #d06060;
   color: #fff;
-  border-color: #b53838;
+  border-color: #d06060;
 }
 
 .filter-pill[data-status="acopio"].active {
@@ -877,7 +877,7 @@ textarea {
   font-size: 62%;
   background: #1a1d24;
   border-radius: 10px;
-  border-left: 4px solid #d64545;
+  border-left: 4px solid #e57373;
   cursor: default;
   overflow: hidden;
   transition: background 0.15s;
@@ -897,22 +897,22 @@ textarea {
 
 .card.encontrado {
   background: #051510 !important;
-  border-left-color: #3fa34d;
+  border-left-color: #66bb6a;
 }
 
 .card.seguro {
   background: #051510 !important;
-  border-left-color: #3fa34d;
+  border-left-color: #66bb6a;
 }
 
 .card.danado {
   background: #151005 !important;
-  border-left-color: #e0a63c;
+  border-left-color: #f0c060;
 }
 
 .card.colapsado {
   background: #150505 !important;
-  border-left-color: #b53838;
+  border-left-color: #d06060;
 }
 
 .card.acopio {
@@ -1090,7 +1090,7 @@ textarea {
   text-transform: uppercase;
   padding: 5px;
   border-radius: 4px;
-  background: #d64545;
+  background: #e57373;
   display: inline-block;
   letter-spacing: 0.3px;
   color: white;
@@ -1099,16 +1099,16 @@ textarea {
 
 .status-tag.encontrado,
 .status-tag.seguro {
-  background: #3fa34d;
+  background: #66bb6a;
 }
 
 .status-tag.danado {
-  background: #e0a63c;
+  background: #f0c060;
   color: #222;
 }
 
 .status-tag.colapsado {
-  background: #b53838;
+  background: #d06060;
 }
 
 .status-tag.acopio {

@@ -66,21 +66,21 @@ function mapItemMatchesSearch(item, type) {
 // Exposed on window so index.js can also use it.
 const STATUS_META = {
   desaparecido: {
-    color: "#d64545",
+    color: "#e57373",
     cssClass: "desaparecido",
     label: "desaparecido",
     icon: "🔍",
   },
   encontrado: {
-    color: "#3fa34d",
+    color: "#66bb6a",
     cssClass: "encontrado",
     label: "encontrado",
     icon: "✅",
   },
-  seguro: { color: "#3fa34d", cssClass: "seguro", label: "seguro", icon: "🫶" },
-  danado: { color: "#e0a63c", cssClass: "danado", label: "dañado", icon: "⚠️" },
+  seguro: { color: "#66bb6a", cssClass: "seguro", label: "seguro", icon: "🫶" },
+  danado: { color: "#f0c060", cssClass: "danado", label: "dañado", icon: "⚠️" },
   colapsado: {
-    color: "#b53838",
+    color: "#d06060",
     cssClass: "colapsado",
     label: "colapsado",
     icon: "💥",
@@ -102,7 +102,7 @@ const STATUS_META = {
 window.STATUS_META = STATUS_META;
 
 function statusColor(status) {
-  return STATUS_META[status]?.color || "#d64545";
+  return STATUS_META[status]?.color || "#e57373";
 }
 
 function statusIcon(status) {
