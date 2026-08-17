@@ -246,6 +246,10 @@ h1 {
   overflow: hidden;
   align-items: center;
   gap: 8px;
+  /* Keep natural height: without this, flex-shrink:1 (default) squeezes
+     every card to fit the list height when there are many items, instead
+     of letting the list scroll. */
+  flex-shrink: 0;
   background: rgba(26, 29, 36, 0.7);
   border-left: 3px solid #d64545;
   border-radius: 8px;
