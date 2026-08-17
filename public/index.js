@@ -170,7 +170,7 @@ function showChat() {
   if (loginForm) loginForm.style.display = "none";
   if (chatContainer) {
     chatContainer.style.display = "flex";
-    chatContainer.innerHTML = `<div style="padding:20px;">Conectado como ${escapeHtml(window.currentUser?.name || "")}</div>`;
+    chatContainer.innerHTML = `<div style="padding:20px;">Conectado como ${escapeHtml(window.currentUser?.chat_name || window.currentUser?.name || "")}</div>`;
   }
   if (colabListWrapper) colabListWrapper.style.display = "block";
   if (colabLoginPrompt) colabLoginPrompt.style.display = "none";
