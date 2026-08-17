@@ -1,7 +1,5 @@
 {
-  "dependencies": {
-    "@hocuspocus/server": "^3.4.4"
-  },
+  "dependencies": {},
   "name": "sismo",
   "version": "1.0.0",
   "description": "https://sismoinfo.co",

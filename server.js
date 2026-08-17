@@ -68,6 +68,16 @@ function requireAuth(req, res, next) {
   req.userId = userId;
   next();
 }
+// Resolve how a collaborator appears in chat: display_name → name → contact (WhatsApp) → "Anónimo"
+function resolveDisplayName(user) {
+  if (!user) return "Anónimo";
+  return (
+    (user.display_name && user.display_name.trim()) ||
+    (user.name && user.name.trim()) ||
+    (user.contact && user.contact.trim()) ||
+    "Anónimo"
+  );
+}
 
 // Helper for PATCH /:id/photo endpoints
 function handlePhotoPatch(tableName) {
@@ -267,6 +277,9 @@ try {
 } catch (e) { }
 try {
   db.exec("ALTER TABLE collaborators ADD COLUMN password_hash TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE collaborators ADD COLUMN display_name TEXT");
 } catch (e) { }
 // ========== Comentarios ==========
 app.get("/api/comments", (req, res) => {
@@ -826,19 +839,42 @@ app.post("/api/auth/login", (req, res) => {
 
   const id = identifier.trim().toLowerCase();
   const user = db.prepare(
-    "SELECT id, name, email, password_hash FROM collaborators WHERE LOWER(email) = ? OR LOWER(name) = ?",
+    "SELECT id, name, email, password_hash, contact, display_name FROM collaborators WHERE LOWER(email) = ? OR LOWER(name) = ?",
   ).get(id, id);
 
   if (!user || !verifyPassword(password, user.password_hash)) {
     return res.status(401).json({ error: "invalid credentials" });
   }
   const token = createToken(user.id);
-  res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+  res.json({
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      display_name: user.display_name || null,
+      chat_name: resolveDisplayName(user),
+    },
+  });
 });
 app.get("/api/auth/me", requireAuth, (req, res) => {
-  const user = db.prepare("SELECT id, name, email, skill, contact, city FROM collaborators WHERE id = ?").get(req.userId);
+  const user = db.prepare("SELECT id, name, email, skill, contact, city, display_name FROM collaborators WHERE id = ?").get(req.userId);
   if (!user) return res.status(404).json({ error: "not found" });
-  res.json(user);
+  res.json({ ...user, chat_name: resolveDisplayName(user) });
+});
+app.patch("/api/auth/me", requireAuth, (req, res) => {
+  const { display_name } = req.body || {};
+  if (display_name !== undefined && display_name !== null && typeof display_name !== "string") {
+    return res.status(400).json({ error: "display_name must be a string" });
+  }
+  const trimmed = typeof display_name === "string" ? display_name.trim() : null;
+  if (trimmed && trimmed.length > 40) {
+    return res.status(400).json({ error: "display_name too long (max 40 chars)" });
+  }
+  const result = db.prepare("UPDATE collaborators SET display_name = ? WHERE id = ?").run(trimmed, req.userId);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  const user = db.prepare("SELECT id, name, email, skill, contact, city, display_name FROM collaborators WHERE id = ?").get(req.userId);
+  res.json({ ...user, chat_name: resolveDisplayName(user) });
 });
 app.delete("/api/collaborators/:id", requireAdmin, (req, res) => {
   const result = db
