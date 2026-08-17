@@ -261,51 +261,23 @@ h1 {
      every card to fit the list height when there are many items, instead
      of letting the list scroll. */
   flex-shrink: 0;
-  background: rgba(26, 29, 36, 0.7);
-  border-left: 3px solid #e57373;
+  /* Background and left border are derived from the status color (set
+     inline as --status-color) via color-mix, matching the main cards. */
+  background: color-mix(in srgb, var(--status-color, #e57373) 12%, rgba(26, 29, 36, 0.85));
+  border-left: 3px solid var(--status-color, #e57373);
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .map-sidebar-card:hover {
-  background: rgba(34, 38, 46, 0.85);
+  background: color-mix(in srgb, var(--status-color, #e57373) 20%, rgba(34, 38, 46, 0.85));
 }
 
-.map-sidebar-card.desaparecido {
-  background: rgba(21, 5, 5, 0.85) !important;
-  border-left-color: #e57373;
-}
-
-.map-sidebar-card.encontrado {
-  background: rgba(5, 21, 16, 0.85) !important;
-  border-left-color: #66bb6a;
-}
-
+/* Angel is a special light-blue case (deceased), not a dark status tint. */
 .map-sidebar-card.angel {
-  background: rgba(127, 184, 236, 0.62) !important;
+  background: rgba(127, 184, 236, 0.62);
   border-left-color: #add8e6;
-}
-
-/* Building statuses (seguro/danado/colapsado/acopio) — match STATUS_META colors. */
-.map-sidebar-card.seguro {
-  background: rgba(5, 21, 16, 0.85) !important;
-  border-left-color: #66bb6a;
-}
-
-.map-sidebar-card.danado {
-  background: rgba(30, 24, 8, 0.85) !important;
-  border-left-color: #f0c060;
-}
-
-.map-sidebar-card.colapsado {
-  background: rgba(24, 6, 6, 0.85) !important;
-  border-left-color: #d06060;
-}
-
-.map-sidebar-card.acopio {
-  background: rgba(30, 30, 30, 0.85) !important;
-  border-left-color: #ffffff;
 }
 
 .map-sidebar-photo {
@@ -842,7 +814,7 @@ textarea {
   display: block;
 }
 
-.search-row > input {
+.search-row>input {
   border-radius: 0px !important;
   border: none !important;
   border-bottom: 2px solid rgba(var(--surface), 0.62) !important;
@@ -872,8 +844,8 @@ textarea {
   width: 100%;
   min-width: 200px;
   /* max-width: 300px; */
-  min-height: 150px;
-  max-height: 150px;
+  min-height: 170px;
+  max-height: 170px;
   font-size: 62%;
   /* Background and left border are derived from the status color (set
      inline as --status-color by the card renderers) via color-mix, so
@@ -1166,6 +1138,7 @@ textarea {
 }
 
 @media (max-width: 480px) {
+
   .crear form input,
   .crear form select {
     flex: 1 1 100%;
@@ -1481,7 +1454,7 @@ textarea {
   font-size: 13px;
 }
 
-.sismo-live-item + .sismo-live-item {
+.sismo-live-item+.sismo-live-item {
   border-top: 1px solid #23272f;
 }
 

@@ -162,8 +162,11 @@ function mapSidebarCardHtml(item, type) {
   const emoji = isAngel ? "👼" : MAP_SIDEBAR_EMOJI[type];
   const defaultStatus = type === "building" ? "seguro" : "desaparecido";
   const statusClass = isAngel ? "angel" : item.status || defaultStatus;
+  // Expose the status color so the card background/border are derived
+  // automatically (color-mix), matching the main list cards.
+  const statusColorHex = statusColor(statusClass);
   return `
-    <div class="map-sidebar-card ${statusClass}" data-id="${item.id}" data-type="${type}">
+    <div class="map-sidebar-card ${statusClass}" data-id="${item.id}" data-type="${type}" style="--status-color:${statusColorHex};">
       ${imgHtml}
       <div class="map-sidebar-info">
         <span class="map-sidebar-name">${emoji} ${escapeHtml(item.name)}</span>
