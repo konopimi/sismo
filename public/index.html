@@ -18,6 +18,8 @@
   <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
   <!-- ECharts (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <!-- Matrix JS SDK (chat E2E) -->
+  <script src="https://cdn.jsdelivr.net/npm/matrix-js-sdk@34.11.1/dist/browser-matrix.min.js"></script>
 </head>
 
 <body>
@@ -123,13 +125,14 @@
     </div>
     <div id="listA" class="list"></div>
   </div>
-  <!-- ===== PANEL COLABORADORES ===== -->
+  <!-- ===== PANEL COLABORADORES (100% privado: requiere login) ===== -->
   <div id="tabColab" class="tab-panel">
 
-    <!-- Chat de colaboradores (requiere login) -->
-    <div id="chatAuth" style="margin-bottom:10px;">
+    <!-- Login (sin sesión) -->
+    <div id="chatAuth">
       <div id="loginForm"
-        style="margin:auto;margin-top:20px;max-width:600px;display:flex;flex-direction:column;gap:10px;padding:20px;background:rgba(var(--surface),0.38);border-radius:10px;">
+        style="
+          margin:auto;margin-top:20px;max-width:600px;display:flex;flex-direction:column;gap:10px;padding:20px;background:rgba(var(--surface),0.38);border-radius:10px;">
         <b style="color:#ccc;">💬 Chat de colaboradores</b>
         <input type="text" id="loginIdentifier" placeholder="Email o usuario" />
         <input type="password" id="loginPassword" placeholder="Contraseña" />
@@ -150,24 +153,69 @@
         </button>
         <div id="loginError" style="color:#f66;font-size:0.85rem;"></div>
       </div>
-      <div id="chatContainer" style="display:none;flex:1;overflow:hidden;min-height:0;"></div>
     </div>
-    <div id="colabListWrapper" style="display:none;">
 
-      <div class="tool-bar">
-        <div style="display:none;" class="filter-row" data-tab="colaborador">
-          <select class="filter-select" data-filter="city" disabled>
-            <option value="">📍 TODAS</option>
-          </select>
-        </div>
-        <button id="crear-top" class="crear-btn" onclick="openCrearModal('colaborador')">
-          🤝 COLABORAR
-        </button>
+    <!-- Contenido privado (con sesión) -->
+    <div id="colabPrivateWrapper" style="display:none;flex-direction:column;flex:1;overflow:hidden;min-height:0;">
+      <div id="connContainer"></div>
+      <!-- Sub-tabs -->
+      <div class="sub-tabs">
+        <button class="sub-tab-btn active" data-subtab="chat">💬<span class="n">Chat</span></button>
+        <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="n">Donaciones</span></button>
+        <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="n">Necesidades</span></button>
+        <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="n">Logística</span></button>
+        <button class="sub-tab-btn" data-subtab="voluntarios">🤝<span class="n">Voluntarios</span></button>
       </div>
-      <div id="listColab" class="list"></div>
+
+      <!-- Panel Chat (lo implementará otra persona) -->
+      <div class="sub-tab-panel active" data-subtab-panel="chat">
+        <div id="chatContainer" style="display:none;flex:1;overflow:hidden;min-height:0;"></div>
+      </div>
+
+      <!-- Panel Donaciones -->
+      <div class="sub-tab-panel" data-subtab-panel="donaciones">
+        <div class="tool-bar">
+          <button class="crear-btn" onclick="openCrearModal('donacion')">🎁 DONAR</button>
+        </div>
+        <div id="listDonaciones" class="list"></div>
+      </div>
+
+      <!-- Panel Necesidades -->
+      <div class="sub-tab-panel" data-subtab-panel="necesidades">
+        <div class="tool-bar">
+          <button class="crear-btn" onclick="openCrearModal('necesidad')">🆘 REPORTAR</button>
+        </div>
+        <div id="listNecesidades" class="list"></div>
+      </div>
+
+      <!-- Panel Logística -->
+      <div class="sub-tab-panel" data-subtab-panel="logistica">
+        <div class="tool-bar">
+          <button class="crear-btn" onclick="openCrearModal('logistica')">🚚 CREAR</button>
+        </div>
+        <div id="listLogistica" class="list"></div>
+      </div>
+
+      <!-- Panel Voluntarios (lista de colaboradores) -->
+      <div class="sub-tab-panel" data-subtab-panel="voluntarios">
+        <div id="colabListWrapper">
+          <div class="tool-bar">
+            <div style="display:none;" class="filter-row" data-tab="colaborador">
+              <select class="filter-select" data-filter="city" disabled>
+                <option value="">📍 TODAS</option>
+              </select>
+            </div>
+            <button id="crear-top" class="crear-btn" onclick="openCrearModal('colaborador')">
+              🤝 COLABORAR
+            </button>
+          </div>
+          <div id="listColab" class="list"></div>
+        </div>
+      </div>
     </div>
+
     <div id="colabLoginPrompt" style="padding:16px;text-align:center;color:#999;font-size:0.9rem;">
-      🔒 Inicia sesión para ver la lista de colaboradores
+      🔒 Inicia sesión para ver la zona de colaboradores
     </div>
   </div>
   <!-- ===== PANEL MAPA ===== -->
@@ -544,6 +592,66 @@
             <input type="email" id="emailInputColab" placeholder="Email (opcional)" />
             <input type="password" id="passwordInputColab" placeholder="Contraseña (opcional, mín 6 chars)" />
             <button type="submit">Unirme</button>
+          </form>
+        </div>
+        <!-- DONACIÓN -->
+        <div class="crear-form-wrap" data-type="donacion">
+          <form id="addFormDonacion">
+            <select id="donacionTypeInput" required>
+              <option value="">Tipo de donación</option>
+              <option value="comida">🍽️ Comida</option>
+              <option value="ropa">👕 Ropa</option>
+              <option value="insumos">🧰 Insumos</option>
+              <option value="medicinas">💊 Medicinas</option>
+              <option value="transporte">🚗 Transporte</option>
+              <option value="otro">📦 Otro</option>
+            </select>
+            <input type="text" id="donacionQtyInput" placeholder="Cantidad (ej: 200 almuerzos)" />
+            <textarea id="donacionDescInput" placeholder="Descripción" required></textarea>
+            <input type="text" id="donacionLocInput" placeholder="Punto de rescate / dirección" />
+            <input type="text" id="donacionContactInput" placeholder="Tu contacto (opcional)" />
+            <button type="submit">🎁 Ofrecer</button>
+          </form>
+        </div>
+        <!-- NECESIDAD -->
+        <div class="crear-form-wrap" data-type="necesidad">
+          <form id="addFormNecesidad">
+            <select id="necesidadTypeInput" required>
+              <option value="">Tipo de necesidad</option>
+              <option value="comida">🍽️ Comida</option>
+              <option value="ropa">👕 Ropa</option>
+              <option value="carpas">⛺ Carpas</option>
+              <option value="medicinas">💊 Medicinas</option>
+              <option value="aseo">🧼 Aseo</option>
+              <option value="otro">📦 Otro</option>
+            </select>
+            <input type="text" id="necesidadQtyInput" placeholder="Cantidad" />
+            <textarea id="necesidadDescInput" placeholder="¿Qué se necesita?" required></textarea>
+            <select id="necesidadUrgencyInput">
+              <option value="media">Urgencia media</option>
+              <option value="alta">⚠️ URGENTE</option>
+              <option value="baja">Baja</option>
+            </select>
+            <input type="text" id="necesidadPointInput" placeholder="Punto de rescate (ej: Cantabria)" />
+            <input type="text" id="necesidadContactInput" placeholder="Contacto en el punto (opcional)" />
+            <button type="submit">🆘 Reportar</button>
+          </form>
+        </div>
+        <!-- LOGÍSTICA -->
+        <div class="crear-form-wrap" data-type="logistica">
+          <form id="addFormLogistica">
+            <select id="logisticaTypeInput" required>
+              <option value="">Tipo de tarea</option>
+              <option value="entrega">📦 Entrega</option>
+              <option value="recogida">📥 Recogida</option>
+              <option value="transporte">🚚 Transporte</option>
+              <option value="voluntario">🙋 Voluntario</option>
+            </select>
+            <textarea id="logisticaDescInput" placeholder="¿Qué hay que hacer?" required></textarea>
+            <input type="text" id="logisticaOriginInput" placeholder="Origen" />
+            <input type="text" id="logisticaDestInput" placeholder="Destino" />
+            <input type="text" id="logisticaContactInput" placeholder="Contacto (opcional)" />
+            <button type="submit">🚚 Crear tarea</button>
           </form>
         </div>
       </div>

@@ -99,6 +99,27 @@ const TYPE_REGISTRY = {
     createTitle: "Colaborar",
     renderFn: renderColab,
   },
+  donacion: {
+    data: () => donacionesData,
+    emoji: "🎁",
+    apiType: "donaciones",
+    createTitle: "Ofrecer donación",
+    renderFn: renderDonaciones,
+  },
+  necesidad: {
+    data: () => necesidadesData,
+    emoji: "🆘",
+    apiType: "necesidades",
+    createTitle: "Reportar necesidad",
+    renderFn: renderNecesidades,
+  },
+  logistica: {
+    data: () => logisticaData,
+    emoji: "🚚",
+    apiType: "logistica",
+    createTitle: "Crear tarea",
+    renderFn: renderLogistica,
+  },
   map: {
     renderFn: () => {},
   },
@@ -156,9 +177,10 @@ async function authFetch(url, opts = {}) {
 function showLoginForm() {
   const loginForm = document.getElementById("loginForm");
   const chatContainer = document.getElementById("chatContainer");
+  const privateWrapper = document.getElementById("colabPrivateWrapper");
   if (loginForm) loginForm.style.display = "flex";
   if (chatContainer) chatContainer.style.display = "none";
-  if (colabListWrapper) colabListWrapper.style.display = "none";
+  if (privateWrapper) privateWrapper.style.display = "none";
   if (colabLoginPrompt) colabLoginPrompt.style.display = "block";
   window.currentUser = null;
   // Hide the collaborators count badge now that we're logged out.
@@ -167,16 +189,25 @@ function showLoginForm() {
 function showChat() {
   const loginForm = document.getElementById("loginForm");
   const chatContainer = document.getElementById("chatContainer");
+  const privateWrapper = document.getElementById("colabPrivateWrapper");
+  const connContainer = document.getElementById("connContainer");
   if (loginForm) loginForm.style.display = "none";
   if (chatContainer) {
     chatContainer.style.display = "flex";
-    chatContainer.innerHTML = `<div style="padding:20px;">Conectado como ${escapeHtml(window.currentUser?.chat_name || window.currentUser?.name || "")}</div>`;
   }
-  if (colabListWrapper) colabListWrapper.style.display = "block";
+  if (connContainer) {
+    connContainer.innerHTML = `<div style="text-align:right;font-size:60%;">Conectado como ${escapeHtml(window.currentUser?.chat_name || window.currentUser?.name || "")}</div>`;
+}
+  if (privateWrapper) privateWrapper.style.display = "flex";
   if (colabLoginPrompt) colabLoginPrompt.style.display = "none";
   if (!colabData.length) loadListColab();
+  if (typeof loadListDonaciones === "function" && !donacionesData.length) loadListDonaciones();
+  if (typeof loadListNecesidades === "function" && !necesidadesData.length) loadListNecesidades();
+  if (typeof loadListLogistica === "function" && !logisticaData.length) loadListLogistica();
   // Show the collaborators count badge now that we're logged in.
   if (typeof updateTabCounts === "function") updateTabCounts();
+  // Conectar el chat Matrix (E2E) una vez autenticado.
+  if (typeof startMatrixChat === "function") startMatrixChat();
 }
 async function attemptLogin() {
   const identifier = document.getElementById("loginIdentifier")?.value.trim();
@@ -222,6 +253,159 @@ async function attemptLogin() {
     showLoginForm();
   }
 })();
+// ================================================================
+//  CHAT MATRIX (E2E)
+//  Un solo canal grupal. El backend provisiona la cuenta Matrix en el
+//  primer login; el cliente hace login con matrix-js-sdk y genera sus
+//  claves E2E en el navegador. El room se crea/une automáticamente.
+// ================================================================
+const MATRIX_ROOM_ALIAS = "#sismo-general:matrix.sismoinfo.co";
+let matrixClient = null;
+let matrixRoom = null;
+let matrixStarted = false;
+
+function matrixSdk() {
+  return window.matrixcs || window.matrix;
+}
+
+async function startMatrixChat() {
+  if (matrixStarted) return;
+  matrixStarted = true;
+  const sdk = matrixSdk();
+  if (!sdk) {
+    renderChatError("Matrix SDK no cargó. Recarga la página.");
+    return;
+  }
+  try {
+    // 1. Obtener credenciales Matrix del backend (provisiona si hace falta).
+    const res = await authFetch(`${API_BASE}/auth/matrix`, { method: "POST" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      renderChatError(data.error || "No se pudo conectar al chat.");
+      return;
+    }
+    const { base_url, user_id, password } = await res.json();
+
+    // 2. Login en Matrix (genera claves E2E en el navegador).
+    matrixClient = sdk.createClient({ baseUrl: base_url });
+    await matrixClient.login("m.login.password", {
+      identifier: { type: "m.id.user", user: user_id.split(":")[0].replace("@", "") },
+      password,
+    });
+    await matrixClient.initCrypto();
+    matrixClient.setGlobalErrorOnUnknownDevices(false);
+    await matrixClient.startClient({ initialSyncLimit: 20 });
+
+    // 3. Unirse/crear el room grupal.
+    matrixRoom = await joinOrCreateRoom();
+
+    // 4. Renderizar la UI del chat.
+    renderChatUI();
+    bindChatEvents();
+  } catch (e) {
+    console.error("Matrix chat error:", e);
+    renderChatError("Error al conectar el chat: " + (e.message || e));
+  }
+}
+
+async function joinOrCreateRoom() {
+  try {
+    const aliasRes = await matrixClient.getRoomIdForAlias(MATRIX_ROOM_ALIAS);
+    const roomId = aliasRes.room_id;
+    await matrixClient.joinRoom(roomId);
+    return matrixClient.getRoom(roomId);
+  } catch (e) {
+    // Room no existe: crearlo.
+    const { room_id } = await matrixClient.createRoom({
+      name: "Sismo General",
+      topic: "Canal general de colaboradores de Sismo",
+      visibility: "private",
+      room_alias_name: "sismo-general",
+    });
+    return matrixClient.getRoom(room_id);
+  }
+}
+
+function renderChatUI() {
+  const container = document.getElementById("chatContainer");
+  if (!container) return;
+  container.style.display = "flex";
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;flex:1;min-height:0;">
+      <div id="chatMessages" style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;"></div>
+      <div style="display:flex;gap:6px;padding:8px;border-top:1px solid rgba(120,120,120,0.3);">
+        <input id="chatInput" type="text" placeholder="Escribe un mensaje..." style="flex:1;border-radius:6px;padding:8px;" />
+        <button id="chatSendBtn" style="border-radius:6px;padding:8px 14px;">Enviar</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderChatError(msg) {
+  const container = document.getElementById("chatContainer");
+  if (!container) return;
+  container.style.display = "flex";
+  container.innerHTML = `<div style="padding:20px;color:#f66;">${escapeHtml(msg)}</div>`;
+}
+
+function bindChatEvents() {
+  const input = document.getElementById("chatInput");
+  const sendBtn = document.getElementById("chatSendBtn");
+  const send = async () => {
+    const text = input.value.trim();
+    if (!text || !matrixRoom) return;
+    try {
+      await matrixClient.sendTextMessage(matrixRoom.roomId, text);
+      input.value = "";
+    } catch (e) {
+      console.error("send error:", e);
+    }
+  };
+  sendBtn.addEventListener("click", send);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") send();
+  });
+
+  // Escuchar mensajes nuevos.
+  matrixClient.on("Room.timeline", (event, room) => {
+    if (!room || room.roomId !== matrixRoom.roomId) return;
+    if (event.getType() !== "m.room.message") return;
+    appendMessage(event);
+  });
+
+  // Cargar historial inicial.
+  const timeline = matrixRoom.getLiveTimeline().getEvents();
+  timeline.forEach((event) => {
+    if (event.getType() === "m.room.message") appendMessage(event);
+  });
+}
+
+function appendMessage(event) {
+  const list = document.getElementById("chatMessages");
+  if (!list) return;
+  const content = event.getContent();
+  const body = content.body || "";
+  const sender = event.getSender();
+  const isSelf = sender === matrixClient.getUserId();
+  const name = isSelf
+    ? (window.currentUser?.chat_name || "Tú")
+    : sender.split(":")[0].replace("@", "");
+  const div = document.createElement("div");
+  div.style.cssText = `
+    align-self:${isSelf ? "flex-end" : "flex-start"};
+    max-width:75%;
+    padding:8px 12px;
+    border-radius:12px;
+    background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};
+  `;
+  div.innerHTML = `
+    <div style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>
+    <div style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(body)}</div>
+  `;
+  list.appendChild(div);
+  list.scrollTop = list.scrollHeight;
+}
+
 // ================================================================
 //  PRIVACY MODAL
 // ================================================================
@@ -1539,6 +1723,42 @@ function openModalForItem(item, type) {
             ${details.join("")}
           </div>
         `;
+  } else if (type === "donacion") {
+    modalStatus.innerHTML = `<span class="status-tag donacion-${escapeHtml(item.status || "disponible")}">${DONACION_STATUS_LABEL[item.status] || item.status}</span>`;
+    modalTitle.textContent = `${item.item_type || "Donación"}${item.quantity ? ` · ${item.quantity}` : ""}`;
+    const metaParts = [];
+    if (item.location) metaParts.push(`📍 ${escapeHtml(item.location)}`);
+    if (item.created_at) metaParts.push(`🕒 ${new Date(item.created_at).toLocaleString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}`);
+    modalMeta.innerHTML = metaParts.map((p) => `<span>${p}</span>`).join("");
+    const details = [];
+    if (item.description) details.push(`<div style="white-space:pre-wrap;">${escapeHtml(item.description)}</div>`);
+    if (item.contact) details.push(`<span>📞 <b>Contacto:</b> ${escapeHtml(item.contact)}</span>`);
+    modalBody.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;font-size:0.95rem;">${details.join("")}</div>`;
+  } else if (type === "necesidad") {
+    modalStatus.innerHTML = `<span class="status-tag necesidad-${escapeHtml(item.status || "abierta")}">${NECESIDAD_STATUS_LABEL[item.status] || item.status}</span>`;
+    modalTitle.textContent = `${item.item_type || "Necesidad"}${item.quantity ? ` · ${item.quantity}` : ""}`;
+    const metaParts = [];
+    if (item.point_name) metaParts.push(`📍 ${escapeHtml(item.point_name)}`);
+    if (item.created_at) metaParts.push(`🕒 ${new Date(item.created_at).toLocaleString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}`);
+    modalMeta.innerHTML = metaParts.map((p) => `<span>${p}</span>`).join("");
+    const details = [];
+    if (item.urgency === "alta") details.push(`<span class="status-tag necesidad-urgente">⚠️ URGENTE</span>`);
+    if (item.description) details.push(`<div style="white-space:pre-wrap;">${escapeHtml(item.description)}</div>`);
+    if (item.contact) details.push(`<span>📞 <b>Contacto:</b> ${escapeHtml(item.contact)}</span>`);
+    modalBody.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;font-size:0.95rem;">${details.join("")}</div>`;
+  } else if (type === "logistica") {
+    modalStatus.innerHTML = `<span class="status-tag logistica-${escapeHtml(item.status || "pendiente")}">${LOGISTICA_STATUS_LABEL[item.status] || item.status}</span>`;
+    modalTitle.textContent = item.task_type || "Tarea";
+    const metaParts = [];
+    if (item.origin && item.destination) metaParts.push(`📍 ${escapeHtml(item.origin)} → ${escapeHtml(item.destination)}`);
+    else if (item.origin) metaParts.push(`📍 ${escapeHtml(item.origin)}`);
+    else if (item.destination) metaParts.push(`📍 → ${escapeHtml(item.destination)}`);
+    if (item.created_at) metaParts.push(`🕒 ${new Date(item.created_at).toLocaleString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}`);
+    modalMeta.innerHTML = metaParts.map((p) => `<span>${p}</span>`).join("");
+    const details = [];
+    if (item.description) details.push(`<div style="white-space:pre-wrap;">${escapeHtml(item.description)}</div>`);
+    if (item.contact) details.push(`<span>📞 <b>Contacto:</b> ${escapeHtml(item.contact)}</span>`);
+    modalBody.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;font-size:0.95rem;">${details.join("")}</div>`;
   } else {
     modalBody.innerHTML = `<div style="color:#888;">Detalles del reporte</div>`;
   }
@@ -1575,6 +1795,24 @@ function openModalForItem(item, type) {
     if (isLocalhost) {
       actionsHtml += `<button class="btn-small btn-delete" onclick="removeB('${item.id}'); closeModal();">✕ Eliminar</button>`;
     }
+  } else if (type === "donacion") {
+    const s = item.status || "disponible";
+    actionsHtml += `<button class="btn-small${s === "disponible" ? " btn-active" : ""}" ${s === "disponible" ? "disabled" : ""} onclick="setDonacionStatus('${item.id}','disponible'); closeModal();">Disponible</button>`;
+    actionsHtml += `<button class="btn-small${s === "reservado" ? " btn-active" : ""}" ${s === "reservado" ? "disabled" : ""} onclick="setDonacionStatus('${item.id}','reservado'); closeModal();">Reservado</button>`;
+    actionsHtml += `<button class="btn-small${s === "entregado" ? " btn-active" : ""}" ${s === "entregado" ? "disabled" : ""} onclick="setDonacionStatus('${item.id}','entregado'); closeModal();">✅ Entregado</button>`;
+    if (isLocalhost) actionsHtml += `<button class="btn-small btn-delete" onclick="removePrivateItem('${item.id}','donacion'); closeModal();">✕ Eliminar</button>`;
+  } else if (type === "necesidad") {
+    const s = item.status || "abierta";
+    actionsHtml += `<button class="btn-small${s === "abierta" ? " btn-active" : ""}" ${s === "abierta" ? "disabled" : ""} onclick="setNecesidadStatus('${item.id}','abierta'); closeModal();">Abierta</button>`;
+    actionsHtml += `<button class="btn-small${s === "en_proceso" ? " btn-active" : ""}" ${s === "en_proceso" ? "disabled" : ""} onclick="setNecesidadStatus('${item.id}','en_proceso'); closeModal();">En proceso</button>`;
+    actionsHtml += `<button class="btn-small${s === "cubierta" ? " btn-active" : ""}" ${s === "cubierta" ? "disabled" : ""} onclick="setNecesidadStatus('${item.id}','cubierta'); closeModal();">✅ Cubierta</button>`;
+    if (isLocalhost) actionsHtml += `<button class="btn-small btn-delete" onclick="removePrivateItem('${item.id}','necesidad'); closeModal();">✕ Eliminar</button>`;
+  } else if (type === "logistica") {
+    const s = item.status || "pendiente";
+    actionsHtml += `<button class="btn-small${s === "pendiente" ? " btn-active" : ""}" ${s === "pendiente" ? "disabled" : ""} onclick="setLogisticaStatus('${item.id}','pendiente'); closeModal();">Pendiente</button>`;
+    actionsHtml += `<button class="btn-small${s === "en_ruta" ? " btn-active" : ""}" ${s === "en_ruta" ? "disabled" : ""} onclick="setLogisticaStatus('${item.id}','en_ruta'); closeModal();">En ruta</button>`;
+    actionsHtml += `<button class="btn-small${s === "completado" ? " btn-active" : ""}" ${s === "completado" ? "disabled" : ""} onclick="setLogisticaStatus('${item.id}','completado'); closeModal();">✅ Completado</button>`;
+    if (isLocalhost) actionsHtml += `<button class="btn-small btn-delete" onclick="removePrivateItem('${item.id}','logistica'); closeModal();">✕ Eliminar</button>`;
   }
   modalActions.innerHTML = actionsHtml;
   // --- Abrir modal y actualizar URL ---
@@ -1592,7 +1830,13 @@ function openModalForItem(item, type) {
           ? "pets"
           : type === "colaborador"
             ? "collaborators"
-            : "buildings";
+            : type === "donacion"
+              ? "donaciones"
+              : type === "necesidad"
+                ? "necesidades"
+                : type === "logistica"
+                  ? "logistica"
+                  : "buildings";
     loadComments(item.id, commentType);
   }
 }
@@ -2801,6 +3045,322 @@ async function removeColab(id) {
   const ok = await adminDelete(`${API_BASE}/collaborators/${id}`);
   if (ok) loadListColab();
 }
+// ================================================================
+//  SUB-TABS de la pestaña Colaboradores
+//  Cambia entre Chat / Donaciones / Necesidades / Logística / Voluntarios
+// ================================================================
+const subTabBtns = document.querySelectorAll(".sub-tab-btn");
+const subTabPanels = document.querySelectorAll(".sub-tab-panel");
+subTabBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.subtab;
+    subTabBtns.forEach((b) => b.classList.toggle("active", b === btn));
+    subTabPanels.forEach((p) => {
+      p.classList.toggle("active", p.dataset.subtabPanel === target);
+    });
+    // Render the target list if it's a data sub-tab and empty.
+    if (target === "donaciones" && !donacionesData.length) loadListDonaciones();
+    else if (target === "necesidades" && !necesidadesData.length) loadListNecesidades();
+    else if (target === "logistica" && !logisticaData.length) loadListLogistica();
+    else if (target === "voluntarios" && !colabData.length) loadListColab();
+  });
+});
+
+// ================================================================
+//  DONACIONES (privado)
+// ================================================================
+let donacionesData = [];
+const listElDonaciones = document.getElementById("listDonaciones");
+const formDonacion = document.getElementById("addFormDonacion");
+const DONACION_STATUS_LABEL = {
+  disponible: "Disponible",
+  reservado: "Reservado",
+  entregado: "Entregado",
+  vencido: "Vencido",
+};
+const DONACION_EMOJI = {
+  comida: "🍽️", ropa: "👕", insumos: "🧰", medicinas: "💊", transporte: "🚗", otro: "📦",
+};
+async function loadListDonaciones() {
+  if (!getAuthToken()) { donacionesData = []; renderDonaciones(); return; }
+  try {
+    const res = await fetch(`${API_BASE}/donaciones`, {
+      headers: { Authorization: `Bearer ${getAuthToken()}` },
+    });
+    if (res.status === 401) { clearAuthToken(); showLoginForm(); return; }
+    donacionesData = await res.json();
+    renderDonaciones();
+  } catch {
+    listElDonaciones.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
+  }
+}
+function donacionCardHtml(item) {
+  const date = new Date(item.created_at).toLocaleString("es-CO", {
+    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+  });
+  const emoji = DONACION_EMOJI[item.item_type] || "🎁";
+  const metaParts = [];
+  if (item.location) metaParts.push(`📍 ${escapeHtml(item.location)}`);
+  metaParts.push(`🕒 ${date}`);
+  return `
+    <div class="card donacion" data-id="${item.id}" data-type="donacion">
+      <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
+        <span class="name">${emoji} ${escapeHtml(item.item_type)}${item.quantity ? ` · ${escapeHtml(item.quantity)}` : ""}</span>
+        <span class="status-tag donacion-${escapeHtml(item.status || "disponible")}">${DONACION_STATUS_LABEL[item.status] || item.status}</span>
+      </div>
+      <div class="card-main">
+        <div class="card-inner">
+          <div class="info">
+            <span class="meta">${escapeHtml(item.description)}</span>
+            <span class="meta">${metaParts.join(" · ")}</span>
+            ${commentBadgeHtml(item)}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function renderDonaciones() {
+  const q = searchInput.value;
+  const searched = q.trim()
+    ? donacionesData.filter((d) =>
+        fuzzyMatch(q, d.item_type || "") || fuzzyMatch(q, d.description || "") || fuzzyMatch(q, d.location || ""))
+    : donacionesData;
+  if (!searched.length) {
+    listElDonaciones.innerHTML = `<div class="empty">${donacionesData.length ? "Sin resultados." : "Aún no hay donaciones ofrecidas."}</div>`;
+    return;
+  }
+  renderVirtualList(listElDonaciones, searched, donacionCardHtml);
+}
+listElDonaciones.addEventListener("click", (e) => {
+  if (e.target.closest("button")) return;
+  const card = e.target.closest(".card");
+  if (!card) return;
+  const item = donacionesData.find((d) => d.id === card.dataset.id);
+  if (item) openModalForItem(item, "donacion");
+});
+formDonacion.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const body = {
+    item_type: document.getElementById("donacionTypeInput").value,
+    quantity: document.getElementById("donacionQtyInput").value.trim(),
+    description: document.getElementById("donacionDescInput").value.trim(),
+    location: document.getElementById("donacionLocInput").value.trim(),
+    contact: document.getElementById("donacionContactInput").value.trim(),
+  };
+  const res = await fetch(`${API_BASE}/donaciones`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAuthToken()}` },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error"); return; }
+  e.target.reset();
+  closeCrearModal();
+  loadListDonaciones();
+});
+async function setDonacionStatus(id, status) {
+  await fetch(`${API_BASE}/donaciones/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAuthToken()}` },
+    body: JSON.stringify({ status }),
+  });
+  loadListDonaciones();
+}
+
+// ================================================================
+//  NECESIDADES (privado)
+// ================================================================
+let necesidadesData = [];
+const listElNecesidades = document.getElementById("listNecesidades");
+const formNecesidad = document.getElementById("addFormNecesidad");
+const NECESIDAD_STATUS_LABEL = { abierta: "Abierta", en_proceso: "En proceso", cubierta: "Cubierta" };
+const NECESIDAD_EMOJI = {
+  comida: "🍽️", ropa: "👕", carpas: "⛺", medicinas: "💊", aseo: "🧼", otro: "📦",
+};
+async function loadListNecesidades() {
+  if (!getAuthToken()) { necesidadesData = []; renderNecesidades(); return; }
+  try {
+    const res = await fetch(`${API_BASE}/necesidades`, {
+      headers: { Authorization: `Bearer ${getAuthToken()}` },
+    });
+    if (res.status === 401) { clearAuthToken(); showLoginForm(); return; }
+    necesidadesData = await res.json();
+    renderNecesidades();
+  } catch {
+    listElNecesidades.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
+  }
+}
+function necesidadCardHtml(item) {
+  const date = new Date(item.created_at).toLocaleString("es-CO", {
+    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+  });
+  const emoji = NECESIDAD_EMOJI[item.item_type] || "🆘";
+  const metaParts = [];
+  if (item.point_name) metaParts.push(`📍 ${escapeHtml(item.point_name)}`);
+  metaParts.push(`🕒 ${date}`);
+  const urgent = item.urgency === "alta" ? `<span class="status-tag necesidad-urgente">⚠️ URGENTE</span>` : "";
+  return `
+    <div class="card necesidad" data-id="${item.id}" data-type="necesidad">
+      <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
+        <span class="name">${emoji} ${escapeHtml(item.item_type)}${item.quantity ? ` · ${escapeHtml(item.quantity)}` : ""}</span>
+        <span class="status-tag necesidad-${escapeHtml(item.status || "abierta")}">${NECESIDAD_STATUS_LABEL[item.status] || item.status}</span>
+        ${urgent}
+      </div>
+      <div class="card-main">
+        <div class="card-inner">
+          <div class="info">
+            <span class="meta">${escapeHtml(item.description)}</span>
+            <span class="meta">${metaParts.join(" · ")}</span>
+            ${commentBadgeHtml(item)}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function renderNecesidades() {
+  const q = searchInput.value;
+  const searched = q.trim()
+    ? necesidadesData.filter((n) =>
+        fuzzyMatch(q, n.item_type || "") || fuzzyMatch(q, n.description || "") || fuzzyMatch(q, n.point_name || ""))
+    : necesidadesData;
+  if (!searched.length) {
+    listElNecesidades.innerHTML = `<div class="empty">${necesidadesData.length ? "Sin resultados." : "Aún no hay necesidades reportadas."}</div>`;
+    return;
+  }
+  renderVirtualList(listElNecesidades, searched, necesidadCardHtml);
+}
+listElNecesidades.addEventListener("click", (e) => {
+  if (e.target.closest("button")) return;
+  const card = e.target.closest(".card");
+  if (!card) return;
+  const item = necesidadesData.find((n) => n.id === card.dataset.id);
+  if (item) openModalForItem(item, "necesidad");
+});
+formNecesidad.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const body = {
+    item_type: document.getElementById("necesidadTypeInput").value,
+    quantity: document.getElementById("necesidadQtyInput").value.trim(),
+    description: document.getElementById("necesidadDescInput").value.trim(),
+    urgency: document.getElementById("necesidadUrgencyInput").value,
+    point_name: document.getElementById("necesidadPointInput").value.trim(),
+    contact: document.getElementById("necesidadContactInput").value.trim(),
+  };
+  const res = await fetch(`${API_BASE}/necesidades`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAuthToken()}` },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error"); return; }
+  e.target.reset();
+  closeCrearModal();
+  loadListNecesidades();
+});
+async function setNecesidadStatus(id, status) {
+  await fetch(`${API_BASE}/necesidades/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAuthToken()}` },
+    body: JSON.stringify({ status }),
+  });
+  loadListNecesidades();
+}
+
+// ================================================================
+//  LOGÍSTICA (privado)
+// ================================================================
+let logisticaData = [];
+const listElLogistica = document.getElementById("listLogistica");
+const formLogistica = document.getElementById("addFormLogistica");
+const LOGISTICA_STATUS_LABEL = { pendiente: "Pendiente", en_ruta: "En ruta", completado: "Completado", cancelado: "Cancelado" };
+const LOGISTICA_EMOJI = { entrega: "📦", recogida: "📥", transporte: "🚚", voluntario: "🙋" };
+async function loadListLogistica() {
+  if (!getAuthToken()) { logisticaData = []; renderLogistica(); return; }
+  try {
+    const res = await fetch(`${API_BASE}/logistica`, {
+      headers: { Authorization: `Bearer ${getAuthToken()}` },
+    });
+    if (res.status === 401) { clearAuthToken(); showLoginForm(); return; }
+    logisticaData = await res.json();
+    renderLogistica();
+  } catch {
+    listElLogistica.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
+  }
+}
+function logisticaCardHtml(item) {
+  const date = new Date(item.created_at).toLocaleString("es-CO", {
+    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+  });
+  const emoji = LOGISTICA_EMOJI[item.task_type] || "🚚";
+  const metaParts = [];
+  if (item.origin && item.destination) metaParts.push(`📍 ${escapeHtml(item.origin)} → ${escapeHtml(item.destination)}`);
+  else if (item.origin) metaParts.push(`📍 ${escapeHtml(item.origin)}`);
+  else if (item.destination) metaParts.push(`📍 → ${escapeHtml(item.destination)}`);
+  metaParts.push(`🕒 ${date}`);
+  return `
+    <div class="card logistica" data-id="${item.id}" data-type="logistica">
+      <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
+        <span class="name">${emoji} ${escapeHtml(item.task_type)}</span>
+        <span class="status-tag logistica-${escapeHtml(item.status || "pendiente")}">${LOGISTICA_STATUS_LABEL[item.status] || item.status}</span>
+      </div>
+      <div class="card-main">
+        <div class="card-inner">
+          <div class="info">
+            <span class="meta">${escapeHtml(item.description)}</span>
+            <span class="meta">${metaParts.join(" · ")}</span>
+            ${commentBadgeHtml(item)}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function renderLogistica() {
+  const q = searchInput.value;
+  const searched = q.trim()
+    ? logisticaData.filter((l) =>
+        fuzzyMatch(q, l.task_type || "") || fuzzyMatch(q, l.description || "") || fuzzyMatch(q, l.origin || "") || fuzzyMatch(q, l.destination || ""))
+    : logisticaData;
+  if (!searched.length) {
+    listElLogistica.innerHTML = `<div class="empty">${logisticaData.length ? "Sin resultados." : "Aún no hay tareas de logística."}</div>`;
+    return;
+  }
+  renderVirtualList(listElLogistica, searched, logisticaCardHtml);
+}
+listElLogistica.addEventListener("click", (e) => {
+  if (e.target.closest("button")) return;
+  const card = e.target.closest(".card");
+  if (!card) return;
+  const item = logisticaData.find((l) => l.id === card.dataset.id);
+  if (item) openModalForItem(item, "logistica");
+});
+formLogistica.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const body = {
+    task_type: document.getElementById("logisticaTypeInput").value,
+    description: document.getElementById("logisticaDescInput").value.trim(),
+    origin: document.getElementById("logisticaOriginInput").value.trim(),
+    destination: document.getElementById("logisticaDestInput").value.trim(),
+    contact: document.getElementById("logisticaContactInput").value.trim(),
+  };
+  const res = await fetch(`${API_BASE}/logistica`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAuthToken()}` },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error"); return; }
+  e.target.reset();
+  closeCrearModal();
+  loadListLogistica();
+});
+async function setLogisticaStatus(id, status) {
+  await fetch(`${API_BASE}/logistica/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAuthToken()}` },
+    body: JSON.stringify({ status }),
+  });
+  loadListLogistica();
+}
 // Deep link: #anuncio/ abre directamente ese anuncio en su modal.
 function handleAnuncioDeepLink() {
   const match = location.hash.match(/^#anuncio\/(.+)$/);
@@ -2835,6 +3395,18 @@ async function removeItem(id, type) {
   if (ok) {
     if (type === "person") loadList();
     else if (type === "pet") loadListP();
+  }
+}
+// Eliminar items privados de la pestaña Colaboradores (admin).
+async function removePrivateItem(id, type) {
+  if (!confirm("¿Eliminar este elemento?")) return;
+  const endpoint =
+    type === "donacion" ? "donaciones" : type === "necesidad" ? "necesidades" : "logistica";
+  const ok = await adminDelete(`${API_BASE}/${endpoint}/${id}`);
+  if (ok) {
+    if (type === "donacion") loadListDonaciones();
+    else if (type === "necesidad") loadListNecesidades();
+    else loadListLogistica();
   }
 }
 async function setStatusB(id, status) {
