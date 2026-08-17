@@ -383,11 +383,12 @@
   <div id="crearModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="crearModalTitle">
     <div class="modal-content" style="max-width: 560px; max-height: 90vh">
       <div class="modal-header" data-modal-header>
-        <h2 id="crearModalTitle">Crear</h2>
+        <h2 id="crearModalTitle" style="flex:1;">Crear</h2>
         <button class="modal-close" id="crearModalClose" data-modal-close aria-label="Cerrar">
-          🗑️
+          ✕
         </button>
       </div>
+      <div data-modal-body style="padding:5px;flex:1;display:flex;flex-direction:column;width:100%;">
       <!-- PERSONA -->
       <div class="crear-form-wrap" data-type="person">
         <form id="addForm">
@@ -531,6 +532,10 @@
           <input type="password" id="passwordInputColab" placeholder="Contraseña (opcional, mín 6 chars)" />
           <button type="submit">Unirme</button>
         </form>
+      </div>
+      </div>
+      <div class="modal-actions" data-modal-footer>
+        <button type="button" class="btn-small" onclick="closeCrearModal()">Cancelar</button>
       </div>
     </div>
   </div>
