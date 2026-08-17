@@ -1573,6 +1573,13 @@ textarea {
   background: rgba(69, 214, 214, 0.15);
   color: #45d6d6;
 }
+/* Botones de acción (DONAR/REPORTAR/CREAR/COLABORAR) dentro de la barra de sub-tabs */
+.sub-tabs .crear-btn {
+  margin-right: 0;
+  text-align: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 .sub-tab-panel {
   display: none;

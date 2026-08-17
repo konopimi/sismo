@@ -159,6 +159,10 @@
       <!-- Sub-tabs -->
       <div class="sub-tabs">
         <button class="sub-tab-btn active" data-subtab="chat">💬<span class="n">Chat</span></button>
+        <button class="crear-btn" onclick="openCrearModal('donacion')">🎁 DONAR</button>
+        <button class="crear-btn" onclick="openCrearModal('necesidad')">🆘 REPORTAR</button>
+        <button class="crear-btn" onclick="openCrearModal('logistica')">🚚 CREAR</button>
+        <button class="crear-btn" onclick="openCrearModal('colaborador')">🤝 COLABORAR</button>
         <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="n">Donaciones</span></button>
         <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="n">Necesidades</span></button>
         <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="n">Logística</span></button>
@@ -172,41 +176,22 @@
 
       <!-- Panel Donaciones -->
       <div class="sub-tab-panel" data-subtab-panel="donaciones">
-        <div class="tool-bar">
-          <button class="crear-btn" onclick="openCrearModal('donacion')">🎁 DONAR</button>
-        </div>
         <div id="listDonaciones" class="list"></div>
       </div>
 
       <!-- Panel Necesidades -->
       <div class="sub-tab-panel" data-subtab-panel="necesidades">
-        <div class="tool-bar">
-          <button class="crear-btn" onclick="openCrearModal('necesidad')">🆘 REPORTAR</button>
-        </div>
         <div id="listNecesidades" class="list"></div>
       </div>
 
       <!-- Panel Logística -->
       <div class="sub-tab-panel" data-subtab-panel="logistica">
-        <div class="tool-bar">
-          <button class="crear-btn" onclick="openCrearModal('logistica')">🚚 CREAR</button>
-        </div>
         <div id="listLogistica" class="list"></div>
       </div>
 
       <!-- Panel Voluntarios (lista de colaboradores) -->
       <div class="sub-tab-panel" data-subtab-panel="voluntarios">
         <div id="colabListWrapper">
-          <div class="tool-bar">
-            <div style="display:none;" class="filter-row" data-tab="colaborador">
-              <select class="filter-select" data-filter="city" disabled>
-                <option value="">📍 TODAS</option>
-              </select>
-            </div>
-            <button id="crear-top" class="crear-btn" onclick="openCrearModal('colaborador')">
-              🤝 COLABORAR
-            </button>
-          </div>
           <div id="listColab" class="list"></div>
         </div>
       </div>
