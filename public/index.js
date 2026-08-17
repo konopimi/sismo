@@ -287,13 +287,16 @@ async function startMatrixChat() {
     const { base_url, user_id, password } = await res.json();
 
     // 2. Login en Matrix (genera claves E2E en el navegador).
-    // v42 usa Rust/WASM crypto (matrix-sdk-crypto-wasm), no Olm.
+    // v28.2.0 usa Olm (cargado por CDN antes del SDK).
+    if (window.Olm && typeof window.Olm.init === "function") {
+      await window.Olm.init();
+    }
     matrixClient = sdk.createClient({ baseUrl: base_url });
     await matrixClient.login("m.login.password", {
       identifier: { type: "m.id.user", user: user_id.split(":")[0].replace("@", "") },
       password,
     });
-    await matrixClient.initRustCrypto();
+    await matrixClient.initCrypto();
     matrixClient.setGlobalErrorOnUnknownDevices(false);
     await matrixClient.startClient({ initialSyncLimit: 20 });
 
