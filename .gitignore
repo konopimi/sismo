@@ -7,7 +7,6 @@ remote-sismo/
 admin/
 node_modules
 data.local.db
-public/matrix-bundle.js
 *.mp4
 dbbup.sh
 bup.sh
