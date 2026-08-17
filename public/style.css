@@ -1131,7 +1131,11 @@ textarea {
   margin-left: auto;
 }
 
-@media (max-width: 600px) {
+.sub-tabs .tab-label {
+  display: none;
+}
+
+@media (max-width: 900px) {
   .tab-label {
     display: none;
   }
@@ -1573,6 +1577,7 @@ textarea {
   background: rgba(69, 214, 214, 0.15);
   color: #45d6d6;
 }
+
 /* Botones de acción (DONAR/REPORTAR/CREAR/COLABORAR) dentro de la barra de sub-tabs */
 .sub-tabs .crear-btn {
   margin-right: 0;
