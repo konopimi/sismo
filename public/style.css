@@ -218,7 +218,8 @@ h1 {
 .map-sidebar {
   display: none;
   position: fixed;
-  top: 0px;
+  /* Start below the sticky top bar so the first card isn't occluded. */
+  top: var(--top-bar-height);
   left: 0px;
   bottom: var(--driver-height);
   width: 220px;
