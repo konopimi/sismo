@@ -1111,6 +1111,10 @@ app.patch("/api/anuncios/:id/photo", handlePhotoPatch("anuncios"));
 app.delete("/api/anuncios/:id", requireAdmin, (req, res) => {
   const result = db
     .prepare("DELETE FROM anuncios WHERE id = ?")
+    .run(req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.status(204).end();
+});
 // ========== Donaciones (privado: requiere login) ==========
 app.get("/api/donaciones", requireAuth, (req, res) => {
   const rows = db
