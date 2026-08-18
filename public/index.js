@@ -544,23 +544,23 @@ const CHAT_GROUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutos
 let lastMediaGroup = null; // { sender, ts, gridEl, items: [] }
 const MEDIA_GRID_CAP = 6; // máx. de miniaturas visibles antes de "+N"
 
-function mediaThumbHtml(item, isLast, extraCount) {
+function mediaThumbHtml(item, index, isLast, extraCount) {
   const src = item.src;
   let inner;
   if (item.msgtype === "m.video") {
     inner = src
-      ? `<video src="${escapeHtml(src)}" controls style="width:100%;height:100%;object-fit:cover;display:block;"></video>`
+      ? `<video src="${escapeHtml(src)}" muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>`
       : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">🎬</div>`;
   } else {
     inner = src
-      ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "imagen")}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" onclick="window.open('${escapeHtml(src)}','_blank')" />`
+      ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "imagen")}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" />`
       : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">📷</div>`;
   }
   const overlay =
     isLast && extraCount > 0
       ? `<div class="chat-media-more">+${extraCount}</div>`
       : "";
-  return `<div class="chat-media-item">${inner}${overlay}</div>`;
+  return `<div class="chat-media-item" data-index="${index}">${inner}${overlay}</div>`;
 }
 
 // Reconstruye la cuadrícula completa a partir de group.items. Se llama
@@ -579,9 +579,70 @@ function renderMediaGrid(group) {
   group.gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   group.gridEl.innerHTML = visible
     .map((item, i) =>
-      mediaThumbHtml(item, i === visible.length - 1, extraCount),
+      mediaThumbHtml(item, i, i === visible.length - 1, extraCount),
     )
     .join("");
+  // Tocar cualquier miniatura abre el lightbox con TODOS los items del
+
+// ================================================================
+//  LIGHTBOX DE MEDIOS — visor a pantalla completa con navegación
+// ================================================================
+const mediaLightboxShell = Modal({ id: "mediaLightbox" });
+let lightboxItems = [];
+let lightboxIndex = 0;
+function renderLightboxStage() {
+  const stage = document.getElementById("lightboxStage");
+  const counter = document.getElementById("lightboxCounter");
+  const prevBtn = document.getElementById("lightboxPrev");
+  const nextBtn = document.getElementById("lightboxNext");
+  const item = lightboxItems[lightboxIndex];
+  if (!item) return;
+  stage.innerHTML =
+    item.msgtype === "m.video"
+      ? `<video src="${escapeHtml(item.src)}" controls autoplay></video>`
+      : `<img src="${escapeHtml(item.src)}" alt="" />`;
+  counter.textContent =
+    lightboxItems.length > 1
+      ? `${lightboxIndex + 1} / ${lightboxItems.length}`
+      : "";
+  prevBtn.disabled = lightboxIndex === 0;
+  nextBtn.disabled = lightboxIndex === lightboxItems.length - 1;
+  prevBtn.style.display = lightboxItems.length > 1 ? "" : "none";
+  nextBtn.style.display = lightboxItems.length > 1 ? "" : "none";
+}
+function openLightbox(items, startIndex) {
+  lightboxItems = items.filter((it) => it.src);
+  const startSrc = items[startIndex]?.src;
+  lightboxIndex = Math.max(
+    0,
+    lightboxItems.findIndex((it) => it.src === startSrc),
+  );
+  renderLightboxStage();
+  mediaLightboxShell.open();
+}
+document.getElementById("lightboxPrev").addEventListener("click", () => {
+  if (lightboxIndex > 0) {
+    lightboxIndex--;
+    renderLightboxStage();
+  }
+});
+document.getElementById("lightboxNext").addEventListener("click", () => {
+  if (lightboxIndex < lightboxItems.length - 1) {
+    lightboxIndex++;
+    renderLightboxStage();
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (!mediaLightboxShell.isOpen()) return;
+  if (e.key === "ArrowLeft") document.getElementById("lightboxPrev").click();
+  if (e.key === "ArrowRight") document.getElementById("lightboxNext").click();
+});
+  // grupo (incluso los ocultos detrás del "+N"), como el álbum de WhatsApp.
+  group.gridEl.onclick = (e) => {
+    const tile = e.target.closest(".chat-media-item");
+    if (!tile) return;
+    openLightbox(group.items, parseInt(tile.dataset.index, 10));
+  };
 }
 
 function appendMessage(event) {

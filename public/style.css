@@ -1695,3 +1695,29 @@ textarea {
   font-weight: 700;
   pointer-events: none;
 }
+
+/* ===== Lightbox ===== */
+#lightboxStage img,
+#lightboxStage video {
+  max-width: 100%;
+  max-height: calc(100vh - 60px);
+  object-fit: contain;
+  display: block;
+}
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(20, 20, 20, 0.6);
+  color: #fff;
+  border: none;
+  font-size: 28px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 5;
+}
+.lightbox-prev { left: 10px; }
+.lightbox-next { right: 10px; }
+.lightbox-nav[disabled] { opacity: 0.25; cursor: default; }
