@@ -296,15 +296,27 @@ function updateReplyBar() {
   const preview = document.getElementById("chatReplyPreview");
   if (!bar || !preview) return;
   if (replyingTo) {
-    const name = replyingTo.sender === matrixClient.getUserId()
+    // Synchronous lookup from cached directory.
+    let name = replyingTo.sender === matrixClient.getUserId()
       ? "Tú"
-      : replyingTo.sender.split(":")[0].replace("@", "");
+      : (matrixDirectory?.get(replyingTo.sender) || replyingTo.sender.split(":")[0].replace("@", ""));
     let previewText = replyingTo.body || "";
     if (replyingTo.msgtype === "m.image") previewText = "📷 Imagen";
     else if (replyingTo.msgtype === "m.video") previewText = "🎬 Video";
     previewText = previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
     preview.innerHTML = `<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong>${escapeHtml(name)}</strong> ${escapeHtml(previewText)}</div>`;
     bar.style.display = "flex";
+    // If name is still a UUID, try to refresh directory and update.
+    if (name.includes("-") && name.length === 36) {
+      loadMatrixDirectory().then((dir) => {
+        matrixDirectory = dir;
+        const resolved = dir.get(replyingTo.sender);
+        if (resolved) {
+          const nameEl = preview.querySelector("strong");
+          if (nameEl) nameEl.textContent = resolved;
+        }
+      });
+    }
   } else {
     bar.style.display = "none";
     preview.innerHTML = "";
