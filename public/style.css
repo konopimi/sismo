@@ -1661,28 +1661,36 @@ textarea {
 }
 
 /* ===== Media grid (WhatsApp-style album) inside chat bubbles ===== */
+.msg-sender-name {
+  padding: 3px 5px;
+}
+
 .chat-media-grid {
   display: grid;
   gap: 2px;
   border-radius: 8px;
   overflow: hidden;
 }
+
 .chat-media-item {
   position: relative;
   aspect-ratio: 1 / 1;
   overflow: hidden;
   background: #12151c;
 }
+
 /* Single-image groups shouldn't be forced square — let it breathe like
    a normal photo message. */
 .chat-media-grid[data-count="1"] .chat-media-item {
   aspect-ratio: auto;
   max-height: 320px;
 }
+
 .chat-media-grid[data-count="1"] .chat-media-item img,
 .chat-media-grid[data-count="1"] .chat-media-item video {
   object-fit: contain !important;
 }
+
 .chat-media-more {
   position: absolute;
   inset: 0;
@@ -1704,6 +1712,7 @@ textarea {
   object-fit: contain;
   display: block;
 }
+
 .lightbox-nav {
   position: absolute;
   top: 50%;
@@ -1718,6 +1727,16 @@ textarea {
   cursor: pointer;
   z-index: 5;
 }
-.lightbox-prev { left: 10px; }
-.lightbox-next { right: 10px; }
-.lightbox-nav[disabled] { opacity: 0.25; cursor: default; }
+
+.lightbox-prev {
+  left: 10px;
+}
+
+.lightbox-next {
+  right: 10px;
+}
+
+.lightbox-nav[disabled] {
+  opacity: 0.25;
+  cursor: default;
+}

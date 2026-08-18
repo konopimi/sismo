@@ -558,12 +558,17 @@ function bindChatEvents() {
     input.style.height = "auto";
     input.style.height = Math.min(input.scrollHeight, 120) + "px";
   }
-  // Escuchar mensajes nuevos.
-  matrixClient.on("Room.timeline", (event, room) => {
-    if (!room || room.roomId !== matrixRoom) return;
-    if (event.getType() !== "m.room.message") return;
-    appendMessage(event);
-  });
+		// Escuchar mensajes nuevos.
+		matrixClient.on("Room.timeline", (event, room, toStartOfTimeline) => {
+			if (!room || room.roomId !== matrixRoom) return;
+			if (event.getType() !== "m.room.message") return;
+			
+			// FIX: Ignore events added via scrollback (pagination). 
+			// They are handled separately by loadOlderMessages() to be prepended at the top.
+			if (toStartOfTimeline) return; 
+			
+			appendMessage(event);
+		});
   // Cargar historial inicial (si el room ya está en el store).
   const room = matrixClient.getRoom(matrixRoom);
   if (room) {
@@ -582,39 +587,47 @@ let scrollbackToken = room?.getLiveTimeline()?.getPaginationToken?.("b");
 // Set global para no duplicar mensajes ya pintados
 const renderedEventIds = new Set();
 async function loadOlderMessages() {
-  const messagesList = document.getElementById("chatMessages");
-  const room = matrixClient.getRoom(matrixRoom);
-  if (!room) return;
-  const timeline = room.getLiveTimeline();
-  const token = timeline?.getPaginationToken?.("b");
-  if (!token) return;
-  loadingOlder = true;
-  // Guardamos la posición de scroll para restaurarla después de insertar
-  // arriba (si no, el navegador reajusta el scroll y parece que "salta").
-  const prevScrollHeight = messagesList.scrollHeight;
-  const prevScrollTop = messagesList.scrollTop;
-  try {
-    await matrixClient.scrollback(room, 30);
-    // No confiamos en result.events — leemos la timeline en vivo, que el
-    // SDK mantiene siempre en orden cronológico ascendente.
-    const olderEvents = room.getLiveTimeline().getEvents()
-      .filter(e => e.getType() === "m.room.message" && !renderedEventIds.has(e.getId()));
-    if (olderEvents.length > 0) {
-      const firstChild = messagesList.firstChild;
-      for (const event of olderEvents) {
-        const div = document.createElement("div");
-        prependMessage(event, div);
-        renderedEventIds.add(event.getId());
-        messagesList.insertBefore(div, firstChild);
-      }
-      // Restaurar posición relativa de scroll.
-      messagesList.scrollTop = messagesList.scrollHeight - prevScrollHeight + prevScrollTop;
-    }
-  } catch (e) {
-    console.error("load older messages error:", e);
-  } finally {
-    loadingOlder = false;
-  }
+	const messagesList = document.getElementById("chatMessages");
+	const room = matrixClient.getRoom(matrixRoom);
+	if (!room) return;
+	const timeline = room.getLiveTimeline();
+	const token = timeline?.getPaginationToken?.("b");
+	if (!token) return;
+	loadingOlder = true;
+	
+	const prevScrollHeight = messagesList.scrollHeight;
+	const prevScrollTop = messagesList.scrollTop;
+	
+	try {
+		await matrixClient.scrollback(room, 30);
+		
+		const olderEvents = room.getLiveTimeline().getEvents()
+			.filter(e => e.getType() === "m.room.message" && !renderedEventIds.has(e.getId()));
+		
+		if (olderEvents.length > 0) {
+			// FIX 1: Explicitly sort by timestamp to guarantee chronological order (oldest first)
+			olderEvents.sort((a, b) => a.getTs() - b.getTs());
+			
+			// FIX 2: Use a DocumentFragment to build the chunk in memory
+			const fragment = document.createDocumentFragment();
+			for (const event of olderEvents) {
+				const div = document.createElement("div");
+				prependMessage(event, div);
+				renderedEventIds.add(event.getId());
+				fragment.appendChild(div);
+			}
+			
+			// Insert the entire chunk at the very top (before the current first child)
+			messagesList.insertBefore(fragment, messagesList.firstChild);
+			
+			// Restore scroll position so the user doesn't get jumped around
+			messagesList.scrollTop = messagesList.scrollHeight - prevScrollHeight + prevScrollTop;
+		}
+	} catch (e) {
+		console.error("load older messages error:", e);
+	} finally {
+		loadingOlder = false;
+	}
 }
   // Renderiza un mensaje en un div para prepend (versión simplificada de appendMessage).
   function prependMessage(event, div) {
@@ -636,16 +649,17 @@ async function loadOlderMessages() {
       margin-top:8px;
     `;
     let bodyHtml = "";
-    if (isMedia) {
-      const src = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
-      const gridEl = document.createElement("div");
-      gridEl.className = "chat-media-grid";
-      const group = { sender, ts: event.getTs(), gridEl, items: [{ msgtype, src: content.url ? matrixClient.mxcUrlToHttp(content.url) : null, body: content.body }] };
-      renderMediaGrid(group);
-      bodyHtml = "";
-      div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>`;
-      if (isMedia) div.appendChild(group.gridEl);
-    } else {
+	if (isMedia) {
+		const fullSrc = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
+		const thumbSrc = content.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(content.info.thumbnail_url) : fullSrc;
+		const gridEl = document.createElement("div");
+		gridEl.className = "chat-media-grid";
+		const group = { sender, ts: event.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
+		renderMediaGrid(group);
+		bodyHtml = "";
+		div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>`;
+		if (isMedia) div.appendChild(group.gridEl);
+	} else {
       bodyHtml = `<div style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(content.body || "")}</div>`;
       div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>${bodyHtml}`;
     }
@@ -693,17 +707,18 @@ const CHAT_GROUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutos
 let lastMediaGroup = null; // { sender, ts, gridEl, items: [] }
 const MEDIA_GRID_CAP = 6; // máx. de miniaturas visibles antes de "+N"
 function mediaThumbHtml(item, index, isLast, extraCount) {
-  const src = item.src;
-  let inner;
-  if (item.msgtype === "m.video") {
-    inner = src
-      ? `<video src="${escapeHtml(src)}" muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>`
-      : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">🎬</div>`;
-  } else {
-    inner = src
-      ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "imagen")}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" />`
-      : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">📷</div>`;
-  }
+	const src = item.src;
+	const fullSrc = item.fullSrc || src;
+	let inner;
+	if (item.msgtype === "m.video") {
+		inner = src
+			? `<video src="${escapeHtml(src)}" muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>`
+			: `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">🎬</div>`;
+	} else {
+		inner = src
+			? `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "imagen")}" loading="lazy" onerror="if(!this.dataset.retry){this.dataset.retry='1';this.src='${escapeHtml(fullSrc)}';}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" />`
+			: `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">📷</div>`;
+	}
   const overlay =
     isLast && extraCount > 0
       ? `<div class="chat-media-more">+${extraCount}</div>`
@@ -757,14 +772,18 @@ function renderLightboxStage() {
   nextBtn.style.display = lightboxItems.length > 1 ? "" : "none";
 }
 function openLightbox(items, startIndex) {
-  lightboxItems = items.filter((it) => it.src);
-  const startSrc = items[startIndex]?.src;
-  lightboxIndex = Math.max(
-    0,
-    lightboxItems.findIndex((it) => it.src === startSrc),
-  );
-  renderLightboxStage();
-  mediaLightboxShell.open();
+	// Map to use fullSrc for the lightbox so we don't show blurry thumbnails
+	lightboxItems = items.filter((it) => it.src).map((it) => ({
+		...it,
+		src: it.fullSrc || it.src,
+	}));
+	const startSrc = items[startIndex]?.fullSrc || items[startIndex]?.src;
+	lightboxIndex = Math.max(
+		0,
+		lightboxItems.findIndex((it) => it.src === startSrc),
+	);
+	renderLightboxStage();
+	mediaLightboxShell.open();
 }
 document.getElementById("lightboxPrev").addEventListener("click", () => {
   if (lightboxIndex > 0) {
@@ -807,16 +826,17 @@ function appendMessage(event) {
   // ---- Agrupación de medios estilo WhatsApp: varias fotos/videos
   // consecutivos del mismo remitente se apilan en una sola burbuja con
   // cuadrícula, en vez de una burbuja por archivo.
-  if (
-    isMedia &&
-    lastMediaGroup &&
-    sender === lastMediaGroup.sender &&
-    ts - lastMediaGroup.ts < CHAT_GROUP_WINDOW_MS
-  ) {
-    const src = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
-    lastMediaGroup.items.push({ msgtype, src, body: content.body });
-    lastMediaGroup.ts = ts;
-    renderMediaGrid(lastMediaGroup);
+		if (
+			isMedia &&
+			lastMediaGroup &&
+			sender === lastMediaGroup.sender &&
+			ts - lastMediaGroup.ts < CHAT_GROUP_WINDOW_MS
+		) {
+			const fullSrc = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
+			const thumbSrc = content.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(content.info.thumbnail_url) : fullSrc;
+			lastMediaGroup.items.push({ msgtype, src: thumbSrc, fullSrc, body: content.body });
+			lastMediaGroup.ts = ts;
+			renderMediaGrid(lastMediaGroup);
     lastChatSender = sender;
     lastChatTs = ts;
     list.scrollTop = list.scrollHeight;
@@ -882,15 +902,16 @@ function appendMessage(event) {
     </div>`;
   }
   let bodyHtml = "";
-  if (isMedia) {
-    const src = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
-    const gridEl = document.createElement("div");
-    gridEl.className = "chat-media-grid";
-    const group = { sender, ts, gridEl, items: [{ msgtype, src, body: content.body }] };
-    renderMediaGrid(group);
-    lastMediaGroup = group;
-    bodyHtml = ""; // el grid se agrega directamente abajo, no vía innerHTML
-  } else {
+		if (isMedia) {
+			const fullSrc = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
+			const thumbSrc = content.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(content.info.thumbnail_url) : fullSrc;
+			const gridEl = document.createElement("div");
+			gridEl.className = "chat-media-grid";
+			const group = { sender, ts, gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
+			renderMediaGrid(group);
+			lastMediaGroup = group;
+			bodyHtml = ""; // el grid se agrega directamente abajo, no vía innerHTML
+		} else {
     lastMediaGroup = null; // un mensaje de texto rompe la cadena de medios
     bodyHtml = `<div style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(content.body || "")}</div>`;
   }
@@ -7629,6 +7650,9 @@ textarea {
   color: #d63031;
 }
 /* ===== Media grid (WhatsApp-style album) inside chat bubbles ===== */
+.msg-sender-name {
+  padding: 3px 5px;
+}
 .chat-media-grid {
   display: grid;
   gap: 2px;
@@ -7685,9 +7709,16 @@ textarea {
   cursor: pointer;
   z-index: 5;
 }
-.lightbox-prev { left: 10px; }
-.lightbox-next { right: 10px; }
-.lightbox-nav[disabled] { opacity: 0.25; cursor: default; }
+.lightbox-prev {
+  left: 10px;
+}
+.lightbox-next {
+  right: 10px;
+}
+.lightbox-nav[disabled] {
+  opacity: 0.25;
+  cursor: default;
+}
 //===== public/sismos.js =====
 // ================================================================
 //  SISMOS EN TIEMPO REAL (ECharts + lista texto)

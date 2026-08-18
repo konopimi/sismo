@@ -674,16 +674,17 @@ async function loadOlderMessages() {
     `;
 
     let bodyHtml = "";
-    if (isMedia) {
-      const src = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
-      const gridEl = document.createElement("div");
-      gridEl.className = "chat-media-grid";
-      const group = { sender, ts: event.getTs(), gridEl, items: [{ msgtype, src: content.url ? matrixClient.mxcUrlToHttp(content.url) : null, body: content.body }] };
-      renderMediaGrid(group);
-      bodyHtml = "";
-      div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>`;
-      if (isMedia) div.appendChild(group.gridEl);
-    } else {
+	if (isMedia) {
+		const fullSrc = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
+		const thumbSrc = content.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(content.info.thumbnail_url) : fullSrc;
+		const gridEl = document.createElement("div");
+		gridEl.className = "chat-media-grid";
+		const group = { sender, ts: event.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
+		renderMediaGrid(group);
+		bodyHtml = "";
+		div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>`;
+		if (isMedia) div.appendChild(group.gridEl);
+	} else {
       bodyHtml = `<div style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(content.body || "")}</div>`;
       div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>${bodyHtml}`;
     }
@@ -735,17 +736,18 @@ let lastMediaGroup = null; // { sender, ts, gridEl, items: [] }
 const MEDIA_GRID_CAP = 6; // máx. de miniaturas visibles antes de "+N"
 
 function mediaThumbHtml(item, index, isLast, extraCount) {
-  const src = item.src;
-  let inner;
-  if (item.msgtype === "m.video") {
-    inner = src
-      ? `<video src="${escapeHtml(src)}" muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>`
-      : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">🎬</div>`;
-  } else {
-    inner = src
-      ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "imagen")}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" />`
-      : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">📷</div>`;
-  }
+	const src = item.src;
+	const fullSrc = item.fullSrc || src;
+	let inner;
+	if (item.msgtype === "m.video") {
+		inner = src
+			? `<video src="${escapeHtml(src)}" muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>`
+			: `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">🎬</div>`;
+	} else {
+		inner = src
+			? `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "imagen")}" loading="lazy" onerror="if(!this.dataset.retry){this.dataset.retry='1';this.src='${escapeHtml(fullSrc)}';}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" />`
+			: `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">📷</div>`;
+	}
   const overlay =
     isLast && extraCount > 0
       ? `<div class="chat-media-more">+${extraCount}</div>`
@@ -801,14 +803,18 @@ function renderLightboxStage() {
   nextBtn.style.display = lightboxItems.length > 1 ? "" : "none";
 }
 function openLightbox(items, startIndex) {
-  lightboxItems = items.filter((it) => it.src);
-  const startSrc = items[startIndex]?.src;
-  lightboxIndex = Math.max(
-    0,
-    lightboxItems.findIndex((it) => it.src === startSrc),
-  );
-  renderLightboxStage();
-  mediaLightboxShell.open();
+	// Map to use fullSrc for the lightbox so we don't show blurry thumbnails
+	lightboxItems = items.filter((it) => it.src).map((it) => ({
+		...it,
+		src: it.fullSrc || it.src,
+	}));
+	const startSrc = items[startIndex]?.fullSrc || items[startIndex]?.src;
+	lightboxIndex = Math.max(
+		0,
+		lightboxItems.findIndex((it) => it.src === startSrc),
+	);
+	renderLightboxStage();
+	mediaLightboxShell.open();
 }
 document.getElementById("lightboxPrev").addEventListener("click", () => {
   if (lightboxIndex > 0) {
@@ -853,16 +859,17 @@ function appendMessage(event) {
   // ---- Agrupación de medios estilo WhatsApp: varias fotos/videos
   // consecutivos del mismo remitente se apilan en una sola burbuja con
   // cuadrícula, en vez de una burbuja por archivo.
-  if (
-    isMedia &&
-    lastMediaGroup &&
-    sender === lastMediaGroup.sender &&
-    ts - lastMediaGroup.ts < CHAT_GROUP_WINDOW_MS
-  ) {
-    const src = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
-    lastMediaGroup.items.push({ msgtype, src, body: content.body });
-    lastMediaGroup.ts = ts;
-    renderMediaGrid(lastMediaGroup);
+		if (
+			isMedia &&
+			lastMediaGroup &&
+			sender === lastMediaGroup.sender &&
+			ts - lastMediaGroup.ts < CHAT_GROUP_WINDOW_MS
+		) {
+			const fullSrc = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
+			const thumbSrc = content.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(content.info.thumbnail_url) : fullSrc;
+			lastMediaGroup.items.push({ msgtype, src: thumbSrc, fullSrc, body: content.body });
+			lastMediaGroup.ts = ts;
+			renderMediaGrid(lastMediaGroup);
     lastChatSender = sender;
     lastChatTs = ts;
     list.scrollTop = list.scrollHeight;
@@ -932,15 +939,16 @@ function appendMessage(event) {
   }
 
   let bodyHtml = "";
-  if (isMedia) {
-    const src = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
-    const gridEl = document.createElement("div");
-    gridEl.className = "chat-media-grid";
-    const group = { sender, ts, gridEl, items: [{ msgtype, src, body: content.body }] };
-    renderMediaGrid(group);
-    lastMediaGroup = group;
-    bodyHtml = ""; // el grid se agrega directamente abajo, no vía innerHTML
-  } else {
+		if (isMedia) {
+			const fullSrc = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
+			const thumbSrc = content.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(content.info.thumbnail_url) : fullSrc;
+			const gridEl = document.createElement("div");
+			gridEl.className = "chat-media-grid";
+			const group = { sender, ts, gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
+			renderMediaGrid(group);
+			lastMediaGroup = group;
+			bodyHtml = ""; // el grid se agrega directamente abajo, no vía innerHTML
+		} else {
     lastMediaGroup = null; // un mensaje de texto rompe la cadena de medios
     bodyHtml = `<div style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(content.body || "")}</div>`;
   }
