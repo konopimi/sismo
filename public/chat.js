@@ -26,6 +26,8 @@ class ChatVirtualList {
         this.OVERSCAN = 8;
         this.isAtBottom = true;
         this._rafId = null;
+        this._rafAnchor = null;
+        this._preserveAnchorId = null;
         this._isDestroyed = false;
 
         // CRITICAL FIX: ResizeObserver now compensates for images loading ABOVE the viewport
@@ -73,6 +75,7 @@ class ChatVirtualList {
         this.nodes.clear();
         this.heights.clear();
         this.events = [];
+        if (this._rafAnchor) cancelAnimationFrame(this._rafAnchor);
     }
 
     setEvents(events) {
@@ -85,21 +88,21 @@ class ChatVirtualList {
     prependEvents(newEvents) {
         if (this._isDestroyed || !newEvents.length) return;
 
-        // ANCHOR-BASED SCROLL RESTORATION
-        // 1. Record the exact visual position of the first rendered node
+        if (this._rafAnchor) cancelAnimationFrame(this._rafAnchor);
+
         const anchorNode = this.wrapper.firstElementChild;
         const anchorId = anchorNode ? anchorNode.dataset.eventId : null;
         const anchorRect = anchorNode ? anchorNode.getBoundingClientRect() : null;
         const prevScrollTop = this.container.scrollTop;
 
-        // 2. Update state and render synchronously
+        this._preserveAnchorId = anchorId;
+
         this.events = [...newEvents, ...this.events];
         this._render(true);
 
-        // 3. Adjust scroll so the anchor node stays in the exact same visual position
-        requestAnimationFrame(() => {
+        this._rafAnchor = requestAnimationFrame(() => {
             if (this._isDestroyed) return;
-            
+
             if (anchorId && anchorRect) {
                 const newAnchorNode = this.nodes.get(anchorId);
                 if (newAnchorNode) {
@@ -108,6 +111,9 @@ class ChatVirtualList {
                     this.container.scrollTop = prevScrollTop + shift;
                 }
             }
+
+            this._preserveAnchorId = null;
+            this._scheduleRender();
         });
     }
 
@@ -193,6 +199,11 @@ class ChatVirtualList {
         const visibleIds = new Set();
         for (let i = startIndex; i < endIndex; i++) {
             visibleIds.add(this.events[i].getId());
+        }
+
+        // Keep the preserved anchor in the DOM during the transition
+        if (this._preserveAnchorId) {
+            visibleIds.add(this._preserveAnchorId);
         }
 
         // 4. DOM RECONCILIATION (No innerHTML = ""!)
