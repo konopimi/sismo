@@ -608,7 +608,7 @@ function createMessageNode(event) {
     const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
     const div = document.createElement("div");
-    div.style.cssText = `align-self:${isSelf ? "flex-end" : "flex-start"};max-width:75%;padding:${isMedia ? "3px" : "8px 12px"};border-radius:12px;background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};margin-top:8px;word-break:break-word;`;
+    div.style.cssText = `align-self:${isSelf ? "flex-end" : "flex-start"};max-width:75%;padding:${isMedia ? "3px" : "8px 12px"};border-radius:12px;background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};margin-top:8px;word-break:break-word;contain:layout;`;
 
     let replyHtml = "";
     const replyPreview = content["m.reply_preview"];
@@ -678,7 +678,7 @@ function mediaThumbHtml(item, index, isLast, extraCount) {
   if (item.msgtype === "m.video") {
     inner = src ? `<video src="${escapeHtml(src)}" muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>` : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">🎬</div>`;
   } else {
-    inner = src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "imagen")}" loading="lazy" onerror="if(!this.dataset.retry){this.dataset.retry='1';this.src='${escapeHtml(fullSrc)}';}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" />` : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">📷</div>`;
+    inner = src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "imagen")}" loading="lazy" decoding="async" onerror="if(!this.dataset.retry){this.dataset.retry='1';this.src='${escapeHtml(fullSrc)}';}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" />` : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">📷</div>`;
   }
   const overlay = isLast && extraCount > 0 ? `<div class="chat-media-more">+${extraCount}</div>` : "";
   return `<div class="chat-media-item" data-index="${index}">${inner}${overlay}</div>`;
