@@ -7,6 +7,185 @@
 // ================================================================
 
 const MATRIX_ROOM_ALIAS = "#ayuda-en-cali:matrix.sismoinfo.co";
+
+// ================================================================
+//  CHAT VIRTUALIZER (Bidirectional DOM Windowing)
+// ================================================================
+class ChatVirtualList {
+    constructor() {
+        this.container = document.getElementById("chatMessages");
+        this.wrapper = document.getElementById("chatContentWrapper");
+        this.topSpacer = document.getElementById("chatTopSpacer");
+        this.bottomSpacer = document.getElementById("chatBottomSpacer");
+        
+        this.events = []; 
+        this.heights = new Map(); 
+        this.nodes = new Map(); 
+        
+        this.DEFAULT_HEIGHT = 80;
+        this.OVERSCAN = 8;
+        this.isAtBottom = true;
+        this._rafId = null;
+        this._isDestroyed = false;
+
+        this._resizeObserver = new ResizeObserver(entries => {
+            if (this._isDestroyed) return;
+            let changed = false;
+            for (let entry of entries) {
+                const id = entry.target.dataset.eventId;
+                const newH = entry.target.offsetHeight;
+                if (this.heights.get(id) !== newH) {
+                    this.heights.set(id, newH);
+                    changed = true;
+                }
+            }
+            if (changed) this._scheduleRender();
+        });
+
+        this._onScroll = this._onScroll.bind(this);
+        this.container.addEventListener("scroll", this._onScroll, { passive: true });
+    }
+
+    destroy() {
+        this._isDestroyed = true;
+        this.container.removeEventListener("scroll", this._onScroll);
+        this._resizeObserver.disconnect();
+        this.nodes.forEach(node => node.remove());
+        this.nodes.clear();
+        this.heights.clear();
+        this.events = [];
+    }
+
+    setEvents(events) {
+        if (this._isDestroyed) return;
+        this.events = events;
+        this._render(true);
+        this.scrollToBottom();
+    }
+
+    prependEvents(newEvents) {
+        if (this._isDestroyed || !newEvents.length) return;
+        const prevScrollHeight = this.container.scrollHeight;
+        const prevScrollTop = this.container.scrollTop;
+        this.events = [...newEvents, ...this.events];
+        this._render(true);
+        requestAnimationFrame(() => {
+            if (this._isDestroyed) return;
+            const newScrollHeight = this.container.scrollHeight;
+            this.container.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
+        });
+    }
+
+    appendEvent(event) {
+        if (this._isDestroyed) return;
+        this.events.push(event);
+        this._scheduleRender();
+        if (this.isAtBottom) {
+            requestAnimationFrame(() => {
+                if (this._isDestroyed) return;
+                this.container.scrollTop = this.container.scrollHeight;
+            });
+        }
+    }
+
+    scrollToBottom() {
+        this.isAtBottom = true;
+        requestAnimationFrame(() => {
+            if (this._isDestroyed) return;
+            this.container.scrollTop = this.container.scrollHeight;
+        });
+    }
+
+    _onScroll() {
+        if (this._isDestroyed) return;
+        const threshold = 150;
+        this.isAtBottom = (this.container.scrollHeight - this.container.scrollTop - this.container.clientHeight) < threshold;
+        if (this.container.scrollTop === 0 && !window.loadingOlder) {
+            window.loadOlderMessages();
+        }
+        this._scheduleRender();
+    }
+
+    _scheduleRender() {
+        if (this._rafId || this._isDestroyed) return;
+        this._rafId = requestAnimationFrame(() => {
+            this._rafId = null;
+            this._render(false);
+        });
+    }
+
+    _render(force) {
+        if (this._isDestroyed || !this.container || !this.wrapper) return;
+        let totalHeight = 0;
+        const eventHeights = this.events.map(ev => {
+            const h = this.heights.get(ev.getId()) || this.DEFAULT_HEIGHT;
+            totalHeight += h;
+            return h;
+        });
+
+        const scrollTop = this.container.scrollTop;
+        const viewportHeight = this.container.clientHeight;
+        
+        let acc = 0, startIndex = 0;
+        for (let i = 0; i < eventHeights.length; i++) {
+            if (acc + eventHeights[i] > scrollTop) break;
+            acc += eventHeights[i];
+            startIndex = i + 1;
+        }
+        
+        let endAcc = acc, endIndex = startIndex;
+        for (let i = startIndex; i < eventHeights.length; i++) {
+            if (endAcc > scrollTop + viewportHeight) break;
+            endAcc += eventHeights[i];
+            endIndex = i + 1;
+        }
+
+        startIndex = Math.max(0, startIndex - this.OVERSCAN);
+        endIndex = Math.min(this.events.length, endIndex + this.OVERSCAN);
+
+        let topHeight = 0;
+        for (let i = 0; i < startIndex; i++) topHeight += eventHeights[i];
+        let bottomHeight = 0;
+        for (let i = endIndex; i < eventHeights.length; i++) bottomHeight += eventHeights[i];
+
+        this.topSpacer.style.height = `${topHeight}px`;
+        this.bottomSpacer.style.height = `${bottomHeight}px`;
+
+        const visibleIds = new Set();
+        const fragment = document.createDocumentFragment();
+
+        for (let i = startIndex; i < endIndex; i++) {
+            const ev = this.events[i];
+            const id = ev.getId();
+            visibleIds.add(id);
+
+            let node = this.nodes.get(id);
+            if (!node) {
+                node = createMessageNode(ev); 
+                node.dataset.eventId = id;
+                this.nodes.set(id, node);
+                this._resizeObserver.observe(node);
+            }
+            fragment.appendChild(node);
+        }
+
+        for (const [id, node] of this.nodes.entries()) {
+            if (!visibleIds.has(id)) {
+                this._resizeObserver.unobserve(node);
+                node.remove();
+                this.nodes.delete(id);
+            }
+        }
+
+        this.wrapper.innerHTML = ""; 
+        this.wrapper.appendChild(fragment);
+    }
+}
+
+let chatVirtualizer = null;
+let chatTimelineListenerBound = false;
+const MEDIA_GRID_CAP = 6;
+window.loadingOlder = false;
 let matrixClient = null;
 let matrixRoom = null;
 let matrixStarted = false;
@@ -24,8 +203,6 @@ async function loadMatrixDirectory() {
   }
 }
 
-// Control de carga de mensajes antiguos (infinite scroll).
-let loadingOlder = false;
 
 // Estado de respuesta (cita de mensaje).
 let replyingTo = null;
@@ -240,123 +417,167 @@ function renderChatError(msg) {
 }
 
 function openChatModal() {
-  const modal = Modal({ id: "chatModal" });
-  if (modal) modal.open();
+    const modal = Modal({ 
+        id: "chatModal",
+        onClose: cleanupChatVirtualizer // ← CRITICAL FIX: Prevents memory leaks on reopen
+    });
+    if (modal) modal.open();
 }
 
 function bindChatEvents() {
-  const input = document.getElementById("chatInput");
-  const sendBtn = document.getElementById("chatSendBtn");
-  const send = async () => {
-    const text = input.value.trim();
-    if (!text || !matrixRoom) return;
-    try {
-      const content = { msgtype: "m.text", body: text };
-      if (replyingTo) {
-        content["m.relates_to"] = { "m.in_reply_to": { event_id: replyingTo.eventId } };
-        content["m.reply_preview"] = { sender: replyingTo.sender, body: replyingTo.body, msgtype: replyingTo.msgtype };
-      }
-      await matrixClient.sendMessage(matrixRoom, content);
-      input.value = "";
-      autoResizeChatInput();
-      clearReplyingTo();
-    } catch (e) { console.error("send error:", e); }
-  };
-  sendBtn.addEventListener("click", send);
-  const replyCancel = document.getElementById("chatReplyCancel");
-  if (replyCancel) replyCancel.addEventListener("click", clearReplyingTo);
-
-  const attachBtn = document.getElementById("chatAttachBtn");
-  const fileInput = document.getElementById("chatFileInput");
-  if (attachBtn && fileInput) {
-    attachBtn.addEventListener("click", () => fileInput.click());
-    fileInput.addEventListener("change", async () => {
-      for (const file of Array.from(fileInput.files || [])) await sendChatFile(file);
-      fileInput.value = "";
-    });
-  }
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
-  });
-  input.addEventListener("input", autoResizeChatInput);
-  function autoResizeChatInput() {
-    input.style.height = "auto";
-    input.style.height = Math.min(input.scrollHeight, 120) + "px";
-  }
-
-  matrixClient.on("Room.timeline", (event, room, toStartOfTimeline) => {
-    if (!room || room.roomId !== matrixRoom) return;
-    if (event.getType() !== "m.room.message") return;
-    if (toStartOfTimeline) return; // Ignore scrollback pagination
-    appendMessage(event);
-  });
-
-  const room = matrixClient.getRoom(matrixRoom);
-  if (room) {
-    const timeline = room.getLiveTimeline().getEvents();
-    timeline.forEach((event) => {
-      if (event.getType() === "m.room.message") appendMessage(event);
-    });
-  }
-
-  const messagesList = document.getElementById("chatMessages");
-  messagesList.addEventListener("scroll", () => {
-    if (messagesList.scrollTop === 0 && !loadingOlder) loadOlderMessages();
-  });
-}
-
-const renderedEventIds = new Set();
-async function loadOlderMessages() {
-  const messagesList = document.getElementById("chatMessages");
-  const room = matrixClient.getRoom(matrixRoom);
-  if (!room) return;
-  const timeline = room.getLiveTimeline();
-  const token = timeline?.getPaginationToken?.("b");
-  if (!token) return;
-  loadingOlder = true;
-  const prevScrollHeight = messagesList.scrollHeight;
-  const prevScrollTop = messagesList.scrollTop;
-  try {
-    await matrixClient.scrollback(room, 30);
-    const olderEvents = room.getLiveTimeline().getEvents()
-      .filter(e => e.getType() === "m.room.message" && !renderedEventIds.has(e.getId()));
-    if (olderEvents.length > 0) {
-      olderEvents.sort((a, b) => a.getTs() - b.getTs());
-      const fragment = document.createDocumentFragment();
-      for (const event of olderEvents) {
-        const div = document.createElement("div");
-        prependMessage(event, div);
-        renderedEventIds.add(event.getId());
-        fragment.appendChild(div);
-      }
-      messagesList.insertBefore(fragment, messagesList.firstChild);
-      messagesList.scrollTop = messagesList.scrollHeight - prevScrollHeight + prevScrollTop;
+    const input = document.getElementById("chatInput");
+    const sendBtn = document.getElementById("chatSendBtn");
+    
+    if (!chatVirtualizer) {
+        chatVirtualizer = new ChatVirtualList();
     }
-  } catch (e) { console.error("load older messages error:", e); }
-  finally { loadingOlder = false; }
+
+    // Guard against duplicate Matrix timeline listeners
+    if (!chatTimelineListenerBound && matrixClient) {
+        matrixClient.on("Room.timeline", (event, room, toStartOfTimeline) => {
+            if (!room || room.roomId !== matrixRoom) return;
+            if (event.getType() !== "m.room.message") return;
+            if (toStartOfTimeline) return; // Ignore scrollback pagination
+            
+            if (chatVirtualizer) chatVirtualizer.appendEvent(event);
+        });
+        chatTimelineListenerBound = true;
+    }
+
+    const room = matrixClient.getRoom(matrixRoom);
+    if (room && chatVirtualizer) {
+        const initialEvents = room.getLiveTimeline().getEvents()
+            .filter(e => e.getType() === "m.room.message");
+        chatVirtualizer.setEvents(initialEvents);
+    }
+
+    const send = async () => {
+        const text = input.value.trim();
+        if (!text || !matrixRoom) return;
+        try {
+            const content = { msgtype: "m.text", body: text };
+            if (replyingTo) {
+                content["m.relates_to"] = { "m.in_reply_to": { event_id: replyingTo.eventId } };
+                content["m.reply_preview"] = { sender: replyingTo.sender, body: replyingTo.body, msgtype: replyingTo.msgtype };
+            }
+            await matrixClient.sendMessage(matrixRoom, content);
+            input.value = "";
+            input.style.height = "auto";
+            clearReplyingTo();
+        } catch (e) { console.error("send error:", e); }
+    };
+    
+    sendBtn.addEventListener("click", send);
+    const replyCancel = document.getElementById("chatReplyCancel");
+    if (replyCancel) replyCancel.addEventListener("click", clearReplyingTo);
+    
+    const attachBtn = document.getElementById("chatAttachBtn");
+    const fileInput = document.getElementById("chatFileInput");
+    if (attachBtn && fileInput) {
+        attachBtn.addEventListener("click", () => fileInput.click());
+        fileInput.addEventListener("change", async () => {
+            for (const file of Array.from(fileInput.files || [])) await sendChatFile(file);
+            fileInput.value = "";
+        });
+    }
+    
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+    });
+    input.addEventListener("input", () => {
+        input.style.height = "auto";
+        input.style.height = Math.min(input.scrollHeight, 120) + "px";
+    });
 }
 
-function prependMessage(event, div) {
-  const content = event.getContent();
-  const msgtype = content.msgtype;
-  const sender = event.getSender();
-  const isSelf = sender === matrixClient.getUserId();
-  const isMedia = msgtype === "m.image" || msgtype === "m.video";
-  const name = isSelf ? (window.currentUser?.chat_name || "Tú") : sender.split(":")[0].replace("@", "");
-  div.style.cssText = `align-self:${isSelf ? "flex-end" : "flex-start"};max-width:75%;padding:${isMedia ? "3px" : "8px 12px"};border-radius:12px;background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};margin-top:8px;`;
+function cleanupChatVirtualizer() {
+    if (chatVirtualizer) {
+        chatVirtualizer.destroy();
+        chatVirtualizer = null;
+    }
+}
 
-  if (isMedia) {
-    const fullSrc = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
-    const thumbSrc = content.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(content.info.thumbnail_url) : fullSrc;
-    const gridEl = document.createElement("div");
-    gridEl.className = "chat-media-grid";
-    const group = { sender, ts: event.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
-    renderMediaGrid(group);
-    div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>`;
-    div.appendChild(group.gridEl);
-  } else {
-    div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div><div style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(content.body || "")}</div>`;
-  }
+async function loadOlderMessages() {
+    const room = matrixClient.getRoom(matrixRoom);
+    if (!room || !chatVirtualizer) return;
+    
+    const timeline = room.getLiveTimeline();
+    const token = timeline?.getPaginationToken?.("b");
+    if (!token) return;
+    
+    window.loadingOlder = true;
+    const currentEventCount = chatVirtualizer.events.length;
+    
+    try {
+        await matrixClient.scrollback(room, 30);
+        const allEvents = room.getLiveTimeline().getEvents()
+            .filter(e => e.getType() === "m.room.message");
+            
+        const newOlderEvents = allEvents.slice(0, allEvents.length - currentEventCount);
+        if (newOlderEvents.length > 0) {
+            chatVirtualizer.prependEvents(newOlderEvents);
+        }
+    } catch (e) {
+        console.error("load older messages error:", e);
+    } finally {
+        window.loadingOlder = false;
+    }
+}
+
+function createMessageNode(event) {
+    const content = event.getContent();
+    const msgtype = content.msgtype;
+    const sender = event.getSender();
+    const isSelf = sender === matrixClient.getUserId();
+    const isMedia = msgtype === "m.image" || msgtype === "m.video";
+    
+    const name = isSelf 
+        ? (window.currentUser?.chat_name || "Tú") 
+        : (matrixDirectory?.get(sender) || sender.split(":")[0].replace("@", ""));
+    
+    const div = document.createElement("div");
+    div.style.cssText = `align-self:${isSelf ? "flex-end" : "flex-start"};max-width:75%;padding:${isMedia ? "3px" : "8px 12px"};border-radius:12px;background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};margin-top:8px;word-break:break-word;`;
+
+    let replyHtml = "";
+    const replyPreview = content["m.reply_preview"];
+    if (replyPreview) {
+        const replySender = replyPreview.sender === matrixClient.getUserId() ? "Tú" : (matrixDirectory?.get(replyPreview.sender) || replyPreview.sender.split(":")[0].replace("@", ""));
+        let previewText = replyPreview.body || "";
+        if (replyPreview.msgtype === "m.image") previewText = "📷 Imagen";
+        else if (replyPreview.msgtype === "m.video") previewText = "🎬 Video";
+        previewText = previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
+        replyHtml = `<div class="msg-reply" style="margin-bottom:4px;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid #3fa34d;font-size:0.8rem;"><div style="font-weight:600;font-size:0.7rem;color:#3fa34d;">${escapeHtml(replySender)}</div><div style="color:#ccc;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(previewText)}</div></div>`;
+    }
+
+    if (isMedia) {
+        const fullSrc = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
+        const thumbSrc = content.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(content.info.thumbnail_url) : fullSrc;
+        const gridEl = document.createElement("div");
+        gridEl.className = "chat-media-grid";
+        const group = { sender, ts: event.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
+        renderMediaGrid(group);
+        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>`;
+        div.appendChild(group.gridEl);
+    } else {
+        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>${replyHtml}<div style="white-space:pre-wrap;">${escapeHtml(content.body || "")}</div>`;
+    }
+
+    const showReplyMenu = (e) => {
+        e.preventDefault();
+        setReplyingTo(event);
+        div.style.outline = "2px solid #3fa34d";
+        setTimeout(() => { div.style.outline = ""; }, 300);
+    };
+    div.addEventListener("contextmenu", showReplyMenu);
+    let pressTimer = null;
+    div.addEventListener("mousedown", () => { pressTimer = setTimeout(showReplyMenu, 500); });
+    div.addEventListener("mouseup", () => clearTimeout(pressTimer));
+    div.addEventListener("mouseleave", () => clearTimeout(pressTimer));
+    div.addEventListener("touchstart", () => { pressTimer = setTimeout(showReplyMenu, 500); }, { passive: true });
+    div.addEventListener("touchend", () => clearTimeout(pressTimer));
+    div.addEventListener("touchmove", () => clearTimeout(pressTimer));
+
+    return div;
 }
 
 async function sendChatFile(file) {
@@ -377,11 +598,6 @@ async function sendChatFile(file) {
   } catch (e) { console.error("send file error:", e); alert("No se pudo enviar el archivo."); }
 }
 
-let lastChatSender = null;
-let lastChatTs = 0;
-const CHAT_GROUP_WINDOW_MS = 5 * 60 * 1000;
-let lastMediaGroup = null;
-const MEDIA_GRID_CAP = 6;
 
 function mediaThumbHtml(item, index, isLast, extraCount) {
   const src = item.src;
@@ -411,153 +627,6 @@ function renderMediaGrid(group) {
     if (!tile) return;
     openLightbox(group.items, parseInt(tile.dataset.index, 10));
   };
-}
-
-// ================================================================
-//  LIGHTBOX DE MEDIOS
-// ================================================================
-const mediaLightboxShell = Modal({ id: "mediaLightbox" });
-let lightboxItems = [];
-let lightboxIndex = 0;
-
-function renderLightboxStage() {
-  const stage = document.getElementById("lightboxStage");
-  const counter = document.getElementById("lightboxCounter");
-  const prevBtn = document.getElementById("lightboxPrev");
-  const nextBtn = document.getElementById("lightboxNext");
-  const item = lightboxItems[lightboxIndex];
-  if (!item) return;
-  stage.innerHTML = item.msgtype === "m.video" ? `<video src="${escapeHtml(item.src)}" controls autoplay></video>` : `<img src="${escapeHtml(item.src)}" alt="" />`;
-  counter.textContent = lightboxItems.length > 1 ? `${lightboxIndex + 1} / ${lightboxItems.length}` : "";
-  prevBtn.disabled = lightboxIndex === 0;
-  nextBtn.disabled = lightboxIndex === lightboxItems.length - 1;
-  prevBtn.style.display = lightboxItems.length > 1 ? "" : "none";
-  nextBtn.style.display = lightboxItems.length > 1 ? "" : "none";
-}
-
-function openLightbox(items, startIndex) {
-  lightboxItems = items.filter((it) => it.src).map((it) => ({ ...it, src: it.fullSrc || it.src }));
-  const startSrc = items[startIndex]?.fullSrc || items[startIndex]?.src;
-  lightboxIndex = Math.max(0, lightboxItems.findIndex((it) => it.src === startSrc));
-  renderLightboxStage();
-  mediaLightboxShell.open();
-}
-
-document.getElementById("lightboxPrev").addEventListener("click", () => {
-  if (lightboxIndex > 0) { lightboxIndex--; renderLightboxStage(); }
-});
-document.getElementById("lightboxNext").addEventListener("click", () => {
-  if (lightboxIndex < lightboxItems.length - 1) { lightboxIndex++; renderLightboxStage(); }
-});
-document.addEventListener("keydown", (e) => {
-  if (!mediaLightboxShell.isOpen()) return;
-  if (e.key === "ArrowLeft") document.getElementById("lightboxPrev").click();
-  if (e.key === "ArrowRight") document.getElementById("lightboxNext").click();
-});
-
-function appendMessage(event) {
-  const eventId = event.getId();
-  if (eventId) {
-    if (renderedEventIds.has(eventId)) return;
-    renderedEventIds.add(eventId);
-  }
-  const list = document.getElementById("chatMessages");
-  if (!list) return;
-  const content = event.getContent();
-  const msgtype = content.msgtype;
-  const sender = event.getSender();
-  const isSelf = sender === matrixClient.getUserId();
-  const ts = event.getTs();
-  const isMedia = msgtype === "m.image" || msgtype === "m.video";
-
-  if (isMedia && lastMediaGroup && sender === lastMediaGroup.sender && ts - lastMediaGroup.ts < CHAT_GROUP_WINDOW_MS) {
-    const fullSrc = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
-    const thumbSrc = content.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(content.info.thumbnail_url) : fullSrc;
-    lastMediaGroup.items.push({ msgtype, src: thumbSrc, fullSrc, body: content.body });
-    lastMediaGroup.ts = ts;
-    renderMediaGrid(lastMediaGroup);
-    lastChatSender = sender;
-    lastChatTs = ts;
-    list.scrollTop = list.scrollHeight;
-    return;
-  }
-
-  const sameGroup = sender === lastChatSender && ts - lastChatTs < CHAT_GROUP_WINDOW_MS;
-  lastChatSender = sender;
-  lastChatTs = ts;
-
-  const resolveMatrixName = async (userId) => {
-    if (!matrixDirectory) matrixDirectory = await loadMatrixDirectory();
-    let resolved = matrixDirectory.get(userId);
-    if (!resolved) {
-      matrixDirectory = await loadMatrixDirectory();
-      resolved = matrixDirectory.get(userId);
-    }
-    return resolved || userId.split(":")[0].replace("@", "");
-  };
-
-  let name = isSelf ? window.currentUser?.chat_name || "Tú" : sender.split(":")[0].replace("@", "");
-  if (!isSelf) {
-    resolveMatrixName(sender).then((resolved) => {
-      if (resolved !== name) {
-        name = resolved;
-        const nameEl = div.querySelector(".msg-sender-name");
-        if (nameEl) nameEl.textContent = resolved;
-      }
-    });
-  }
-
-  const div = document.createElement("div");
-  div.style.cssText = `align-self:${isSelf ? "flex-end" : "flex-start"};max-width:75%;padding:${isMedia ? "3px" : sameGroup ? "2px 12px" : "8px 12px"};border-radius:12px;background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};margin-top:${sameGroup ? "2px" : "8px"};`;
-
-  let replyHtml = "";
-  const replyPreview = content["m.reply_preview"];
-  if (replyPreview) {
-    const replySender = replyPreview.sender === matrixClient.getUserId() ? "Tú" : replyPreview.sender.split(":")[0].replace("@", "");
-    let previewText = replyPreview.body || "";
-    if (replyPreview.msgtype === "m.image") previewText = "📷 Imagen";
-    else if (replyPreview.msgtype === "m.video") previewText = "🎬 Video";
-    previewText = previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
-    replyHtml = `<div class="msg-reply" style="margin-bottom:4px;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid #3fa34d;font-size:0.8rem;"><div style="font-weight:600;font-size:0.7rem;color:#3fa34d;">${escapeHtml(replySender)}</div><div style="color:#ccc;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(previewText)}</div></div>`;
-  }
-
-  let bodyHtml = "";
-  if (isMedia) {
-    const fullSrc = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
-    const thumbSrc = content.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(content.info.thumbnail_url) : fullSrc;
-    const gridEl = document.createElement("div");
-    gridEl.className = "chat-media-grid";
-    const group = { sender, ts, gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
-    renderMediaGrid(group);
-    lastMediaGroup = group;
-  } else {
-    lastMediaGroup = null;
-    bodyHtml = `<div style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(content.body || "")}</div>`;
-  }
-
-  div.innerHTML = `${sameGroup ? "" : `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>`}${replyHtml}${bodyHtml}`;
-  if (isMedia) div.appendChild(lastMediaGroup.gridEl);
-
-  const showReplyMenu = (e) => {
-    e.preventDefault();
-    const eventId = event.getId();
-    if (!eventId) return;
-    setReplyingTo(event);
-    div.style.outline = "2px solid #3fa34d";
-    setTimeout(() => { div.style.outline = ""; }, 300);
-  };
-  div.addEventListener("contextmenu", showReplyMenu);
-  let pressTimer = null;
-  div.addEventListener("mousedown", () => { pressTimer = setTimeout(showReplyMenu, 500); });
-  div.addEventListener("mouseup", () => clearTimeout(pressTimer));
-  div.addEventListener("mouseleave", () => clearTimeout(pressTimer));
-  div.addEventListener("touchstart", () => { pressTimer = setTimeout(showReplyMenu, 500); }, { passive: true });
-  div.addEventListener("touchend", () => clearTimeout(pressTimer));
-  div.addEventListener("touchmove", () => clearTimeout(pressTimer));
-
-  list.appendChild(div);
-  list.scrollTop = list.scrollHeight;
-}
 
 // Expose to global scope so index.js can trigger it after login
 window.startMatrixChat = startMatrixChat;

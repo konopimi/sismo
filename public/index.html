@@ -816,8 +816,13 @@
         <button class="modal-close" data-modal-close aria-label="Cerrar">✕</button>
       </div>
       <div data-modal-body style="padding:0;flex:1;display:flex;flex-direction:column;overflow:hidden;">
-        <div id="chatMessages" style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
-        </div>
+        <div id="chatMessages" style="flex:1;overflow-y:auto;padding:0 10px;">
+    <div id="chatTopSpacer" style="flex: 0 0 auto; height: 0;"></div>
+    <div id="chatContentWrapper" style="display:flex;flex-direction:column;gap:8px;padding:10px 0;">
+        <!-- Virtualizer will inject messages here -->
+    </div>
+    <div id="chatBottomSpacer" style="flex: 0 0 auto; height: 0;"></div>
+</div>
         <!-- Barra de respuesta (se muestra cuando se responde a un mensaje) -->
         <div id="chatReplyBar"
           style="display:none;padding:6px 8px;background:rgba(120,120,120,0.15);border-top:1px solid rgba(120,120,120,0.2);flex:0 0 auto;">
