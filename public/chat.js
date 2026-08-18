@@ -419,7 +419,20 @@ function renderChatError(msg) {
 function openChatModal() {
     const modal = Modal({ 
         id: "chatModal",
-        onClose: cleanupChatVirtualizer // ← CRITICAL FIX: Prevents memory leaks on reopen
+        onClose: cleanupChatVirtualizer,
+        onOpen: () => {
+            // Initialize virtualizer when modal opens (DOM elements exist)
+            if (!chatVirtualizer) {
+                chatVirtualizer = new ChatVirtualList();
+            }
+            // Load initial history
+            const room = matrixClient.getRoom(matrixRoom);
+            if (room && chatVirtualizer) {
+                const initialEvents = room.getLiveTimeline().getEvents()
+                    .filter(e => e.getType() === "m.room.message");
+                chatVirtualizer.setEvents(initialEvents);
+            }
+        }
     });
     if (modal) modal.open();
 }
@@ -427,10 +440,6 @@ function openChatModal() {
 function bindChatEvents() {
     const input = document.getElementById("chatInput");
     const sendBtn = document.getElementById("chatSendBtn");
-    
-    if (!chatVirtualizer) {
-        chatVirtualizer = new ChatVirtualList();
-    }
 
     // Guard against duplicate Matrix timeline listeners
     if (!chatTimelineListenerBound && matrixClient) {
@@ -442,13 +451,6 @@ function bindChatEvents() {
             if (chatVirtualizer) chatVirtualizer.appendEvent(event);
         });
         chatTimelineListenerBound = true;
-    }
-
-    const room = matrixClient.getRoom(matrixRoom);
-    if (room && chatVirtualizer) {
-        const initialEvents = room.getLiveTimeline().getEvents()
-            .filter(e => e.getType() === "m.room.message");
-        chatVirtualizer.setEvents(initialEvents);
     }
 
     const send = async () => {
@@ -627,6 +629,8 @@ function renderMediaGrid(group) {
     if (!tile) return;
     openLightbox(group.items, parseInt(tile.dataset.index, 10));
   };
+}
 
 // Expose to global scope so index.js can trigger it after login
 window.startMatrixChat = startMatrixChat;
+
