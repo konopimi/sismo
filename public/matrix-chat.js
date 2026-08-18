@@ -34,7 +34,10 @@ async function startMatrixChat() {
     // 2. Login en Matrix (genera claves E2E en el navegador).
     matrixClient = matrixcs.createClient({ baseUrl: base_url });
     await matrixClient.login("m.login.password", {
-      identifier: { type: "m.id.user", user: user_id.split(":")[0].replace("@", "") },
+      identifier: {
+        type: "m.id.user",
+        user: user_id.split(":")[0].replace("@", ""),
+      },
       password,
     });
     await matrixClient.initCrypto();
@@ -130,12 +133,11 @@ function appendMessage(event) {
   const sender = event.getSender();
   const isSelf = sender === matrixClient.getUserId();
   const name = isSelf
-    ? (window.currentUser?.chat_name || "Tú")
-    : sender.split(":")[0].replace("@", "");
+    ? window.currentUser?.chat_name || "Tú"): sender.split(":")[0].replace("@", "");
   const div = document.createElement("div");
   div.style.cssText = `
     align-self:${isSelf ? "flex-end" : "flex-start"};
-    max-width:75%;
+     max-width:75%;
     padding:8px 12px;
     border-radius:12px;
     background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};

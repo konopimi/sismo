@@ -577,12 +577,17 @@ function bindChatEvents() {
     input.style.height = Math.min(input.scrollHeight, 120) + "px";
   }
 
-  // Escuchar mensajes nuevos.
-  matrixClient.on("Room.timeline", (event, room) => {
-    if (!room || room.roomId !== matrixRoom) return;
-    if (event.getType() !== "m.room.message") return;
-    appendMessage(event);
-  });
+		// Escuchar mensajes nuevos.
+		matrixClient.on("Room.timeline", (event, room, toStartOfTimeline) => {
+			if (!room || room.roomId !== matrixRoom) return;
+			if (event.getType() !== "m.room.message") return;
+			
+			// FIX: Ignore events added via scrollback (pagination). 
+			// They are handled separately by loadOlderMessages() to be prepended at the top.
+			if (toStartOfTimeline) return; 
+			
+			appendMessage(event);
+		});
 
   // Cargar historial inicial (si el room ya está en el store).
   const room = matrixClient.getRoom(matrixRoom);
@@ -595,51 +600,58 @@ function bindChatEvents() {
 
   // ===== Infinite scroll =====
   const messagesList = document.getElementById("chatMessages");
-  let scrollbackToken = room?.getLiveTimeline()?.getPaginationToken?.();
+let scrollbackToken = room?.getLiveTimeline()?.getPaginationToken?.("b");
   messagesList.addEventListener("scroll", () => {
     if (messagesList.scrollTop === 0 && !loadingOlder) loadOlderMessages();
   });
 }
 
-// Carga mensajes más antiguos (infinite scroll).
+// Set global para no duplicar mensajes ya pintados
+const renderedEventIds = new Set();
+
 async function loadOlderMessages() {
-  const messagesList = document.getElementById("chatMessages");
-  const room = matrixClient.getRoom(matrixRoom);
-  if (!room) return;
-
-  const timeline = room.getLiveTimeline();
-  const token = timeline?.getPaginationToken?.();
-  if (!token) return;
-
-  loadingOlder = true;
-  try {
-    const result = await matrixClient.scrollback(room.roomId, {
-      limit: 30,
-      direction: "b",
-      from: token,
-    });
-    if (result.events && result.events.length > 0) {
-      const olderEvents = result.events.filter(e => e.getType() === "m.room.message");
-      if (olderEvents.length > 0) {
-        const firstChild = messagesList.firstChild;
-        for (let i = olderEvents.length - 1; i >= 0; i--) {
-          const event = olderEvents[i];
-          const div = document.createElement("div");
-          prependMessage(event, div);
-          if (firstChild) {
-            messagesList.insertBefore(div, firstChild);
-          } else {
-            messagesList.appendChild(div);
-          }
-        }
-      }
-    } catch (e) {
-      console.error("load older messages error:", e);
-    } finally {
-      loadingOlder = false;
-    }
-  }
-
+	const messagesList = document.getElementById("chatMessages");
+	const room = matrixClient.getRoom(matrixRoom);
+	if (!room) return;
+	const timeline = room.getLiveTimeline();
+	const token = timeline?.getPaginationToken?.("b");
+	if (!token) return;
+	loadingOlder = true;
+	
+	const prevScrollHeight = messagesList.scrollHeight;
+	const prevScrollTop = messagesList.scrollTop;
+	
+	try {
+		await matrixClient.scrollback(room, 30);
+		
+		const olderEvents = room.getLiveTimeline().getEvents()
+			.filter(e => e.getType() === "m.room.message" && !renderedEventIds.has(e.getId()));
+		
+		if (olderEvents.length > 0) {
+			// FIX 1: Explicitly sort by timestamp to guarantee chronological order (oldest first)
+			olderEvents.sort((a, b) => a.getTs() - b.getTs());
+			
+			// FIX 2: Use a DocumentFragment to build the chunk in memory
+			const fragment = document.createDocumentFragment();
+			for (const event of olderEvents) {
+				const div = document.createElement("div");
+				prependMessage(event, div);
+				renderedEventIds.add(event.getId());
+				fragment.appendChild(div);
+			}
+			
+			// Insert the entire chunk at the very top (before the current first child)
+			messagesList.insertBefore(fragment, messagesList.firstChild);
+			
+			// Restore scroll position so the user doesn't get jumped around
+			messagesList.scrollTop = messagesList.scrollHeight - prevScrollHeight + prevScrollTop;
+		}
+	} catch (e) {
+		console.error("load older messages error:", e);
+	} finally {
+		loadingOlder = false;
+	}
+}
   // Renderiza un mensaje en un div para prepend (versión simplificada de appendMessage).
   function prependMessage(event, div) {
     const content = event.getContent();
@@ -824,6 +836,11 @@ document.addEventListener("keydown", (e) => {
 }
 
 function appendMessage(event) {
+  const eventId = event.getId();
+  if (eventId) {
+    if (renderedEventIds.has(eventId)) return; // evita duplicados
+    renderedEventIds.add(eventId);
+  }
   const list = document.getElementById("chatMessages");
   if (!list) return;
   const content = event.getContent();

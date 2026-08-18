@@ -1,10 +1,11 @@
 #!/bin/bash
 # List of files with their relative paths
 FILES=(
-"public/index.html"
-"public/index.js"
-"public/modal.js"
-"public/virtue.js"
+ "public/"
+# "public/index.html"
+# "public/index.js"
+# "public/modal.js"
+# "public/virtue.js"
 "server.js"
 
   )
