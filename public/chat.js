@@ -18,9 +18,9 @@ class ChatVirtualList {
         this.topSpacer = document.getElementById("chatTopSpacer");
         this.bottomSpacer = document.getElementById("chatBottomSpacer");
         
-        this.events = []; 
-        this.heights = new Map(); 
-        this.nodes = new Map(); 
+        this.events = [];
+        this.heights = new Map();
+        this.nodes = new Map();
         
         this.DEFAULT_HEIGHT = 80;
         this.OVERSCAN = 8;
@@ -65,14 +65,25 @@ class ChatVirtualList {
 
     prependEvents(newEvents) {
         if (this._isDestroyed || !newEvents.length) return;
-        const prevScrollHeight = this.container.scrollHeight;
+        
+        // 1. Anchor to the first currently existing event to maintain visual position
+        const prevFirstEventId = this.events.length > 0 ? this.events[0].getId() : null;
+        const anchorNode = prevFirstEventId ? this.nodes.get(prevFirstEventId) : null;
+        const prevAnchorRect = anchorNode ? anchorNode.getBoundingClientRect() : null;
         const prevScrollTop = this.container.scrollTop;
+
         this.events = [...newEvents, ...this.events];
         this._render(true);
+
+        // 2. After DOM updates, measure how much the anchor shifted and adjust scroll
         requestAnimationFrame(() => {
             if (this._isDestroyed) return;
-            const newScrollHeight = this.container.scrollHeight;
-            this.container.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
+            const newAnchorNode = prevFirstEventId ? this.nodes.get(prevFirstEventId) : null;
+            if (newAnchorNode && prevAnchorRect) {
+                const newAnchorRect = newAnchorNode.getBoundingClientRect();
+                const shift = newAnchorRect.top - prevAnchorRect.top;
+                this.container.scrollTop = prevScrollTop + shift;
+            }
         });
     }
 
@@ -116,6 +127,10 @@ class ChatVirtualList {
 
     _render(force) {
         if (this._isDestroyed || !this.container || !this.wrapper) return;
+
+        // 1. Save current scroll position to prevent browser jumps during DOM mutation
+        const savedScrollTop = this.container.scrollTop;
+
         let totalHeight = 0;
         const eventHeights = this.events.map(ev => {
             const h = this.heights.get(ev.getId()) || this.DEFAULT_HEIGHT;
@@ -123,19 +138,18 @@ class ChatVirtualList {
             return h;
         });
 
-        const scrollTop = this.container.scrollTop;
         const viewportHeight = this.container.clientHeight;
         
         let acc = 0, startIndex = 0;
         for (let i = 0; i < eventHeights.length; i++) {
-            if (acc + eventHeights[i] > scrollTop) break;
+            if (acc + eventHeights[i] > savedScrollTop) break;
             acc += eventHeights[i];
             startIndex = i + 1;
         }
         
         let endAcc = acc, endIndex = startIndex;
         for (let i = startIndex; i < eventHeights.length; i++) {
-            if (endAcc > scrollTop + viewportHeight) break;
+            if (endAcc > savedScrollTop + viewportHeight) break;
             endAcc += eventHeights[i];
             endIndex = i + 1;
         }
@@ -153,15 +167,13 @@ class ChatVirtualList {
 
         const visibleIds = new Set();
         const fragment = document.createDocumentFragment();
-
         for (let i = startIndex; i < endIndex; i++) {
             const ev = this.events[i];
             const id = ev.getId();
             visibleIds.add(id);
-
             let node = this.nodes.get(id);
             if (!node) {
-                node = createMessageNode(ev); 
+                node = createMessageNode(ev);
                 node.dataset.eventId = id;
                 this.nodes.set(id, node);
                 this._resizeObserver.observe(node);
@@ -177,8 +189,11 @@ class ChatVirtualList {
             }
         }
 
-        this.wrapper.innerHTML = ""; 
+        this.wrapper.innerHTML = "";
         this.wrapper.appendChild(fragment);
+
+        // 2. Restore scroll position immediately after DOM mutation
+        this.container.scrollTop = savedScrollTop;
     }
 }
 
