@@ -467,6 +467,18 @@ function bindChatEvents() {
     }
   };
   sendBtn.addEventListener("click", send);
+  // Adjuntar imagen/video.
+  const attachBtn = document.getElementById("chatAttachBtn");
+  const fileInput = document.getElementById("chatFileInput");
+  if (attachBtn && fileInput) {
+    attachBtn.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", async () => {
+      for (const file of Array.from(fileInput.files || [])) {
+        await sendChatFile(file);
+      }
+      fileInput.value = "";
+    });
+  }
   // Enter envía; Shift+Enter hace salto de línea.
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -499,11 +511,35 @@ function bindChatEvents() {
   }
 }
 
+// Sube un archivo (imagen/video) y lo envía como mensaje al room.
+async function sendChatFile(file) {
+  if (!matrixRoom || !file) return;
+  const isImage = file.type.startsWith("image/");
+  const isVideo = file.type.startsWith("video/");
+  if (!isImage && !isVideo) return;
+  try {
+    const uploadRes = await matrixClient.uploadContent(file, {
+      includeFilename: true,
+      type: file.type,
+    });
+    const msgtype = isVideo ? "m.video" : "m.image";
+    await matrixClient.sendMessage(matrixRoom, {
+      msgtype,
+      body: file.name,
+      url: uploadRes.content_uri,
+      info: { mimetype: file.type, size: file.size },
+    });
+  } catch (e) {
+    console.error("send file error:", e);
+    alert("No se pudo enviar el archivo.");
+  }
+}
+
 function appendMessage(event) {
   const list = document.getElementById("chatMessages");
   if (!list) return;
   const content = event.getContent();
-  const body = content.body || "";
+  const msgtype = content.msgtype;
   const sender = event.getSender();
   const isSelf = sender === matrixClient.getUserId();
   const name = isSelf
@@ -517,9 +553,25 @@ function appendMessage(event) {
     border-radius:12px;
     background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};
   `;
+
+  let bodyHtml = "";
+  if (msgtype === "m.image" && content.url) {
+    const src = matrixClient.mxcUrlToHttp(content.url);
+    bodyHtml = src
+      ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(content.body || "imagen")}" style="max-width:100%;border-radius:8px;display:block;" />`
+      : `<div style="color:#999;">📷 Imagen</div>`;
+  } else if (msgtype === "m.video" && content.url) {
+    const src = matrixClient.mxcUrlToHttp(content.url);
+    bodyHtml = src
+      ? `<video src="${escapeHtml(src)}" controls style="max-width:100%;border-radius:8px;display:block;"></video>`
+      : `<div style="color:#999;">🎬 Video</div>`;
+  } else {
+    bodyHtml = `<div style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(content.body || "")}</div>`;
+  }
+
   div.innerHTML = `
     <div style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>
-    <div style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(body)}</div>
+    ${bodyHtml}
   `;
   list.appendChild(div);
   list.scrollTop = list.scrollHeight;

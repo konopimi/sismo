@@ -820,9 +820,11 @@
         </div>
         <div
           style="display:flex;gap:6px;padding:5px;border-top:1px solid rgba(120,120,120,0.3);flex:0 0 auto;align-items:flex-end;">
+          <button id="chatAttachBtn" type="button" title="Adjuntar imagen o video" style="flex:0 0 auto;">📎</button>
+          <input type="file" id="chatFileInput" accept="image/*,video/*" multiple style="display:none;" />
           <textarea id="chatInput" rows="1" placeholder="Escribe un mensaje..."
-            style="flex:1;border-radius:6px;padding:8px;resize:none;min-height:38px;max-height:120px;font-family:inherit;"></textarea>
-          <button id="chatSendBtn" style="border-radius:6px;padding:8px 14px;flex:0 0 auto;">Enviar</button>
+            style="flex:1;resize:none;min-height:38px;max-height:120px;font-family:inherit;"></textarea>
+          <button id="chatSendBtn" style="flex:0 0 auto;">Enviar</button>
         </div>
       </div>
     </div>
