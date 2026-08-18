@@ -65,24 +65,39 @@ class ChatVirtualList {
 
     prependEvents(newEvents) {
         if (this._isDestroyed || !newEvents.length) return;
+
+        // 1. Find the first currently rendered node to use as a visual anchor
+        const firstRenderedNode = this.nodes.values().next().value;
+        let anchorId = null;
+        let prevAnchorRect = null;
         
-        // 1. Anchor to the first currently existing event to maintain visual position
-        const prevFirstEventId = this.events.length > 0 ? this.events[0].getId() : null;
-        const anchorNode = prevFirstEventId ? this.nodes.get(prevFirstEventId) : null;
-        const prevAnchorRect = anchorNode ? anchorNode.getBoundingClientRect() : null;
+        if (firstRenderedNode) {
+            anchorId = firstRenderedNode.dataset.eventId;
+            prevAnchorRect = firstRenderedNode.getBoundingClientRect();
+        }
+        
         const prevScrollTop = this.container.scrollTop;
 
+        // 2. Add new events to the beginning and re-render synchronously
         this.events = [...newEvents, ...this.events];
         this._render(true);
 
-        // 2. After DOM updates, measure how much the anchor shifted and adjust scroll
+        // 3. After the browser has updated the layout, measure the anchor's shift
         requestAnimationFrame(() => {
             if (this._isDestroyed) return;
-            const newAnchorNode = prevFirstEventId ? this.nodes.get(prevFirstEventId) : null;
-            if (newAnchorNode && prevAnchorRect) {
-                const newAnchorRect = newAnchorNode.getBoundingClientRect();
-                const shift = newAnchorRect.top - prevAnchorRect.top;
-                this.container.scrollTop = prevScrollTop + shift;
+            
+            if (anchorId) {
+                const newAnchorNode = this.nodes.get(anchorId);
+                if (newAnchorNode && prevAnchorRect) {
+                    const newAnchorRect = newAnchorNode.getBoundingClientRect();
+                    // The difference in Y position is exactly how much we need to scroll
+                    // to keep the user's view perfectly stable, regardless of image loading.
+                    const shift = newAnchorRect.top - prevAnchorRect.top;
+                    this.container.scrollTop = prevScrollTop + shift;
+                }
+            } else {
+                // Fallback: if the list was completely empty, scroll to bottom
+                this.container.scrollTop = this.container.scrollHeight;
             }
         });
     }
