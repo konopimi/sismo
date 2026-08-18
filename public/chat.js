@@ -85,6 +85,16 @@ class ChatVirtualList {
         if (this._stickRaf) cancelAnimationFrame(this._stickRaf);
     }
 
+    _isEventAlreadyPresent(eventId) {
+        return this.events.some(ev => {
+            if (ev.getId() === eventId) return true;
+            if (ev._isMediaGroup) {
+                return ev.items.some(i => i.getId() === eventId);
+            }
+            return false;
+        });
+    }
+
     setEvents(events) {
         if (this._isDestroyed) return;
         this.events = this._groupEvents(events);
@@ -95,7 +105,10 @@ class ChatVirtualList {
     prependEvents(newEvents) {
         if (this._isDestroyed || !newEvents.length) return;
 
-        const groupedNew = this._groupEvents(newEvents);
+        const uniqueNewEvents = newEvents.filter(ev => !this._isEventAlreadyPresent(ev.getId()));
+        if (!uniqueNewEvents.length) return;
+
+        const groupedNew = this._groupEvents(uniqueNewEvents);
         if (!groupedNew.length) return;
 
         if (this._rafAnchor) cancelAnimationFrame(this._rafAnchor);
@@ -133,6 +146,7 @@ class ChatVirtualList {
 
     appendEvent(event) {
         if (this._isDestroyed) return;
+        if (this._isEventAlreadyPresent(event.getId())) return;
 
         const content = event.getContent();
         const msgtype = content.msgtype;
@@ -143,12 +157,14 @@ class ChatVirtualList {
         if (isMedia && this.events.length > 0) {
             const last = this.events[this.events.length - 1];
             if (last._isMediaGroup && last.sender === sender && ts - last.getTs() < 5 * 60 * 1000) {
-                last.items.push(event);
-                const groupId = last.getId();
-                this.nodes.delete(groupId);
-                this.heights.delete(groupId);
-                this._scheduleRender();
-                if (this.isAtBottom) this._stickToBottom();
+                if (!last.items.some(i => i.getId() === event.getId())) {
+                    last.items.push(event);
+                    const groupId = last.getId();
+                    this.nodes.delete(groupId);
+                    this.heights.delete(groupId);
+                    this._scheduleRender();
+                    if (this.isAtBottom) this._stickToBottom();
+                }
                 return;
             }
         }
@@ -195,7 +211,7 @@ class ChatVirtualList {
             cancelAnimationFrame(this._stickRaf);
             this._stickRaf = null;
         }
-        const threshold = 150;
+        const threshold = 50;
         this.isAtBottom = (this.container.scrollHeight - this.container.scrollTop - this.container.clientHeight) < threshold;
         if (this.container.scrollTop === 0 && !window.loadingOlder) {
             window.loadOlderMessages();
