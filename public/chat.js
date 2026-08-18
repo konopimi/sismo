@@ -891,3 +891,56 @@ function renderMediaGrid(group) {
 // Expose to global scope so index.js can trigger it after login
 window.startMatrixChat = startMatrixChat;
 
+// ===== LIGHTBOX =====
+let _lightboxItems = [];
+let _lightboxIndex = 0;
+
+function openLightbox(items, index) {
+    _lightboxItems = items;
+    _lightboxIndex = index;
+    updateLightboxStage();
+    const modal = Modal({ id: "mediaLightbox" });
+    if (modal) modal.open();
+}
+
+function updateLightboxStage() {
+    const stage = document.getElementById("lightboxStage");
+    const counter = document.getElementById("lightboxCounter");
+    const prevBtn = document.getElementById("lightboxPrev");
+    const nextBtn = document.getElementById("lightboxNext");
+    if (!stage) return;
+
+    const item = _lightboxItems[_lightboxIndex];
+    const src = item.fullSrc || item.src;
+
+    if (item.msgtype === "m.video") {
+        stage.innerHTML = `<video src="${escapeHtml(src)}" controls autoplay style="max-width:100%;max-height:100%;"></video>`;
+    } else {
+        stage.innerHTML = `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "")}" style="max-width:100%;max-height:100%;object-fit:contain;" />`;
+    }
+
+    if (counter) counter.textContent = `${_lightboxIndex + 1} / ${_lightboxItems.length}`;
+    if (prevBtn) prevBtn.disabled = _lightboxIndex === 0;
+    if (nextBtn) nextBtn.disabled = _lightboxIndex === _lightboxItems.length - 1;
+}
+
+// Wire lightbox nav buttons once
+let _lightboxWired = false;
+function wireLightboxNav() {
+    if (_lightboxWired) return;
+    _lightboxWired = true;
+    const prevBtn = document.getElementById("lightboxPrev");
+    const nextBtn = document.getElementById("lightboxNext");
+    if (prevBtn) prevBtn.addEventListener("click", () => {
+        if (_lightboxIndex > 0) { _lightboxIndex--; updateLightboxStage(); }
+    });
+    if (nextBtn) nextBtn.addEventListener("click", () => {
+        if (_lightboxIndex < _lightboxItems.length - 1) { _lightboxIndex++; updateLightboxStage(); }
+    });
+}
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", wireLightboxNav);
+} else {
+    wireLightboxNav();
+}
+
