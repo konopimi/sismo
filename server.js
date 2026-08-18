@@ -884,6 +884,16 @@ app.get("/api/collaborators", (req, res) => {
     .all();
   res.json(rows);
 });
+// Colaboradores con cuenta Matrix (para invitar al room privado).
+// Requiere login: solo miembros del chat pueden invitar a otros.
+app.get("/api/collaborators/matrix", requireAuth, (req, res) => {
+  const rows = db
+    .prepare(
+      "SELECT id, name, matrix_user_id FROM collaborators WHERE matrix_user_id IS NOT NULL ORDER BY name ASC",
+    )
+    .all();
+  res.json(rows);
+});
 app.post("/api/collaborators", (req, res) => {
   const { name, skill, contact, city, email, password } = req.body || {};
   if (!name || !name.trim()) {

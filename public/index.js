@@ -319,39 +319,37 @@ async function startMatrixChat() {
 }
 
 async function joinOrCreateRoom() {
-  // Join by alias first (works for public rooms). If the alias doesn't
-  // resolve yet, create the room. We must NOT fall back to createRoom on
-  // a join failure, or we'd hit "RoomID already exists" when the room
-  // already exists but the join itself failed.
+  // Resolve the alias. If it doesn't exist yet, create the room (private).
+  let roomId = null;
   try {
     const aliasRes = await matrixClient.getRoomIdForAlias(MATRIX_ROOM_ALIAS);
-    if (aliasRes && aliasRes.room_id) {
-      await matrixClient.joinRoom(aliasRes.room_id);
-      return aliasRes.room_id;
-    }
+    roomId = aliasRes && aliasRes.room_id;
   } catch (e) {
-    // Alias not found (M_NOT_FOUND) — fall through to create.
+    // M_NOT_FOUND: alias no existe todavía → crear el room.
     if (e.errcode !== "M_NOT_FOUND") throw e;
   }
-  // Room no existe: crearlo (público para que todos los colaboradores
-  // puedan unirse por alias sin invitación).
-  const { room_id } = await matrixClient.createRoom({
-    name: "Ayuda en Cali 🆘",
-    topic: "Canal general de colaboradores de Sismo",
-    visibility: "public",
-    room_alias_name: "ayuda-en-cali",
-    // Dendrite no siempre respeta `visibility`; forzamos la regla de
-    // unión a pública explícitamente para que cualquier colaborador
-    // pueda entrar por alias sin invitación.
-    initial_state: [
-      {
-        type: "m.room.join_rules",
-        state_key: "",
-        content: { join_rule: "public" },
-      },
-    ],
-  });
-  return room_id;
+
+  if (!roomId) {
+    const { room_id } = await matrixClient.createRoom({
+      name: "Ayuda en Cali 🆘",
+      topic: "Canal general de colaboradores de Sismo",
+      visibility: "private",
+      room_alias_name: "ayuda-en-cali",
+    });
+    return room_id;
+  }
+
+  // El room ya existe (privado). Intentamos unirnos: funciona si ya somos
+  // miembros o si tenemos una invitación pendiente. Si no, no lanzamos
+  // error — el usuario verá el chat vacío hasta que un miembro lo invite.
+  try {
+    await matrixClient.joinRoom(roomId);
+  } catch (e) {
+    // M_FORBIDDEN: sin invitación. No es fatal; el room se mostrará igual
+    // y el usuario podrá ser invitado después.
+    if (e.errcode !== "M_FORBIDDEN") throw e;
+  }
+  return roomId;
 }
 
 // Renderiza la lista de conversaciones en el sub-tab "Chat".
@@ -359,19 +357,87 @@ function renderChatUI() {
   const container = document.getElementById("chatListContainer");
   if (!container) return;
   container.innerHTML = `
-    <button class="chat-list-item" data-room-id="${escapeHtml(matrixRoom)}" style="
-      display:flex;align-items:center;gap:10px;padding:12px;border-radius:10px;
-      background:rgba(120,120,120,0.15);border:1px solid rgba(120,120,120,0.3);
-      cursor:pointer;text-align:left;width:100%;
-    ">
-      <span style="font-size:1.4em;">💬</span>
-      <div style="flex:1;">
-        <div style="font-weight:600;">Ayuda en Cali 🆘</div>
-        <div style="font-size:0.8em;opacity:0.7;">Canal general de colaboradores</div>
-      </div>
-    </button>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="chat-list-item" data-room-id="${escapeHtml(matrixRoom)}" style="
+        display:flex;align-items:center;gap:10px;padding:12px;border-radius:10px;
+        background:rgba(120,120,120,0.15);border:1px solid rgba(120,120,120,0.3);
+        cursor:pointer;text-align:left;width:100%;
+      ">
+        <span style="font-size:1.4em;">💬</span>
+        <div style="flex:1;">
+          <div style="font-weight:600;">Ayuda en Cali 🆘</div>
+          <div style="font-size:0.8em;opacity:0.7;">Canal general de colaboradores</div>
+        </div>
+      </button>
+      <button id="chatInviteBtn" style="
+        padding:8px 12px;border-radius:8px;border:1px solid rgba(120,120,120,0.3);
+        background:rgba(120,120,120,0.1);cursor:pointer;font-size:0.85em;
+      ">➕ Invitar colaboradores</button>
+    </div>
   `;
   container.querySelector(".chat-list-item").addEventListener("click", openChatModal);
+  container.querySelector("#chatInviteBtn").addEventListener("click", openInviteModal);
+}
+
+// Abre el modal de invitación y carga la lista de colaboradores con cuenta Matrix.
+async function openInviteModal() {
+  const modal = Modal({ id: "inviteModal" });
+  if (!modal) return;
+  const list = document.getElementById("inviteList");
+  if (list) list.innerHTML = `<div style="padding:12px;color:#999;">Cargando…</div>`;
+  modal.open();
+  try {
+    const res = await authFetch(`${API_BASE}/collaborators/matrix`);
+    if (!res.ok) throw new Error("no se pudo cargar la lista");
+    const collabs = await res.json();
+    renderInviteList(collabs);
+  } catch (e) {
+    if (list) list.innerHTML = `<div style="padding:12px;color:#f66;">Error al cargar colaboradores.</div>`;
+  }
+}
+
+function renderInviteList(collabs) {
+  const list = document.getElementById("inviteList");
+  if (!list) return;
+  if (!collabs.length) {
+    list.innerHTML = `<div style="padding:12px;color:#999;">No hay colaboradores con cuenta de chat todavía.</div>`;
+    return;
+  }
+  list.innerHTML = collabs
+    .map((c) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid rgba(120,120,120,0.2);">
+        <span style="flex:1;">${escapeHtml(c.name)}</span>
+        <button class="invite-collab-btn" data-user-id="${escapeHtml(c.matrix_user_id)}" style="
+          padding:4px 10px;border-radius:6px;border:1px solid rgba(120,120,120,0.3);
+          background:rgba(63,163,77,0.25);cursor:pointer;font-size:0.8em;
+        ">Invitar</button>
+      </div>
+    `)
+    .join("");
+  list.querySelectorAll(".invite-collab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => inviteCollaborator(btn));
+  });
+}
+
+async function inviteCollaborator(btn) {
+  const userId = btn.dataset.userId;
+  if (!userId || !matrixRoom) return;
+  btn.disabled = true;
+  btn.textContent = "…";
+  try {
+    await matrixClient.invite(matrixRoom, userId);
+    btn.textContent = "✅";
+    btn.style.background = "rgba(63,163,77,0.5)";
+  } catch (e) {
+    console.error("invite error:", e);
+    btn.textContent = "Error";
+    btn.style.background = "rgba(214,69,69,0.4)";
+    setTimeout(() => {
+      btn.textContent = "Invitar";
+      btn.style.background = "rgba(63,163,77,0.25)";
+      btn.disabled = false;
+    }, 2000);
+  }
 }
 
 function renderChatError(msg) {

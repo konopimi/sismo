@@ -182,7 +182,7 @@
       <!-- Panel Chat: lista de conversaciones -->
       <div class="sub-tab-panel active" data-subtab-panel="chat">
         <div id="chatListContainer"
-          style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;"></div>
+          style="flex:1;overflow-y:auto;padding:0px;display:flex;flex-direction:column;gap:8px;"></div>
       </div>
 
       <!-- Panel Donaciones -->
@@ -818,11 +818,25 @@
       <div data-modal-body style="padding:0;flex:1;display:flex;flex-direction:column;overflow:hidden;">
         <div id="chatMessages" style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
         </div>
-        <div style="display:flex;gap:6px;padding:8px;border-top:1px solid rgba(120,120,120,0.3);flex:0 0 auto;align-items:flex-end;">
+        <div
+          style="display:flex;gap:6px;padding:5px;border-top:1px solid rgba(120,120,120,0.3);flex:0 0 auto;align-items:flex-end;">
           <textarea id="chatInput" rows="1" placeholder="Escribe un mensaje..."
             style="flex:1;border-radius:6px;padding:8px;resize:none;min-height:38px;max-height:120px;font-family:inherit;"></textarea>
           <button id="chatSendBtn" style="border-radius:6px;padding:8px 14px;flex:0 0 auto;">Enviar</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de invitación al chat (lista de colaboradores con cuenta Matrix) -->
+  <div id="inviteModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="inviteModalTitle">
+    <div class="modal-content" style="max-width:420px;">
+      <div class="modal-header" data-modal-header>
+        <div id="inviteModalTitle" style="flex:1;">➕ Invitar colaboradores</div>
+        <button class="modal-close" data-modal-close aria-label="Cerrar">✕</button>
+      </div>
+      <div data-modal-body style="max-height:60vh;overflow-y:auto;">
+        <div id="inviteList"></div>
       </div>
     </div>
   </div>
