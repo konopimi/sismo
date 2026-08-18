@@ -535,6 +535,11 @@ async function sendChatFile(file) {
   }
 }
 
+// Estado para agrupar mensajes consecutivos del mismo remitente (como WhatsApp).
+let lastChatSender = null;
+let lastChatTs = 0;
+const CHAT_GROUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutos
+
 function appendMessage(event) {
   const list = document.getElementById("chatMessages");
   if (!list) return;
@@ -542,6 +547,13 @@ function appendMessage(event) {
   const msgtype = content.msgtype;
   const sender = event.getSender();
   const isSelf = sender === matrixClient.getUserId();
+  const ts = event.getTs();
+
+  // Agrupar si es el mismo remitente y llegó dentro de la ventana.
+  const sameGroup = sender === lastChatSender && (ts - lastChatTs) < CHAT_GROUP_WINDOW_MS;
+  lastChatSender = sender;
+  lastChatTs = ts;
+
   const name = isSelf
     ? (window.currentUser?.chat_name || "Tú")
     : sender.split(":")[0].replace("@", "");
@@ -549,9 +561,10 @@ function appendMessage(event) {
   div.style.cssText = `
     align-self:${isSelf ? "flex-end" : "flex-start"};
     max-width:75%;
-    padding:8px 12px;
+    padding:${sameGroup ? "2px 12px" : "8px 12px"};
     border-radius:12px;
     background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};
+    margin-top:${sameGroup ? "2px" : "8px"};
   `;
 
   let bodyHtml = "";
@@ -570,7 +583,7 @@ function appendMessage(event) {
   }
 
   div.innerHTML = `
-    <div style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>
+    ${sameGroup ? "" : `<div style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>`}
     ${bodyHtml}
   `;
   list.appendChild(div);
