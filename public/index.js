@@ -680,14 +680,37 @@ function appendMessage(event) {
   lastChatSender = sender;
   lastChatTs = ts;
 
-  // Resuelve el nombre a partir del Matrix user_id usando colabData.
-  const resolveMatrixName = (userId) => {
-    const collab = colabData.find((c) => c.matrix_user_id === userId);
-    return collab ? collab.name : userId.split(":")[0].replace("@", "");
+  // Resuelve el nombre a partir del Matrix user_id usando colabData,
+  // con fallback a fetch si no está cargado.
+  const resolveMatrixName = async (userId) => {
+    let collab = colabData.find((c) => c.matrix_user_id === userId);
+    if (collab) return collab.name;
+    // No está en memoria: intentar cargar la lista de colaboradores.
+    try {
+      const res = await authFetch(`${API_BASE}/collaborators`);
+      if (res.ok) {
+        const data = await res.json();
+        collab = data.find((c) => c.matrix_user_id === userId);
+        if (collab) return collab.name;
+      }
+    } catch {}
+    return userId.split(":")[0].replace("@", "");
   };
-  const name = isSelf
+  // Usamos una promesa para el nombre; si no está listo, mostramos
+  // el UUID temporalmente y actualizamos cuando resuelva.
+  let name = isSelf
     ? window.currentUser?.chat_name || "Tú"
-    : resolveMatrixName(sender);
+    : sender.split(":")[0].replace("@", "");
+  if (!isSelf) {
+    resolveMatrixName(sender).then((resolved) => {
+      if (resolved !== name) {
+        name = resolved;
+        // Actualizar el nombre en el DOM si el mensaje ya se renderizó.
+        const nameEl = div.querySelector(".msg-sender-name");
+        if (nameEl) nameEl.textContent = resolved;
+      }
+    });
+  }
   const div = document.createElement("div");
   div.style.cssText = `
     align-self:${isSelf ? "flex-end" : "flex-start"};
@@ -713,7 +736,7 @@ function appendMessage(event) {
   }
 
   div.innerHTML = `
-    ${sameGroup ? "" : `<div style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>`}
+    ${sameGroup ? "" : `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>`}
     ${bodyHtml}
   `;
   if (isMedia) div.appendChild(lastMediaGroup.gridEl);
