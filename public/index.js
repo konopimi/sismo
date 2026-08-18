@@ -274,6 +274,10 @@ async function loadMatrixDirectory() {
   }
 }
 
+// Control de carga de mensajes antiguos (infinite scroll).
+let loadingOlder = false;
+
+// Estado de respuesta (cita de mensaje).
 // Estado de respuesta (cita de mensaje).
 let replyingTo = null; // { eventId, sender, body, msgtype, url }
 function setReplyingTo(event) {
@@ -588,7 +592,94 @@ function bindChatEvents() {
       if (event.getType() === "m.room.message") appendMessage(event);
     });
   }
+
+  // ===== Infinite scroll =====
+  const messagesList = document.getElementById("chatMessages");
+  let scrollbackToken = room?.getLiveTimeline()?.getPaginationToken?.();
+  messagesList.addEventListener("scroll", () => {
+    if (messagesList.scrollTop === 0 && !loadingOlder) loadOlderMessages();
+  });
 }
+
+// Carga mensajes más antiguos (infinite scroll).
+async function loadOlderMessages() {
+  const messagesList = document.getElementById("chatMessages");
+  const room = matrixClient.getRoom(matrixRoom);
+  if (!room) return;
+  
+  // Obtener token de paginación del timeline actual.
+  const timeline = room.getLiveTimeline();
+  const token = timeline?.getPaginationToken?.();
+  if (!token) return;
+
+  loadingOlder = true;
+  try {
+    const result = await matrixClient.scrollback(room.roomId, {
+      limit: 30,
+      direction: "b",
+      from: token,
+    });
+    if (result.events && result.events.length > 0) {
+      const olderEvents = result.events.filter(e => e.getType() === "m.room.message");
+      if (olderEvents.length > 0) {
+        const firstChild = messagesList.firstChild;
+        for (let i = olderEvents.length - 1; i >= 0; i--) {
+          const event = olderEvents[i];
+          const div = document.createElement("div");
+          prependMessage(event, div);
+          if (firstChild) {
+            messagesList.insertBefore(div, firstChild);
+          } else {
+            messagesList.appendChild(div);
+          }
+        }
+      }
+      // Actualizar token para la próxima carga.
+      // Nota: scrollback devuelve un nuevo token en result.paginationToken
+      // pero la API puede variar; usamos el token del timeline actualizado.
+    } catch (e) {
+      console.error("load older messages error:", e);
+    } finally {
+      loadingOlder = false;
+    }
+  }
+
+  // Renderiza un mensaje en un div para prepend (versión simplificada de appendMessage).
+  function prependMessage(event, div) {
+    const content = event.getContent();
+    const msgtype = content.msgtype;
+    const sender = event.getSender();
+    const isSelf = sender === matrixClient.getUserId();
+    const isMedia = msgtype === "m.image" || msgtype === "m.video";
+
+    const name = isSelf
+      ? (window.currentUser?.chat_name || "Tú")
+      : sender.split(":")[0].replace("@", "");
+    
+    div.style.cssText = `
+      align-self:${isSelf ? "flex-end" : "flex-start"};
+      max-width:75%;
+      padding:${isMedia ? "3px" : "8px 12px"};
+      border-radius:12px;
+      background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};
+      margin-top:8px;
+    `;
+
+    let bodyHtml = "";
+    if (isMedia) {
+      const src = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
+      const gridEl = document.createElement("div");
+      gridEl.className = "chat-media-grid";
+      const group = { sender, ts: event.getTs(), gridEl, items: [{ msgtype, src: content.url ? matrixClient.mxcUrlToHttp(content.url) : null, body: content.body }] };
+      renderMediaGrid(group);
+      bodyHtml = "";
+      div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>`;
+      if (isMedia) div.appendChild(group.gridEl);
+    } else {
+      bodyHtml = `<div style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(content.body || "")}</div>`;
+      div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>${bodyHtml}`;
+    }
+  }
 
 // Sube un archivo (imagen/video) y lo envía como mensaje al room.
 async function sendChatFile(file) {
