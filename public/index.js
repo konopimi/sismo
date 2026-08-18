@@ -340,6 +340,16 @@ async function joinOrCreateRoom() {
     topic: "Canal general de colaboradores de Sismo",
     visibility: "public",
     room_alias_name: "ayuda-en-cali",
+    // Dendrite no siempre respeta `visibility`; forzamos la regla de
+    // unión a pública explícitamente para que cualquier colaborador
+    // pueda entrar por alias sin invitación.
+    initial_state: [
+      {
+        type: "m.room.join_rules",
+        state_key: "",
+        content: { join_rule: "public" },
+      },
+    ],
   });
   return room_id;
 }
