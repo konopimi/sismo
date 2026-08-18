@@ -35,32 +35,33 @@ class ChatVirtualList {
         this._resizeObserver = new ResizeObserver(entries => {
             if (this._isDestroyed) return;
             let changed = false;
+            let scrollAdjustment = 0;
+            const containerTop = this.container.getBoundingClientRect().top;
+
+
             for (let entry of entries) {
                 const id = entry.target.dataset.eventId;
                 const newH = entry.target.offsetHeight;
                 const oldH = this.heights.get(id) || this.DEFAULT_HEIGHT;
+
                 if (oldH !== newH) {
                     this.heights.set(id, newH);
                     changed = true;
+
+                    if (!this.isAtBottom) {
+                        const nodeTop = entry.target.getBoundingClientRect().top;
+                        if (nodeTop <= containerTop + 5) {
+                            scrollAdjustment += (newH - oldH);
+                        }
+                    }
                 }
             }
+
             if (changed) {
                 if (this.isAtBottom) {
                     this._stickToBottom();
-                } else {
-                    let scrollAdjustment = 0;
-                    const containerTop = this.container.getBoundingClientRect().top;
-                    for (let entry of entries) {
-                        const nodeTop = entry.target.getBoundingClientRect().top;
-                        if (nodeTop < containerTop) {
-                            const id = entry.target.dataset.eventId;
-                            const oldH = this.heights.get(id) || this.DEFAULT_HEIGHT;
-                            scrollAdjustment += (entry.target.offsetHeight - oldH);
-                        }
-                    }
-                    if (scrollAdjustment !== 0) {
-                        this.container.scrollTop += scrollAdjustment;
-                    }
+                } else if (scrollAdjustment !== 0) {
+                    this.container.scrollTop += scrollAdjustment;
                 }
                 this._scheduleRender();
             }
@@ -638,10 +639,13 @@ function createMessageNode(event) {
         const thumbSrc = content.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(content.info.thumbnail_url) : fullSrc;
         const gridEl = document.createElement("div");
         gridEl.className = "chat-media-grid";
-        // Reserve space for media to prevent layout shift
+        // Reserve space to prevent layout shift while images load
         if (content.info && content.info.w && content.info.h) {
             gridEl.style.aspectRatio = `${content.info.w} / ${content.info.h}`;
             gridEl.style.minHeight = "80px";
+        } else {
+            gridEl.style.aspectRatio = "4 / 3";
+            gridEl.style.minHeight = "120px";
         }
         const group = { sender, ts: event.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
         renderMediaGrid(group);
