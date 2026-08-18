@@ -265,6 +265,43 @@ let matrixStarted = false;
 let matrixDirectory = null; // Map<matrix_user_id, name>
 async function loadMatrixDirectory() {
   try {
+
+// Estado de respuesta (cita de mensaje).
+let replyingTo = null; // { eventId, sender, body, msgtype, url }
+function setReplyingTo(event) {
+  const content = event.getContent();
+  replyingTo = {
+    eventId: event.getId(),
+    sender: event.getSender(),
+    body: content.body || "",
+    msgtype: content.msgtype,
+    url: content.url,
+  };
+  updateReplyBar();
+}
+function clearReplyingTo() {
+  replyingTo = null;
+  updateReplyBar();
+}
+function updateReplyBar() {
+  const bar = document.getElementById("chatReplyBar");
+  const preview = document.getElementById("chatReplyPreview");
+  if (!bar || !preview) return;
+  if (replyingTo) {
+    const name = replyingTo.sender === matrixClient.getUserId()
+      ? "Tú"
+      : replyingTo.sender.split(":")[0].replace("@", "");
+    let previewText = replyingTo.body || "";
+    if (replyingTo.msgtype === "m.image") previewText = "📷 Imagen";
+    else if (replyingTo.msgtype === "m.video") previewText = "🎬 Video";
+    previewText = previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
+    preview.innerHTML = `<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong>${escapeHtml(name)}</strong> ${escapeHtml(previewText)}</div>`;
+    bar.style.display = "flex";
+  } else {
+    bar.style.display = "none";
+    preview.innerHTML = "";
+  }
+}
     const res = await authFetch(`${API_BASE}/collaborators/matrix`);
     if (!res.ok) return new Map();
     const data = await res.json();
@@ -474,14 +511,29 @@ function bindChatEvents() {
     const text = input.value.trim();
     if (!text || !matrixRoom) return;
     try {
-      await matrixClient.sendTextMessage(matrixRoom, text);
+      const content = { msgtype: "m.text", body: text };
+      if (replyingTo) {
+        content["m.relates_to"] = {
+          "m.in_reply_to": { event_id: replyingTo.eventId },
+        };
+        content["m.reply_preview"] = {
+          sender: replyingTo.sender,
+          body: replyingTo.body,
+          msgtype: replyingTo.msgtype,
+        };
+      }
+      await matrixClient.sendMessage(matrixRoom, content);
       input.value = "";
       autoResizeChatInput();
+      clearReplyingTo();
     } catch (e) {
       console.error("send error:", e);
     }
   };
   sendBtn.addEventListener("click", send);
+  // Cancelar respuesta.
+  const replyCancel = document.getElementById("chatReplyCancel");
+  if (replyCancel) replyCancel.addEventListener("click", clearReplyingTo);
   // Adjuntar imagen/video.
   const attachBtn = document.getElementById("chatAttachBtn");
   const fileInput = document.getElementById("chatFileInput");
@@ -538,12 +590,24 @@ async function sendChatFile(file) {
       type: file.type,
     });
     const msgtype = isVideo ? "m.video" : "m.image";
-    await matrixClient.sendMessage(matrixRoom, {
+    const content = {
       msgtype,
       body: file.name,
       url: uploadRes.content_uri,
       info: { mimetype: file.type, size: file.size },
-    });
+    };
+    if (replyingTo) {
+      content["m.relates_to"] = {
+        "m.in_reply_to": { event_id: replyingTo.eventId },
+      };
+      content["m.reply_preview"] = {
+        sender: replyingTo.sender,
+        body: replyingTo.body,
+        msgtype: replyingTo.msgtype,
+      };
+    }
+    await matrixClient.sendMessage(matrixRoom, content);
+    clearReplyingTo();
   } catch (e) {
     console.error("send file error:", e);
     alert("No se pudo enviar el archivo.");
@@ -734,6 +798,23 @@ function appendMessage(event) {
     margin-top:${sameGroup ? "2px" : "8px"};
   `;
 
+  // Renderizar mensaje citado (respuesta) si existe m.reply_preview.
+  let replyHtml = "";
+  const replyPreview = content["m.reply_preview"];
+  if (replyPreview) {
+    const replySender = replyPreview.sender === matrixClient.getUserId()
+      ? "Tú"
+      : replyPreview.sender.split(":")[0].replace("@", "");
+    let previewText = replyPreview.body || "";
+    if (replyPreview.msgtype === "m.image") previewText = "📷 Imagen";
+    else if (replyPreview.msgtype === "m.video") previewText = "🎬 Video";
+    previewText = previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
+    replyHtml = `<div class="msg-reply" style="margin-bottom:4px;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid #3fa34d;font-size:0.8rem;">
+      <div style="font-weight:600;font-size:0.7rem;color:#3fa34d;">${escapeHtml(replySender)}</div>
+      <div style="color:#ccc;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(previewText)}</div>
+    </div>`;
+  }
+
   let bodyHtml = "";
   if (isMedia) {
     const src = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
@@ -750,9 +831,33 @@ function appendMessage(event) {
 
   div.innerHTML = `
     ${sameGroup ? "" : `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>`}
+    ${replyHtml}
     ${bodyHtml}
   `;
   if (isMedia) div.appendChild(lastMediaGroup.gridEl);
+
+  // Context menu / long-press para responder (estilo WhatsApp).
+  const showReplyMenu = (e) => {
+    e.preventDefault();
+    const eventId = event.getId();
+    if (!eventId) return;
+    setReplyingTo(event);
+    // Feedback visual breve.
+    div.style.outline = "2px solid #3fa34d";
+    setTimeout(() => { div.style.outline = ""; }, 300);
+  };
+  div.addEventListener("contextmenu", showReplyMenu);
+  let pressTimer = null;
+  div.addEventListener("mousedown", () => {
+    pressTimer = setTimeout(showReplyMenu, 500);
+  });
+  div.addEventListener("mouseup", () => clearTimeout(pressTimer));
+  div.addEventListener("mouseleave", () => clearTimeout(pressTimer));
+  div.addEventListener("touchstart", () => {
+    pressTimer = setTimeout(showReplyMenu, 500);
+  }, { passive: true });
+  div.addEventListener("touchend", () => clearTimeout(pressTimer));
+  div.addEventListener("touchmove", () => clearTimeout(pressTimer));
 
   list.appendChild(div);
   list.scrollTop = list.scrollHeight;

@@ -818,6 +818,14 @@
       <div data-modal-body style="padding:0;flex:1;display:flex;flex-direction:column;overflow:hidden;">
         <div id="chatMessages" style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
         </div>
+        <!-- Barra de respuesta (se muestra cuando se responde a un mensaje) -->
+        <div id="chatReplyBar" style="display:none;padding:6px 8px;background:rgba(120,120,120,0.15);border-top:1px solid rgba(120,120,120,0.2);flex:0 0 auto;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:0.7rem;color:#888;">Respondiendo a</span>
+            <div id="chatReplyPreview" style="flex:1;min-width:0;"></div>
+            <button id="chatReplyCancel" type="button" style="flex:0 0 auto;padding:2px 8px;font-size:0.75rem;">✕</button>
+          </div>
+        </div>
         <div
           style="display:flex;gap:6px;padding:5px;border-top:1px solid rgba(120,120,120,0.3);flex:0 0 auto;align-items:flex-end;">
           <button id="chatAttachBtn" type="button" title="Adjuntar imagen o video" style="flex:0 0 auto;">📎</button>
