@@ -265,6 +265,14 @@ let matrixStarted = false;
 let matrixDirectory = null; // Map<matrix_user_id, name>
 async function loadMatrixDirectory() {
   try {
+    const res = await authFetch(`${API_BASE}/collaborators/matrix`);
+    if (!res.ok) return new Map();
+    const data = await res.json();
+    return new Map(data.map((c) => [c.matrix_user_id, c.name]));
+  } catch {
+    return new Map();
+  }
+}
 
 // Estado de respuesta (cita de mensaje).
 let replyingTo = null; // { eventId, sender, body, msgtype, url }
@@ -300,14 +308,6 @@ function updateReplyBar() {
   } else {
     bar.style.display = "none";
     preview.innerHTML = "";
-  }
-}
-    const res = await authFetch(`${API_BASE}/collaborators/matrix`);
-    if (!res.ok) return new Map();
-    const data = await res.json();
-    return new Map(data.map((c) => [c.matrix_user_id, c.name]));
-  } catch {
-    return new Map();
   }
 }
 function matrixSdk() {
