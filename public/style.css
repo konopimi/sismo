@@ -871,6 +871,11 @@ textarea {
   background: color-mix(in srgb, var(--status-color, #e57373) 20%, #22262e);
 }
 
+.card.colaborador {
+  min-height: 120px;
+  max-height: 120px;
+}
+
 .card.colaborador .card-photo {
   width: 70px;
   min-height: 70px;
