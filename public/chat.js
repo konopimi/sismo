@@ -27,6 +27,7 @@ class ChatVirtualList {
         this.isAtBottom = true;
         this._rafId = null;
         this._rafAnchor = null;
+        this._stickRaf = null;
         this._preserveAnchorId = null;
         this._preserveAnchorIndex = null;
         this._isDestroyed = false;
@@ -81,6 +82,7 @@ class ChatVirtualList {
         this.events = [];
         if (this._rafAnchor) cancelAnimationFrame(this._rafAnchor);
         if (this._rafId) cancelAnimationFrame(this._rafId);
+        if (this._stickRaf) cancelAnimationFrame(this._stickRaf);
     }
 
     setEvents(events) {
@@ -179,14 +181,20 @@ class ChatVirtualList {
 
     _stickToBottom() {
         if (this._isDestroyed || !this.isAtBottom) return;
-        requestAnimationFrame(() => {
+        if (this._stickRaf) cancelAnimationFrame(this._stickRaf);
+        this._stickRaf = requestAnimationFrame(() => {
             if (this._isDestroyed) return;
             this.container.scrollTop = this.container.scrollHeight;
+            this._stickRaf = null;
         });
     }
 
     _onScroll() {
         if (this._isDestroyed) return;
+        if (this._stickRaf) {
+            cancelAnimationFrame(this._stickRaf);
+            this._stickRaf = null;
+        }
         const threshold = 150;
         this.isAtBottom = (this.container.scrollHeight - this.container.scrollTop - this.container.clientHeight) < threshold;
         if (this.container.scrollTop === 0 && !window.loadingOlder) {
