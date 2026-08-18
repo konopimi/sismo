@@ -606,8 +606,7 @@ async function loadOlderMessages() {
   const messagesList = document.getElementById("chatMessages");
   const room = matrixClient.getRoom(matrixRoom);
   if (!room) return;
-  
-  // Obtener token de paginación del timeline actual.
+
   const timeline = room.getLiveTimeline();
   const token = timeline?.getPaginationToken?.();
   if (!token) return;
@@ -634,9 +633,6 @@ async function loadOlderMessages() {
           }
         }
       }
-      // Actualizar token para la próxima carga.
-      // Nota: scrollback devuelve un nuevo token en result.paginationToken
-      // pero la API puede variar; usamos el token del timeline actualizado.
     } catch (e) {
       console.error("load older messages error:", e);
     } finally {
