@@ -28,6 +28,7 @@ class ChatVirtualList {
         this._rafId = null;
         this._rafAnchor = null;
         this._preserveAnchorId = null;
+        this._preserveAnchorIndex = null;
         this._isDestroyed = false;
 
         // CRITICAL FIX: ResizeObserver now compensates for images loading ABOVE the viewport
@@ -95,13 +96,23 @@ class ChatVirtualList {
         const anchorRect = anchorNode ? anchorNode.getBoundingClientRect() : null;
         const prevScrollTop = this.container.scrollTop;
 
+        // Find anchor index in OLD events array, compute new index after prepend
+        let anchorIndexInOld = -1;
+        if (anchorId) {
+            anchorIndexInOld = this.events.findIndex(e => e.getId() === anchorId);
+        }
+
         this._preserveAnchorId = anchorId;
+        this._preserveAnchorIndex = anchorIndexInOld >= 0
+            ? anchorIndexInOld + newEvents.length
+            : null;
 
         this.events = [...newEvents, ...this.events];
         this._render(true);
 
         this._rafAnchor = requestAnimationFrame(() => {
             if (this._isDestroyed) return;
+
 
             if (anchorId && anchorRect) {
                 const newAnchorNode = this.nodes.get(anchorId);
@@ -113,6 +124,7 @@ class ChatVirtualList {
             }
 
             this._preserveAnchorId = null;
+            this._preserveAnchorIndex = null;
             this._scheduleRender();
         });
     }
@@ -186,6 +198,12 @@ class ChatVirtualList {
         startIndex = Math.max(0, startIndex - this.OVERSCAN);
         endIndex = Math.min(this.events.length, endIndex + this.OVERSCAN);
 
+        // Expand range to include the preserved anchor index
+        if (this._preserveAnchorIndex !== null) {
+            startIndex = Math.min(startIndex, this._preserveAnchorIndex);
+            endIndex = Math.max(endIndex, this._preserveAnchorIndex + 1);
+        }
+
         // 2. Calculate Spacer Heights
         let topHeight = 0;
         for (let i = 0; i < startIndex; i++) topHeight += eventHeights[i];
@@ -199,11 +217,6 @@ class ChatVirtualList {
         const visibleIds = new Set();
         for (let i = startIndex; i < endIndex; i++) {
             visibleIds.add(this.events[i].getId());
-        }
-
-        // Keep the preserved anchor in the DOM during the transition
-        if (this._preserveAnchorId) {
-            visibleIds.add(this._preserveAnchorId);
         }
 
         // 4. DOM RECONCILIATION (No innerHTML = ""!)
