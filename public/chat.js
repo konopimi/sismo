@@ -28,18 +28,37 @@ class ChatVirtualList {
         this._rafId = null;
         this._isDestroyed = false;
 
+        // CRITICAL FIX: ResizeObserver now compensates for images loading ABOVE the viewport
         this._resizeObserver = new ResizeObserver(entries => {
             if (this._isDestroyed) return;
+            let scrollAdjustment = 0;
             let changed = false;
+            
             for (let entry of entries) {
                 const id = entry.target.dataset.eventId;
                 const newH = entry.target.offsetHeight;
-                if (this.heights.get(id) !== newH) {
+                const oldH = this.heights.get(id) || this.DEFAULT_HEIGHT;
+                
+                if (oldH !== newH) {
                     this.heights.set(id, newH);
                     changed = true;
+                    
+                    // If the resized node is ABOVE the current viewport, adjust scrollTop 
+                    // to compensate for the growth, preventing the "phantom jump" effect.
+                    const nodeTop = entry.target.getBoundingClientRect().top;
+                    const containerTop = this.container.getBoundingClientRect().top;
+                    if (nodeTop < containerTop) {
+                        scrollAdjustment += (newH - oldH);
+                    }
                 }
             }
-            if (changed) this._scheduleRender();
+            
+            if (changed) {
+                if (scrollAdjustment !== 0) {
+                    this.container.scrollTop += scrollAdjustment;
+                }
+                this._scheduleRender();
+            }
         });
 
         this._onScroll = this._onScroll.bind(this);
@@ -66,38 +85,28 @@ class ChatVirtualList {
     prependEvents(newEvents) {
         if (this._isDestroyed || !newEvents.length) return;
 
-        // 1. Find the first currently rendered node to use as a visual anchor
-        const firstRenderedNode = this.nodes.values().next().value;
-        let anchorId = null;
-        let prevAnchorRect = null;
-        
-        if (firstRenderedNode) {
-            anchorId = firstRenderedNode.dataset.eventId;
-            prevAnchorRect = firstRenderedNode.getBoundingClientRect();
-        }
-        
+        // ANCHOR-BASED SCROLL RESTORATION
+        // 1. Record the exact visual position of the first rendered node
+        const anchorNode = this.wrapper.firstElementChild;
+        const anchorId = anchorNode ? anchorNode.dataset.eventId : null;
+        const anchorRect = anchorNode ? anchorNode.getBoundingClientRect() : null;
         const prevScrollTop = this.container.scrollTop;
 
-        // 2. Add new events to the beginning and re-render synchronously
+        // 2. Update state and render synchronously
         this.events = [...newEvents, ...this.events];
         this._render(true);
 
-        // 3. After the browser has updated the layout, measure the anchor's shift
+        // 3. Adjust scroll so the anchor node stays in the exact same visual position
         requestAnimationFrame(() => {
             if (this._isDestroyed) return;
             
-            if (anchorId) {
+            if (anchorId && anchorRect) {
                 const newAnchorNode = this.nodes.get(anchorId);
-                if (newAnchorNode && prevAnchorRect) {
+                if (newAnchorNode) {
                     const newAnchorRect = newAnchorNode.getBoundingClientRect();
-                    // The difference in Y position is exactly how much we need to scroll
-                    // to keep the user's view perfectly stable, regardless of image loading.
-                    const shift = newAnchorRect.top - prevAnchorRect.top;
+                    const shift = newAnchorRect.top - anchorRect.top;
                     this.container.scrollTop = prevScrollTop + shift;
                 }
-            } else {
-                // Fallback: if the list was completely empty, scroll to bottom
-                this.container.scrollTop = this.container.scrollHeight;
             }
         });
     }
@@ -143,9 +152,7 @@ class ChatVirtualList {
     _render(force) {
         if (this._isDestroyed || !this.container || !this.wrapper) return;
 
-        // 1. Save current scroll position to prevent browser jumps during DOM mutation
-        const savedScrollTop = this.container.scrollTop;
-
+        // 1. Calculate visible range
         let totalHeight = 0;
         const eventHeights = this.events.map(ev => {
             const h = this.heights.get(ev.getId()) || this.DEFAULT_HEIGHT;
@@ -153,18 +160,19 @@ class ChatVirtualList {
             return h;
         });
 
+        const scrollTop = this.container.scrollTop;
         const viewportHeight = this.container.clientHeight;
         
         let acc = 0, startIndex = 0;
         for (let i = 0; i < eventHeights.length; i++) {
-            if (acc + eventHeights[i] > savedScrollTop) break;
+            if (acc + eventHeights[i] > scrollTop) break;
             acc += eventHeights[i];
             startIndex = i + 1;
         }
         
         let endAcc = acc, endIndex = startIndex;
         for (let i = startIndex; i < eventHeights.length; i++) {
-            if (endAcc > savedScrollTop + viewportHeight) break;
+            if (endAcc > scrollTop + viewportHeight) break;
             endAcc += eventHeights[i];
             endIndex = i + 1;
         }
@@ -172,6 +180,7 @@ class ChatVirtualList {
         startIndex = Math.max(0, startIndex - this.OVERSCAN);
         endIndex = Math.min(this.events.length, endIndex + this.OVERSCAN);
 
+        // 2. Calculate Spacer Heights
         let topHeight = 0;
         for (let i = 0; i < startIndex; i++) topHeight += eventHeights[i];
         let bottomHeight = 0;
@@ -180,22 +189,14 @@ class ChatVirtualList {
         this.topSpacer.style.height = `${topHeight}px`;
         this.bottomSpacer.style.height = `${bottomHeight}px`;
 
+        // 3. Determine visible IDs
         const visibleIds = new Set();
-        const fragment = document.createDocumentFragment();
         for (let i = startIndex; i < endIndex; i++) {
-            const ev = this.events[i];
-            const id = ev.getId();
-            visibleIds.add(id);
-            let node = this.nodes.get(id);
-            if (!node) {
-                node = createMessageNode(ev);
-                node.dataset.eventId = id;
-                this.nodes.set(id, node);
-                this._resizeObserver.observe(node);
-            }
-            fragment.appendChild(node);
+            visibleIds.add(this.events[i].getId());
         }
 
+        // 4. DOM RECONCILIATION (No innerHTML = ""!)
+        // Remove nodes that scrolled out of bounds
         for (const [id, node] of this.nodes.entries()) {
             if (!visibleIds.has(id)) {
                 this._resizeObserver.unobserve(node);
@@ -204,11 +205,21 @@ class ChatVirtualList {
             }
         }
 
-        this.wrapper.innerHTML = "";
-        this.wrapper.appendChild(fragment);
-
-        // 2. Restore scroll position immediately after DOM mutation
-        this.container.scrollTop = savedScrollTop;
+        // Add/Reorder visible nodes. 
+        // Using appendChild on an existing node MOVES it in the DOM, preserving state 
+        // and avoiding the massive layout thrash of innerHTML = "".
+        for (let i = startIndex; i < endIndex; i++) {
+            const ev = this.events[i];
+            const id = ev.getId();
+            let node = this.nodes.get(id);
+            if (!node) {
+                node = createMessageNode(ev);
+                node.dataset.eventId = id;
+                this.nodes.set(id, node);
+                this._resizeObserver.observe(node);
+            }
+            this.wrapper.appendChild(node);
+        }
     }
 }
 
