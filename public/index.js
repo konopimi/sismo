@@ -253,7 +253,7 @@ async function attemptLogin() {
 //  primer login; el cliente hace login con matrix-js-sdk y genera sus
 //  claves E2E en el navegador. El room se crea/une automáticamente.
 // ================================================================
-const MATRIX_ROOM_ALIAS = "#sismo-general:matrix.sismoinfo.co";
+const MATRIX_ROOM_ALIAS = "#ayuda-en-cali:matrix.sismoinfo.co";
 let matrixClient = null;
 let matrixRoom = null;
 let matrixStarted = false;
@@ -336,10 +336,10 @@ async function joinOrCreateRoom() {
   // Room no existe: crearlo (público para que todos los colaboradores
   // puedan unirse por alias sin invitación).
   const { room_id } = await matrixClient.createRoom({
-    name: "Sismo General",
+    name: "Ayuda en Cali 🆘",
     topic: "Canal general de colaboradores de Sismo",
     visibility: "public",
-    room_alias_name: "sismo-general",
+    room_alias_name: "ayuda-en-cali",
   });
   return room_id;
 }
@@ -356,7 +356,7 @@ function renderChatUI() {
     ">
       <span style="font-size:1.4em;">💬</span>
       <div style="flex:1;">
-        <div style="font-weight:600;">Sismo General</div>
+        <div style="font-weight:600;">Ayuda en Cali 🆘</div>
         <div style="font-size:0.8em;opacity:0.7;">Canal general de colaboradores</div>
       </div>
     </button>
