@@ -31,34 +31,36 @@ class ChatVirtualList {
         this._preserveAnchorIndex = null;
         this._isDestroyed = false;
 
-        // CRITICAL FIX: ResizeObserver now compensates for images loading ABOVE the viewport
+        // ResizeObserver: sticky bottom when pinned, compensate when scrolled up
         this._resizeObserver = new ResizeObserver(entries => {
             if (this._isDestroyed) return;
-            let scrollAdjustment = 0;
             let changed = false;
-            
             for (let entry of entries) {
                 const id = entry.target.dataset.eventId;
                 const newH = entry.target.offsetHeight;
                 const oldH = this.heights.get(id) || this.DEFAULT_HEIGHT;
-                
                 if (oldH !== newH) {
                     this.heights.set(id, newH);
                     changed = true;
-                    
-                    // If the resized node is ABOVE the current viewport, adjust scrollTop 
-                    // to compensate for the growth, preventing the "phantom jump" effect.
-                    const nodeTop = entry.target.getBoundingClientRect().top;
-                    const containerTop = this.container.getBoundingClientRect().top;
-                    if (nodeTop < containerTop) {
-                        scrollAdjustment += (newH - oldH);
-                    }
                 }
             }
-            
             if (changed) {
-                if (scrollAdjustment !== 0) {
-                    this.container.scrollTop += scrollAdjustment;
+                if (this.isAtBottom) {
+                    this._stickToBottom();
+                } else {
+                    let scrollAdjustment = 0;
+                    const containerTop = this.container.getBoundingClientRect().top;
+                    for (let entry of entries) {
+                        const nodeTop = entry.target.getBoundingClientRect().top;
+                        if (nodeTop < containerTop) {
+                            const id = entry.target.dataset.eventId;
+                            const oldH = this.heights.get(id) || this.DEFAULT_HEIGHT;
+                            scrollAdjustment += (entry.target.offsetHeight - oldH);
+                        }
+                    }
+                    if (scrollAdjustment !== 0) {
+                        this.container.scrollTop += scrollAdjustment;
+                    }
                 }
                 this._scheduleRender();
             }
@@ -134,15 +136,17 @@ class ChatVirtualList {
         this.events.push(event);
         this._scheduleRender();
         if (this.isAtBottom) {
-            requestAnimationFrame(() => {
-                if (this._isDestroyed) return;
-                this.container.scrollTop = this.container.scrollHeight;
-            });
+            this._stickToBottom();
         }
     }
 
     scrollToBottom() {
         this.isAtBottom = true;
+        this._stickToBottom();
+    }
+
+    _stickToBottom() {
+        if (this._isDestroyed || !this.isAtBottom) return;
         requestAnimationFrame(() => {
             if (this._isDestroyed) return;
             this.container.scrollTop = this.container.scrollHeight;
@@ -244,6 +248,12 @@ class ChatVirtualList {
             fragment.appendChild(node);
         }
         this.wrapper.replaceChildren(fragment);
+
+
+        // Keep bottom sticky if user was at bottom
+        if (this.isAtBottom) {
+            this._stickToBottom();
+        }
     }
 }
 
@@ -358,6 +368,7 @@ async function startMatrixChat() {
     await matrixClient.startClient({ initialSyncLimit: 20 });
 
     matrixRoom = await joinOrCreateRoom();
+    matrixDirectory = await loadMatrixDirectory();
     renderChatUI();
     bindChatEvents();
   } catch (e) {
@@ -481,16 +492,17 @@ function renderChatError(msg) {
   container.innerHTML = `<div style="padding:20px;color:#f66;">${escapeHtml(msg)}</div>`;
 }
 
-function openChatModal() {
+async function openChatModal() {
+    if (!matrixDirectory) {
+        matrixDirectory = await loadMatrixDirectory();
+    }
     const modal = Modal({ 
         id: "chatModal",
         onClose: cleanupChatVirtualizer,
         onOpen: () => {
-            // Initialize virtualizer when modal opens (DOM elements exist)
             if (!chatVirtualizer) {
                 chatVirtualizer = new ChatVirtualList();
             }
-            // Load initial history
             const room = matrixClient.getRoom(matrixRoom);
             if (room && chatVirtualizer) {
                 const initialEvents = room.getLiveTimeline().getEvents()
@@ -626,6 +638,11 @@ function createMessageNode(event) {
         const thumbSrc = content.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(content.info.thumbnail_url) : fullSrc;
         const gridEl = document.createElement("div");
         gridEl.className = "chat-media-grid";
+        // Reserve space for media to prevent layout shift
+        if (content.info && content.info.w && content.info.h) {
+            gridEl.style.aspectRatio = `${content.info.w} / ${content.info.h}`;
+            gridEl.style.minHeight = "80px";
+        }
         const group = { sender, ts: event.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
         renderMediaGrid(group);
         div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;">${escapeHtml(name)}<span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>`;
