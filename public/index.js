@@ -319,21 +319,29 @@ async function startMatrixChat() {
 }
 
 async function joinOrCreateRoom() {
+  // Join by alias first (works for public rooms). If the alias doesn't
+  // resolve yet, create the room. We must NOT fall back to createRoom on
+  // a join failure, or we'd hit "RoomID already exists" when the room
+  // already exists but the join itself failed.
   try {
     const aliasRes = await matrixClient.getRoomIdForAlias(MATRIX_ROOM_ALIAS);
-    const roomId = aliasRes.room_id;
-    await matrixClient.joinRoom(roomId);
-    return roomId;
+    if (aliasRes && aliasRes.room_id) {
+      await matrixClient.joinRoom(aliasRes.room_id);
+      return aliasRes.room_id;
+    }
   } catch (e) {
-    // Room no existe: crearlo.
-    const { room_id } = await matrixClient.createRoom({
-      name: "Sismo General",
-      topic: "Canal general de colaboradores de Sismo",
-      visibility: "private",
-      room_alias_name: "sismo-general",
-    });
-    return room_id;
+    // Alias not found (M_NOT_FOUND) — fall through to create.
+    if (e.errcode !== "M_NOT_FOUND") throw e;
   }
+  // Room no existe: crearlo (público para que todos los colaboradores
+  // puedan unirse por alias sin invitación).
+  const { room_id } = await matrixClient.createRoom({
+    name: "Sismo General",
+    topic: "Canal general de colaboradores de Sismo",
+    visibility: "public",
+    room_alias_name: "sismo-general",
+  });
+  return room_id;
 }
 
 // Renderiza la lista de conversaciones en el sub-tab "Chat".
