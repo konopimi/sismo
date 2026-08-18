@@ -537,6 +537,11 @@ function createMessageNode(event) {
         ? (window.currentUser?.chat_name || "Tú") 
         : (matrixDirectory?.get(sender) || sender.split(":")[0].replace("@", ""));
     
+    // Format timestamp
+    const ts = event.getTs();
+    const date = new Date(ts);
+    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
     const div = document.createElement("div");
     div.style.cssText = `align-self:${isSelf ? "flex-end" : "flex-start"};max-width:75%;padding:${isMedia ? "3px" : "8px 12px"};border-radius:12px;background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};margin-top:8px;word-break:break-word;`;
 
@@ -558,10 +563,10 @@ function createMessageNode(event) {
         gridEl.className = "chat-media-grid";
         const group = { sender, ts: event.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
         renderMediaGrid(group);
-        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>`;
+        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;">${escapeHtml(name)}<span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>`;
         div.appendChild(group.gridEl);
     } else {
-        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>${replyHtml}<div style="white-space:pre-wrap;">${escapeHtml(content.body || "")}</div>`;
+        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;">${escapeHtml(name)}<span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>${replyHtml}<div style="white-space:pre-wrap;">${escapeHtml(content.body || "")}</div>`;
     }
 
     const showReplyMenu = (e) => {
