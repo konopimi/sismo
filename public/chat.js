@@ -77,6 +77,7 @@ class ChatVirtualList {
         this.heights.clear();
         this.events = [];
         if (this._rafAnchor) cancelAnimationFrame(this._rafAnchor);
+        if (this._rafId) cancelAnimationFrame(this._rafId);
     }
 
     setEvents(events) {
@@ -91,42 +92,41 @@ class ChatVirtualList {
 
         if (this._rafAnchor) cancelAnimationFrame(this._rafAnchor);
 
+        // 1. Capture anchor (first visible node) and its position
         const anchorNode = this.wrapper.firstElementChild;
         const anchorId = anchorNode ? anchorNode.dataset.eventId : null;
-        const anchorRect = anchorNode ? anchorNode.getBoundingClientRect() : null;
+        const anchorTop = anchorNode ? anchorNode.offsetTop : 0;
         const prevScrollTop = this.container.scrollTop;
 
-        // Find anchor index in OLD events array, compute new index after prepend
+        // 2. Find anchor index in OLD events array
         let anchorIndexInOld = -1;
         if (anchorId) {
             anchorIndexInOld = this.events.findIndex(e => e.getId() === anchorId);
         }
 
+        // 3. Store new index after prepending
         this._preserveAnchorId = anchorId;
         this._preserveAnchorIndex = anchorIndexInOld >= 0
             ? anchorIndexInOld + newEvents.length
             : null;
 
+        // 4. Update events and render synchronously
         this.events = [...newEvents, ...this.events];
         this._render(true);
 
-        this._rafAnchor = requestAnimationFrame(() => {
-            if (this._isDestroyed) return;
-
-
-            if (anchorId && anchorRect) {
-                const newAnchorNode = this.nodes.get(anchorId);
-                if (newAnchorNode) {
-                    const newAnchorRect = newAnchorNode.getBoundingClientRect();
-                    const shift = newAnchorRect.top - anchorRect.top;
-                    this.container.scrollTop = prevScrollTop + shift;
-                }
+        // 5. Adjust scroll synchronously (zero frame delay, no flash)
+        if (anchorId && anchorIndexInOld >= 0) {
+            const newAnchorNode = this.nodes.get(anchorId);
+            if (newAnchorNode) {
+                const shift = newAnchorNode.offsetTop - anchorTop;
+                this.container.scrollTop = prevScrollTop + shift;
             }
+        }
 
-            this._preserveAnchorId = null;
-            this._preserveAnchorIndex = null;
-            this._scheduleRender();
-        });
+        // 6. Clean up preservation and schedule a normal render
+        this._preserveAnchorId = null;
+        this._preserveAnchorIndex = null;
+        this._scheduleRender();
     }
 
     appendEvent(event) {
@@ -219,7 +219,7 @@ class ChatVirtualList {
             visibleIds.add(this.events[i].getId());
         }
 
-        // 4. DOM RECONCILIATION (No innerHTML = ""!)
+        // 4. DOM RECONCILIATION
         // Remove nodes that scrolled out of bounds
         for (const [id, node] of this.nodes.entries()) {
             if (!visibleIds.has(id)) {
@@ -229,9 +229,8 @@ class ChatVirtualList {
             }
         }
 
-        // Add/Reorder visible nodes. 
-        // Using appendChild on an existing node MOVES it in the DOM, preserving state 
-        // and avoiding the massive layout thrash of innerHTML = "".
+        // Build a fragment and replace children atomically (single reflow)
+        const fragment = document.createDocumentFragment();
         for (let i = startIndex; i < endIndex; i++) {
             const ev = this.events[i];
             const id = ev.getId();
@@ -242,8 +241,9 @@ class ChatVirtualList {
                 this.nodes.set(id, node);
                 this._resizeObserver.observe(node);
             }
-            this.wrapper.appendChild(node);
+            fragment.appendChild(node);
         }
+        this.wrapper.replaceChildren(fragment);
     }
 }
 
