@@ -258,6 +258,21 @@ let matrixClient = null;
 let matrixRoom = null;
 let matrixStarted = false;
 
+
+// Directorio de matrix_user_id -> nombre, para resolver remitentes en el
+// chat. /api/collaborators NO incluye matrix_user_id (por diseño, es
+// público); solo /api/collaborators/matrix lo trae, y requiere sesión.
+let matrixDirectory = null; // Map<matrix_user_id, name>
+async function loadMatrixDirectory() {
+  try {
+    const res = await authFetch(`${API_BASE}/collaborators/matrix`);
+    if (!res.ok) return new Map();
+    const data = await res.json();
+    return new Map(data.map((c) => [c.matrix_user_id, c.name]));
+  } catch {
+    return new Map();
+  }
+}
 function matrixSdk() {
   return window.matrixcs || window.matrix;
 }
@@ -680,21 +695,19 @@ function appendMessage(event) {
   lastChatSender = sender;
   lastChatTs = ts;
 
-  // Resuelve el nombre a partir del Matrix user_id usando colabData,
-  // con fallback a fetch si no está cargado.
+  // Resuelve el nombre a partir del Matrix user_id, usando un directorio
+  // cacheado de /api/collaborators/matrix (el único endpoint que expone
+  // matrix_user_id; /api/collaborators no lo incluye).
   const resolveMatrixName = async (userId) => {
-    let collab = colabData.find((c) => c.matrix_user_id === userId);
-    if (collab) return collab.name;
-    // No está en memoria: intentar cargar la lista de colaboradores.
-    try {
-      const res = await authFetch(`${API_BASE}/collaborators`);
-      if (res.ok) {
-        const data = await res.json();
-        collab = data.find((c) => c.matrix_user_id === userId);
-        if (collab) return collab.name;
-      }
-    } catch {}
-    return userId.split(":")[0].replace("@", "");
+    if (!matrixDirectory) matrixDirectory = await loadMatrixDirectory();
+    let resolved = matrixDirectory.get(userId);
+    if (!resolved) {
+      // Puede ser un colaborador nuevo que aún no estaba en el directorio
+      // cacheado; refrescamos una vez antes de rendirnos.
+      matrixDirectory = await loadMatrixDirectory();
+      resolved = matrixDirectory.get(userId);
+    }
+    return resolved || userId.split(":")[0].replace("@", "");
   };
   // Usamos una promesa para el nombre; si no está listo, mostramos
   // el UUID temporalmente y actualizamos cuando resuelva.
