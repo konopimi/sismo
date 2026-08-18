@@ -85,7 +85,7 @@ class ChatVirtualList {
 
     setEvents(events) {
         if (this._isDestroyed) return;
-        this.events = events;
+        this.events = this._groupEvents(events);
         this._render(true);
         this.scrollToBottom();
     }
@@ -93,31 +93,29 @@ class ChatVirtualList {
     prependEvents(newEvents) {
         if (this._isDestroyed || !newEvents.length) return;
 
+        const groupedNew = this._groupEvents(newEvents);
+        if (!groupedNew.length) return;
+
         if (this._rafAnchor) cancelAnimationFrame(this._rafAnchor);
 
-        // 1. Capture anchor (first visible node) and its position
         const anchorNode = this.wrapper.firstElementChild;
         const anchorId = anchorNode ? anchorNode.dataset.eventId : null;
         const anchorTop = anchorNode ? anchorNode.offsetTop : 0;
         const prevScrollTop = this.container.scrollTop;
 
-        // 2. Find anchor index in OLD events array
         let anchorIndexInOld = -1;
         if (anchorId) {
             anchorIndexInOld = this.events.findIndex(e => e.getId() === anchorId);
         }
 
-        // 3. Store new index after prepending
         this._preserveAnchorId = anchorId;
         this._preserveAnchorIndex = anchorIndexInOld >= 0
-            ? anchorIndexInOld + newEvents.length
+            ? anchorIndexInOld + groupedNew.length
             : null;
 
-        // 4. Update events and render synchronously
-        this.events = [...newEvents, ...this.events];
+        this.events = [...groupedNew, ...this.events];
         this._render(true);
 
-        // 5. Adjust scroll synchronously (zero frame delay, no flash)
         if (anchorId && anchorIndexInOld >= 0) {
             const newAnchorNode = this.nodes.get(anchorId);
             if (newAnchorNode) {
@@ -126,7 +124,6 @@ class ChatVirtualList {
             }
         }
 
-        // 6. Clean up preservation and schedule a normal render
         this._preserveAnchorId = null;
         this._preserveAnchorIndex = null;
         this._scheduleRender();
@@ -134,11 +131,45 @@ class ChatVirtualList {
 
     appendEvent(event) {
         if (this._isDestroyed) return;
-        this.events.push(event);
-        this._scheduleRender();
-        if (this.isAtBottom) {
-            this._stickToBottom();
+
+        const content = event.getContent();
+        const msgtype = content.msgtype;
+        const isMedia = msgtype === 'm.image' || msgtype === 'm.video';
+        const sender = event.getSender();
+        const ts = event.getTs();
+
+        if (isMedia && this.events.length > 0) {
+            const last = this.events[this.events.length - 1];
+            if (last._isMediaGroup && last.sender === sender && ts - last.getTs() < 5 * 60 * 1000) {
+                last.items.push(event);
+                const groupId = last.getId();
+                this.nodes.delete(groupId);
+                this.heights.delete(groupId);
+                this._scheduleRender();
+                if (this.isAtBottom) this._stickToBottom();
+                return;
+            }
         }
+
+        if (isMedia) {
+            const newGroup = {
+                _isMediaGroup: true,
+                sender,
+                ts,
+                items: [event],
+                getId: () => event.getId(),
+                getType: () => 'm.room.message',
+                getContent: () => content,
+                getSender: () => sender,
+                getTs: () => ts
+            };
+            this.events.push(newGroup);
+        } else {
+            this.events.push(event);
+        }
+
+        this._scheduleRender();
+        if (this.isAtBottom) this._stickToBottom();
     }
 
     scrollToBottom() {
@@ -170,6 +201,60 @@ class ChatVirtualList {
             this._rafId = null;
             this._render(false);
         });
+    }
+
+    _groupEvents(events) {
+        const grouped = [];
+        let currentGroup = null;
+
+        const flush = () => {
+            if (currentGroup) {
+                grouped.push(currentGroup);
+                currentGroup = null;
+            }
+        };
+
+        for (const ev of events) {
+            if (ev.getType() !== 'm.room.message') {
+                flush();
+                grouped.push(ev);
+                continue;
+            }
+            const content = ev.getContent();
+            const msgtype = content.msgtype;
+            if (msgtype !== 'm.image' && msgtype !== 'm.video') {
+                flush();
+                grouped.push(ev);
+                continue;
+            }
+
+            const sender = ev.getSender();
+            const ts = ev.getTs();
+
+            if (currentGroup) {
+                const lastTs = currentGroup.items[currentGroup.items.length - 1].getTs();
+                if (sender === currentGroup.sender && ts - lastTs < 5 * 60 * 1000) {
+                    currentGroup.items.push(ev);
+                    continue;
+                } else {
+                    flush();
+                }
+            }
+
+            currentGroup = {
+                _isMediaGroup: true,
+                sender,
+                ts,
+                items: [ev],
+                getId: () => ev.getId(),
+                getType: () => 'm.room.message',
+                getContent: () => content,
+                getSender: () => sender,
+                getTs: () => ts
+            };
+        }
+        flush();
+        return grouped;
     }
 
     _render(force) {
@@ -604,24 +689,82 @@ async function loadOlderMessages() {
     }
 }
 
-function createMessageNode(event) {
-    const content = event.getContent();
+function createMessageNode(item) {
+    // Handle media group (multiple images/videos from same sender)
+    if (item._isMediaGroup) {
+        const sender = item.getSender();
+        const isSelf = sender === matrixClient.getUserId();
+        const name = isSelf
+            ? (window.currentUser?.chat_name || "Tú")
+            : (matrixDirectory?.get(sender) || sender.split(":")[0].replace("@", ""));
+        const ts = item.getTs();
+        const date = new Date(ts);
+        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+
+        const div = document.createElement("div");
+        div.style.cssText = `align-self:${isSelf ? "flex-end" : "flex-start"};max-width:75%;padding:3px;border-radius:12px;background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};margin-top:8px;word-break:break-word;contain:layout;`;
+
+        const items = item.items.map(ev => {
+            const c = ev.getContent();
+            const fullSrc = c.url ? matrixClient.mxcUrlToHttp(c.url) : null;
+            const thumbSrc = c.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(c.info.thumbnail_url) : fullSrc;
+            return { msgtype: c.msgtype, src: thumbSrc, fullSrc, body: c.body };
+        });
+
+        const gridEl = document.createElement("div");
+        gridEl.className = "chat-media-grid";
+        const firstContent = item.items[0].getContent();
+        if (firstContent.info && firstContent.info.w && firstContent.info.h) {
+            gridEl.style.aspectRatio = `${firstContent.info.w} / ${firstContent.info.h}`;
+            gridEl.style.minHeight = "80px";
+        } else {
+            gridEl.style.aspectRatio = "4 / 3";
+            gridEl.style.minHeight = "120px";
+        }
+
+        const group = { sender, ts: item.getTs(), gridEl, items };
+        renderMediaGrid(group);
+        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;">${escapeHtml(name)}<span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>`;
+        div.appendChild(group.gridEl);
+
+        const firstEvent = item.items[0];
+        const showReplyMenu = (e) => {
+            e.preventDefault();
+            setReplyingTo(firstEvent);
+            div.style.outline = "2px solid #3fa34d";
+            setTimeout(() => { div.style.outline = ""; }, 300);
+        };
+        div.addEventListener("contextmenu", showReplyMenu);
+        let pressTimer = null;
+        div.addEventListener("mousedown", () => { pressTimer = setTimeout(showReplyMenu, 500); });
+        div.addEventListener("mouseup", () => clearTimeout(pressTimer));
+        div.addEventListener("mouseleave", () => clearTimeout(pressTimer));
+        div.addEventListener("touchstart", () => { pressTimer = setTimeout(showReplyMenu, 500); }, { passive: true });
+        div.addEventListener("touchend", () => clearTimeout(pressTimer));
+        div.addEventListener("touchmove", () => clearTimeout(pressTimer));
+
+        return div;
+    }
+
+    // Handle single event (original logic)
+    const content = item.getContent();
     const msgtype = content.msgtype;
-    const sender = event.getSender();
+    const sender = item.getSender();
     const isSelf = sender === matrixClient.getUserId();
     const isMedia = msgtype === "m.image" || msgtype === "m.video";
-    
-    const name = isSelf 
-        ? (window.currentUser?.chat_name || "Tú") 
+
+    const name = isSelf
+        ? (window.currentUser?.chat_name || "Tú")
         : (matrixDirectory?.get(sender) || sender.split(":")[0].replace("@", ""));
-    
-    // Format timestamp
-    const ts = event.getTs();
+
+    const ts = item.getTs();
     const date = new Date(ts);
     const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
+
     const div = document.createElement("div");
     div.style.cssText = `align-self:${isSelf ? "flex-end" : "flex-start"};max-width:75%;padding:${isMedia ? "3px" : "8px 12px"};border-radius:12px;background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};margin-top:8px;word-break:break-word;contain:layout;`;
+
 
     let replyHtml = "";
     const replyPreview = content["m.reply_preview"];
@@ -639,7 +782,6 @@ function createMessageNode(event) {
         const thumbSrc = content.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(content.info.thumbnail_url) : fullSrc;
         const gridEl = document.createElement("div");
         gridEl.className = "chat-media-grid";
-        // Reserve space to prevent layout shift while images load
         if (content.info && content.info.w && content.info.h) {
             gridEl.style.aspectRatio = `${content.info.w} / ${content.info.h}`;
             gridEl.style.minHeight = "80px";
@@ -647,7 +789,7 @@ function createMessageNode(event) {
             gridEl.style.aspectRatio = "4 / 3";
             gridEl.style.minHeight = "120px";
         }
-        const group = { sender, ts: event.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
+        const group = { sender, ts: item.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
         renderMediaGrid(group);
         div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;">${escapeHtml(name)}<span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>`;
         div.appendChild(group.gridEl);
@@ -657,7 +799,7 @@ function createMessageNode(event) {
 
     const showReplyMenu = (e) => {
         e.preventDefault();
-        setReplyingTo(event);
+        setReplyingTo(item);
         div.style.outline = "2px solid #3fa34d";
         setTimeout(() => { div.style.outline = ""; }, 300);
     };
