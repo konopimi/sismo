@@ -540,6 +540,50 @@ let lastChatSender = null;
 let lastChatTs = 0;
 const CHAT_GROUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutos
 
+// Grupo de medios en curso (para armar la cuadrícula estilo WhatsApp).
+let lastMediaGroup = null; // { sender, ts, gridEl, items: [] }
+const MEDIA_GRID_CAP = 6; // máx. de miniaturas visibles antes de "+N"
+
+function mediaThumbHtml(item, isLast, extraCount) {
+  const src = item.src;
+  let inner;
+  if (item.msgtype === "m.video") {
+    inner = src
+      ? `<video src="${escapeHtml(src)}" controls style="width:100%;height:100%;object-fit:cover;display:block;"></video>`
+      : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">🎬</div>`;
+  } else {
+    inner = src
+      ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "imagen")}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" onclick="window.open('${escapeHtml(src)}','_blank')" />`
+      : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">📷</div>`;
+  }
+  const overlay =
+    isLast && extraCount > 0
+      ? `<div class="chat-media-more">+${extraCount}</div>`
+      : "";
+  return `<div class="chat-media-item">${inner}${overlay}</div>`;
+}
+
+// Reconstruye la cuadrícula completa a partir de group.items. Se llama
+// cada vez que se agrega un archivo nuevo al grupo.
+function renderMediaGrid(group) {
+  const items = group.items;
+  const total = items.length;
+  let visible = items;
+  let extraCount = 0;
+  if (total > MEDIA_GRID_CAP) {
+    visible = items.slice(0, MEDIA_GRID_CAP - 1);
+    extraCount = total - (MEDIA_GRID_CAP - 1);
+  }
+  const cols = visible.length === 1 ? 1 : visible.length === 2 ? 2 : 3;
+  group.gridEl.dataset.count = String(visible.length);
+  group.gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  group.gridEl.innerHTML = visible
+    .map((item, i) =>
+      mediaThumbHtml(item, i === visible.length - 1, extraCount),
+    )
+    .join("");
+}
+
 function appendMessage(event) {
   const list = document.getElementById("chatMessages");
   if (!list) return;
@@ -548,37 +592,57 @@ function appendMessage(event) {
   const sender = event.getSender();
   const isSelf = sender === matrixClient.getUserId();
   const ts = event.getTs();
+  const isMedia = msgtype === "m.image" || msgtype === "m.video";
+
+  // ---- Agrupación de medios estilo WhatsApp: varias fotos/videos
+  // consecutivos del mismo remitente se apilan en una sola burbuja con
+  // cuadrícula, en vez de una burbuja por archivo.
+  if (
+    isMedia &&
+    lastMediaGroup &&
+    sender === lastMediaGroup.sender &&
+    ts - lastMediaGroup.ts < CHAT_GROUP_WINDOW_MS
+  ) {
+    const src = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
+    lastMediaGroup.items.push({ msgtype, src, body: content.body });
+    lastMediaGroup.ts = ts;
+    renderMediaGrid(lastMediaGroup);
+    lastChatSender = sender;
+    lastChatTs = ts;
+    list.scrollTop = list.scrollHeight;
+    return;
+  }
 
   // Agrupar si es el mismo remitente y llegó dentro de la ventana.
-  const sameGroup = sender === lastChatSender && (ts - lastChatTs) < CHAT_GROUP_WINDOW_MS;
+  const sameGroup =
+    sender === lastChatSender && ts - lastChatTs < CHAT_GROUP_WINDOW_MS;
   lastChatSender = sender;
   lastChatTs = ts;
 
   const name = isSelf
-    ? (window.currentUser?.chat_name || "Tú")
+    ? window.currentUser?.chat_name || "Tú"
     : sender.split(":")[0].replace("@", "");
   const div = document.createElement("div");
   div.style.cssText = `
     align-self:${isSelf ? "flex-end" : "flex-start"};
     max-width:75%;
-    padding:${sameGroup ? "2px 12px" : "8px 12px"};
+    padding:${isMedia ? "3px" : sameGroup ? "2px 12px" : "8px 12px"};
     border-radius:12px;
     background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};
     margin-top:${sameGroup ? "2px" : "8px"};
   `;
 
   let bodyHtml = "";
-  if (msgtype === "m.image" && content.url) {
-    const src = matrixClient.mxcUrlToHttp(content.url);
-    bodyHtml = src
-      ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(content.body || "imagen")}" style="max-width:100%;border-radius:8px;display:block;" />`
-      : `<div style="color:#999;">📷 Imagen</div>`;
-  } else if (msgtype === "m.video" && content.url) {
-    const src = matrixClient.mxcUrlToHttp(content.url);
-    bodyHtml = src
-      ? `<video src="${escapeHtml(src)}" controls style="max-width:100%;border-radius:8px;display:block;"></video>`
-      : `<div style="color:#999;">🎬 Video</div>`;
+  if (isMedia) {
+    const src = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
+    const gridEl = document.createElement("div");
+    gridEl.className = "chat-media-grid";
+    const group = { sender, ts, gridEl, items: [{ msgtype, src, body: content.body }] };
+    renderMediaGrid(group);
+    lastMediaGroup = group;
+    bodyHtml = ""; // el grid se agrega directamente abajo, no vía innerHTML
   } else {
+    lastMediaGroup = null; // un mensaje de texto rompe la cadena de medios
     bodyHtml = `<div style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(content.body || "")}</div>`;
   }
 
@@ -586,6 +650,8 @@ function appendMessage(event) {
     ${sameGroup ? "" : `<div style="font-size:70%;opacity:0.7;">${escapeHtml(name)}</div>`}
     ${bodyHtml}
   `;
+  if (isMedia) div.appendChild(lastMediaGroup.gridEl);
+
   list.appendChild(div);
   list.scrollTop = list.scrollHeight;
 }

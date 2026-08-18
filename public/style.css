@@ -1659,3 +1659,39 @@ textarea {
   background: rgba(214, 48, 49, 0.2);
   color: #d63031;
 }
+
+/* ===== Media grid (WhatsApp-style album) inside chat bubbles ===== */
+.chat-media-grid {
+  display: grid;
+  gap: 2px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.chat-media-item {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: #12151c;
+}
+/* Single-image groups shouldn't be forced square — let it breathe like
+   a normal photo message. */
+.chat-media-grid[data-count="1"] .chat-media-item {
+  aspect-ratio: auto;
+  max-height: 320px;
+}
+.chat-media-grid[data-count="1"] .chat-media-item img,
+.chat-media-grid[data-count="1"] .chat-media-item video {
+  object-fit: contain !important;
+}
+.chat-media-more {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  pointer-events: none;
+}
