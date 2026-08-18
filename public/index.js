@@ -680,9 +680,14 @@ function appendMessage(event) {
   lastChatSender = sender;
   lastChatTs = ts;
 
+  // Resuelve el nombre a partir del Matrix user_id usando colabData.
+  const resolveMatrixName = (userId) => {
+    const collab = colabData.find((c) => c.matrix_user_id === userId);
+    return collab ? collab.name : userId.split(":")[0].replace("@", "");
+  };
   const name = isSelf
     ? window.currentUser?.chat_name || "Tú"
-    : sender.split(":")[0].replace("@", "");
+    : resolveMatrixName(sender);
   const div = document.createElement("div");
   div.style.cssText = `
     align-self:${isSelf ? "flex-end" : "flex-start"};
