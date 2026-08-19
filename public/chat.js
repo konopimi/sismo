@@ -1107,8 +1107,11 @@ function setChatModalSubTab(target) {
   const isChat = target === "chat";
   // Chat view: show messages + input bar, hide the list panels.
   if (messages) messages.style.display = isChat ? "" : "none";
-  if (inputBar) inputBar.style.display = isChat ? "" : "none";
-  if (replyBar) replyBar.style.display = isChat ? "" : "none";
+  // Explicitly set "flex" (not "") so the flex layout is never dropped
+  // when toggling visibility — an empty string removes the inline style
+  // and the div falls back to display:block, breaking the row.
+  if (inputBar) inputBar.style.display = isChat ? "flex" : "none";
+  if (replyBar) replyBar.style.display = isChat ? "flex" : "none";
   panels.style.display = isChat ? "none" : "flex";
 
   // Lazy-load the target list into the modal's own container.
