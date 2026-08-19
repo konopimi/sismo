@@ -41,6 +41,7 @@ class ChatVirtualList {
         this._stickRaf = null;
         this._preserveAnchorId = null;
         this._preserveAnchorIndex = null;
+        this._pendingScrollTo = null;
         this._isDestroyed = false;
 
         // ResizeObserver: sticky bottom when pinned, compensate when scrolled up
@@ -153,6 +154,30 @@ class ChatVirtualList {
         this._preserveAnchorId = null;
         this._preserveAnchorIndex = null;
         this._scheduleRender();
+
+        // Check if a pending scroll target arrived
+        if (this._pendingScrollTo) {
+            const idx = this.events.findIndex(e => e.getId() === this._pendingScrollTo);
+            if (idx >= 0) {
+                clearTimeout(this._pendingScrollTimeout);
+                this._pendingScrollTo = null;
+                this._doScrollToIndex(idx);
+            } else {
+                // Check inside media groups
+                for (let i = 0; i < this.events.length; i++) {
+                    const ev = this.events[i];
+                    if (ev._isMediaGroup) {
+                        const itemIdx = ev.items.findIndex(item => item.getId() === this._pendingScrollTo);
+                        if (itemIdx >= 0) {
+                            clearTimeout(this._pendingScrollTimeout);
+                            this._pendingScrollTo = null;
+                            this._doScrollToIndex(i);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     appendEvent(event) {
@@ -218,19 +243,45 @@ class ChatVirtualList {
 
     scrollToEvent(eventId) {
         if (this._isDestroyed) return;
-        const index = this.events.findIndex(e => e.getId() === eventId);
-        if (index < 0) return;
 
-        // Calculate cumulative height up to this event
+        // Check top-level events
+        let index = this.events.findIndex(e => e.getId() === eventId);
+        if (index >= 0) {
+            this._doScrollToIndex(index);
+            return;
+        }
+
+        // Check inside media groups
+        for (let i = 0; i < this.events.length; i++) {
+            const ev = this.events[i];
+            if (ev._isMediaGroup) {
+                const itemIdx = ev.items.findIndex(item => item.getId() === eventId);
+                if (itemIdx >= 0) {
+                    this._doScrollToIndex(i);
+                    return;
+                }
+            }
+        }
+
+        // Event not loaded yet — store as pending and trigger loading
+        this._pendingScrollTo = eventId;
+        clearTimeout(this._pendingScrollTimeout);
+        this._pendingScrollTimeout = setTimeout(() => {
+            this._pendingScrollTo = null;
+        }, 10000);
+
+        // Scroll to top to trigger loadOlderMessages
+        this.container.scrollTop = 0;
+    }
+
+    _doScrollToIndex(index) {
         let top = 0;
         for (let i = 0; i < index; i++) {
             top += this.heights.get(this.events[i].getId()) || this.DEFAULT_HEIGHT;
         }
-
         this.container.scrollTop = top;
 
-        // Highlight the node briefly
-        const node = this.nodes.get(eventId);
+        const node = this.nodes.get(this.events[index].getId());
         if (node) {
             node.style.outline = "2px solid #3fa34d";
             setTimeout(() => { node.style.outline = ""; }, 1500);
