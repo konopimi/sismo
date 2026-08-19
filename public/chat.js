@@ -810,7 +810,6 @@ function createMessageNode(item) {
         const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const senderColor = getUserColor(sender);
 
-
         const div = document.createElement("div");
         div.style.cssText = `align-self:${isSelf ? "flex-end" : "flex-start"};max-width:75%;padding:3px;border-radius:12px;background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};margin-top:8px;word-break:break-word;contain:layout;`;
 
@@ -834,7 +833,22 @@ function createMessageNode(item) {
 
         const group = { sender, ts: item.getTs(), gridEl, items };
         renderMediaGrid(group);
-        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>`;
+
+        let replyHtml = "";
+        const replyPreview = firstContent["m.reply_preview"];
+        const replyEventId = firstContent["m.relates_to"]?.["m.in_reply_to"]?.["event_id"];
+        if (replyPreview) {
+            const replySender = replyPreview.sender === matrixClient.getUserId() ? "Tú" : (matrixDirectory?.get(replyPreview.sender) || replyPreview.sender.split(":")[0].replace("@", ""));
+            const replyColor = getUserColor(replyPreview.sender);
+            let previewText = replyPreview.body || "";
+            if (replyPreview.msgtype === "m.image") previewText = "📷 Imagen";
+            else if (replyPreview.msgtype === "m.video") previewText = "🎬 Video";
+            previewText = previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
+            const clickAttr = replyEventId ? ` onclick="window.scrollToChatEvent('${replyEventId}')" style="cursor:pointer;"` : "";
+            replyHtml = `<div class="msg-reply"${clickAttr} style="margin-bottom:4px;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid ${replyColor};font-size:0.8rem;"><div style="font-weight:600;font-size:0.7rem;color:${replyColor};">${escapeHtml(replySender)}</div><div style="color:#ccc;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(previewText)}</div></div>`;
+        }
+
+        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>${replyHtml}`;
         div.appendChild(group.gridEl);
 
         const firstEvent = item.items[0];
@@ -903,7 +917,7 @@ function createMessageNode(item) {
         }
         const group = { sender, ts: item.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
         renderMediaGrid(group);
-        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>`;
+        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>${replyHtml}`;
         div.appendChild(group.gridEl);
     } else {
         div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>${replyHtml}<div style="white-space:pre-wrap;">${escapeHtml(content.body || "")}</div>`;
