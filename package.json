@@ -10,7 +10,8 @@
   "dependencies": {
     "express": "^5.2.1",
     "better-sqlite3": "^13.0.3",
-    "cors": "^2.8.6"
+    "cors": "^2.8.6",
+    "matrix-bot-sdk": "^0.7.1"
   },
   "allowScripts": {
     "better-sqlite3@13.0.3": true

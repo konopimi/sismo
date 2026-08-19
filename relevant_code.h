@@ -7,6 +7,16 @@
 //  window.currentUser, updateTabCounts, loadListColab, etc.
 // ================================================================
 const MATRIX_ROOM_ALIAS = "#ayuda-en-cali:matrix.sismoinfo.co";
+// Deterministic color from user ID
+function getUserColor(userId) {
+    let hash = 0;
+    for (let i = 0; i < userId.length; i++) {
+        hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+        hash |= 0;
+    }
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 70%, 75%)`;
+}
 // ================================================================
 //  CHAT VIRTUALIZER (Bidirectional DOM Windowing)
 // ================================================================
@@ -26,36 +36,36 @@ class ChatVirtualList {
         this.isAtBottom = true;
         this._rafId = null;
         this._rafAnchor = null;
+        this._stickRaf = null;
         this._preserveAnchorId = null;
         this._preserveAnchorIndex = null;
+        this._pendingScrollTo = null;
         this._isDestroyed = false;
-        // CRITICAL FIX: ResizeObserver now compensates for images loading ABOVE the viewport
+        // ResizeObserver: sticky bottom when pinned, compensate when scrolled up
         this._resizeObserver = new ResizeObserver(entries => {
             if (this._isDestroyed) return;
-            let scrollAdjustment = 0;
             let changed = false;
-            
+            let scrollAdjustment = 0;
+            const containerTop = this.container.getBoundingClientRect().top;
             for (let entry of entries) {
                 const id = entry.target.dataset.eventId;
                 const newH = entry.target.offsetHeight;
                 const oldH = this.heights.get(id) || this.DEFAULT_HEIGHT;
-                
                 if (oldH !== newH) {
                     this.heights.set(id, newH);
                     changed = true;
-                    
-                    // If the resized node is ABOVE the current viewport, adjust scrollTop 
-                    // to compensate for the growth, preventing the "phantom jump" effect.
-                    const nodeTop = entry.target.getBoundingClientRect().top;
-                    const containerTop = this.container.getBoundingClientRect().top;
-                    if (nodeTop < containerTop) {
-                        scrollAdjustment += (newH - oldH);
+                    if (!this.isAtBottom) {
+                        const nodeTop = entry.target.getBoundingClientRect().top;
+                        if (nodeTop <= containerTop + 5) {
+                            scrollAdjustment += (newH - oldH);
+                        }
                     }
                 }
             }
-            
             if (changed) {
-                if (scrollAdjustment !== 0) {
+                if (this.isAtBottom) {
+                    this._stickToBottom();
+                } else if (scrollAdjustment !== 0) {
                     this.container.scrollTop += scrollAdjustment;
                 }
                 this._scheduleRender();
@@ -73,67 +83,180 @@ class ChatVirtualList {
         this.heights.clear();
         this.events = [];
         if (this._rafAnchor) cancelAnimationFrame(this._rafAnchor);
+        if (this._rafId) cancelAnimationFrame(this._rafId);
+        if (this._stickRaf) cancelAnimationFrame(this._stickRaf);
+    }
+    _isEventAlreadyPresent(eventId) {
+        return this.events.some(ev => {
+            if (ev.getId() === eventId) return true;
+            if (ev._isMediaGroup) {
+                return ev.items.some(i => i.getId() === eventId);
+            }
+            return false;
+        });
     }
     setEvents(events) {
         if (this._isDestroyed) return;
-        this.events = events;
+        this.events = this._groupEvents(events);
         this._render(true);
         this.scrollToBottom();
     }
     prependEvents(newEvents) {
         if (this._isDestroyed || !newEvents.length) return;
+        const uniqueNewEvents = newEvents.filter(ev => !this._isEventAlreadyPresent(ev.getId()));
+        if (!uniqueNewEvents.length) return;
+        const groupedNew = this._groupEvents(uniqueNewEvents);
+        if (!groupedNew.length) return;
         if (this._rafAnchor) cancelAnimationFrame(this._rafAnchor);
         const anchorNode = this.wrapper.firstElementChild;
         const anchorId = anchorNode ? anchorNode.dataset.eventId : null;
-        const anchorRect = anchorNode ? anchorNode.getBoundingClientRect() : null;
+        const anchorTop = anchorNode ? anchorNode.offsetTop : 0;
         const prevScrollTop = this.container.scrollTop;
-        // Find anchor index in OLD events array, compute new index after prepend
         let anchorIndexInOld = -1;
         if (anchorId) {
             anchorIndexInOld = this.events.findIndex(e => e.getId() === anchorId);
         }
         this._preserveAnchorId = anchorId;
         this._preserveAnchorIndex = anchorIndexInOld >= 0
-            ? anchorIndexInOld + newEvents.length
+            ? anchorIndexInOld + groupedNew.length
             : null;
-        this.events = [...newEvents, ...this.events];
+        this.events = [...groupedNew, ...this.events];
         this._render(true);
-        this._rafAnchor = requestAnimationFrame(() => {
-            if (this._isDestroyed) return;
-            if (anchorId && anchorRect) {
-                const newAnchorNode = this.nodes.get(anchorId);
-                if (newAnchorNode) {
-                    const newAnchorRect = newAnchorNode.getBoundingClientRect();
-                    const shift = newAnchorRect.top - anchorRect.top;
-                    this.container.scrollTop = prevScrollTop + shift;
+        if (anchorId && anchorIndexInOld >= 0) {
+            const newAnchorNode = this.nodes.get(anchorId);
+            if (newAnchorNode) {
+                const shift = newAnchorNode.offsetTop - anchorTop;
+                this.container.scrollTop = prevScrollTop + shift;
+            }
+        }
+        this._preserveAnchorId = null;
+        this._preserveAnchorIndex = null;
+        this._scheduleRender();
+        // Check if a pending scroll target arrived
+        if (this._pendingScrollTo) {
+            const idx = this.events.findIndex(e => e.getId() === this._pendingScrollTo);
+            if (idx >= 0) {
+                clearTimeout(this._pendingScrollTimeout);
+                this._pendingScrollTo = null;
+                this._doScrollToIndex(idx);
+            } else {
+                // Check inside media groups
+                for (let i = 0; i < this.events.length; i++) {
+                    const ev = this.events[i];
+                    if (ev._isMediaGroup) {
+                        const itemIdx = ev.items.findIndex(item => item.getId() === this._pendingScrollTo);
+                        if (itemIdx >= 0) {
+                            clearTimeout(this._pendingScrollTimeout);
+                            this._pendingScrollTo = null;
+                            this._doScrollToIndex(i);
+                            break;
+                        }
+                    }
                 }
             }
-            this._preserveAnchorId = null;
-            this._preserveAnchorIndex = null;
-            this._scheduleRender();
-        });
+        }
     }
     appendEvent(event) {
         if (this._isDestroyed) return;
-        this.events.push(event);
-        this._scheduleRender();
-        if (this.isAtBottom) {
-            requestAnimationFrame(() => {
-                if (this._isDestroyed) return;
-                this.container.scrollTop = this.container.scrollHeight;
-            });
+        if (this._isEventAlreadyPresent(event.getId())) return;
+        const content = event.getContent();
+        const msgtype = content.msgtype;
+        const isMedia = msgtype === 'm.image' || msgtype === 'm.video';
+        const sender = event.getSender();
+        const ts = event.getTs();
+        if (isMedia && this.events.length > 0) {
+            const last = this.events[this.events.length - 1];
+            if (last._isMediaGroup && last.sender === sender && ts - last.getTs() < 5 * 60 * 1000) {
+                if (!last.items.some(i => i.getId() === event.getId())) {
+                    last.items.push(event);
+                    const groupId = last.getId();
+                    this.nodes.delete(groupId);
+                    this.heights.delete(groupId);
+                    this._scheduleRender();
+                    if (this.isAtBottom) this._stickToBottom();
+                }
+                return;
+            }
         }
+        if (isMedia) {
+            const newGroup = {
+                _isMediaGroup: true,
+                sender,
+                ts,
+                items: [event],
+                getId: () => event.getId(),
+                getType: () => 'm.room.message',
+                getContent: () => content,
+                getSender: () => sender,
+                getTs: () => ts
+            };
+            this.events.push(newGroup);
+        } else {
+            this.events.push(event);
+        }
+        this._scheduleRender();
+        if (this.isAtBottom) this._stickToBottom();
     }
     scrollToBottom() {
         this.isAtBottom = true;
-        requestAnimationFrame(() => {
+        this._stickToBottom();
+    }
+    _stickToBottom() {
+        if (this._isDestroyed || !this.isAtBottom) return;
+        if (this._stickRaf) cancelAnimationFrame(this._stickRaf);
+        this._stickRaf = requestAnimationFrame(() => {
             if (this._isDestroyed) return;
             this.container.scrollTop = this.container.scrollHeight;
+            this._stickRaf = null;
         });
+    }
+    scrollToEvent(eventId) {
+        if (this._isDestroyed) return;
+        // Check top-level events
+        let index = this.events.findIndex(e => e.getId() === eventId);
+        if (index >= 0) {
+            this._doScrollToIndex(index);
+            return;
+        }
+        // Check inside media groups
+        for (let i = 0; i < this.events.length; i++) {
+            const ev = this.events[i];
+            if (ev._isMediaGroup) {
+                const itemIdx = ev.items.findIndex(item => item.getId() === eventId);
+                if (itemIdx >= 0) {
+                    this._doScrollToIndex(i);
+                    return;
+                }
+            }
+        }
+        // Event not loaded yet — store as pending and trigger loading
+        this._pendingScrollTo = eventId;
+        clearTimeout(this._pendingScrollTimeout);
+        this._pendingScrollTimeout = setTimeout(() => {
+            this._pendingScrollTo = null;
+        }, 10000);
+        // Scroll to top to trigger loadOlderMessages
+        this.container.scrollTop = 0;
+    }
+    _doScrollToIndex(index) {
+        let top = 0;
+        for (let i = 0; i < index; i++) {
+            top += this.heights.get(this.events[i].getId()) || this.DEFAULT_HEIGHT;
+        }
+        this.container.scrollTop = top;
+        const node = this.nodes.get(this.events[index].getId());
+        if (node) {
+            node.style.outline = "2px solid #3fa34d";
+            setTimeout(() => { node.style.outline = ""; }, 1500);
+        }
     }
     _onScroll() {
         if (this._isDestroyed) return;
-        const threshold = 150;
+        if (this._stickRaf) {
+            cancelAnimationFrame(this._stickRaf);
+            this._stickRaf = null;
+        }
+        const threshold = 50;
         this.isAtBottom = (this.container.scrollHeight - this.container.scrollTop - this.container.clientHeight) < threshold;
         if (this.container.scrollTop === 0 && !window.loadingOlder) {
             window.loadOlderMessages();
@@ -146,6 +269,54 @@ class ChatVirtualList {
             this._rafId = null;
             this._render(false);
         });
+    }
+    _groupEvents(events) {
+        const grouped = [];
+        let currentGroup = null;
+        const flush = () => {
+            if (currentGroup) {
+                grouped.push(currentGroup);
+                currentGroup = null;
+            }
+        };
+        for (const ev of events) {
+            if (ev.getType() !== 'm.room.message') {
+                flush();
+                grouped.push(ev);
+                continue;
+            }
+            const content = ev.getContent();
+            const msgtype = content.msgtype;
+            if (msgtype !== 'm.image' && msgtype !== 'm.video') {
+                flush();
+                grouped.push(ev);
+                continue;
+            }
+            const sender = ev.getSender();
+            const ts = ev.getTs();
+            if (currentGroup) {
+                const lastTs = currentGroup.items[currentGroup.items.length - 1].getTs();
+                if (sender === currentGroup.sender && ts - lastTs < 5 * 60 * 1000) {
+                    currentGroup.items.push(ev);
+                    continue;
+                } else {
+                    flush();
+                }
+            }
+            currentGroup = {
+                _isMediaGroup: true,
+                sender,
+                ts,
+                items: [ev],
+                getId: () => ev.getId(),
+                getType: () => 'm.room.message',
+                getContent: () => content,
+                getSender: () => sender,
+                getTs: () => ts
+            };
+        }
+        flush();
+        return grouped;
     }
     _render(force) {
         if (this._isDestroyed || !this.container || !this.wrapper) return;
@@ -191,7 +362,7 @@ class ChatVirtualList {
         for (let i = startIndex; i < endIndex; i++) {
             visibleIds.add(this.events[i].getId());
         }
-        // 4. DOM RECONCILIATION (No innerHTML = ""!)
+        // 4. DOM RECONCILIATION
         // Remove nodes that scrolled out of bounds
         for (const [id, node] of this.nodes.entries()) {
             if (!visibleIds.has(id)) {
@@ -200,9 +371,8 @@ class ChatVirtualList {
                 this.nodes.delete(id);
             }
         }
-        // Add/Reorder visible nodes. 
-        // Using appendChild on an existing node MOVES it in the DOM, preserving state 
-        // and avoiding the massive layout thrash of innerHTML = "".
+        // Build a fragment and replace children atomically (single reflow)
+        const fragment = document.createDocumentFragment();
         for (let i = startIndex; i < endIndex; i++) {
             const ev = this.events[i];
             const id = ev.getId();
@@ -213,7 +383,12 @@ class ChatVirtualList {
                 this.nodes.set(id, node);
                 this._resizeObserver.observe(node);
             }
-            this.wrapper.appendChild(node);
+            fragment.appendChild(node);
+        }
+        this.wrapper.replaceChildren(fragment);
+        // Keep bottom sticky if user was at bottom
+        if (this.isAtBottom) {
+            this._stickToBottom();
         }
     }
 }
@@ -261,11 +436,12 @@ function updateReplyBar() {
     let name = replyingTo.sender === matrixClient.getUserId()
       ? "Tú"
       : (matrixDirectory?.get(replyingTo.sender) || replyingTo.sender.split(":")[0].replace("@", ""));
+    const replyColor = getUserColor(replyingTo.sender);
     let previewText = replyingTo.body || "";
     if (replyingTo.msgtype === "m.image") previewText = "📷 Imagen";
     else if (replyingTo.msgtype === "m.video") previewText = "🎬 Video";
     previewText = previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
-    preview.innerHTML = `<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong>${escapeHtml(name)}</strong> ${escapeHtml(previewText)}</div>`;
+    preview.innerHTML = `<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong style="color:${replyColor};">${escapeHtml(name)}</strong> ${escapeHtml(previewText)}</div>`;
     bar.style.display = "flex";
     if (name.includes("-") && name.length === 36) {
       loadMatrixDirectory().then((dir) => {
@@ -320,6 +496,7 @@ async function startMatrixChat() {
     matrixClient.setGlobalErrorOnUnknownDevices(false);
     await matrixClient.startClient({ initialSyncLimit: 20 });
     matrixRoom = await joinOrCreateRoom();
+    matrixDirectory = await loadMatrixDirectory();
     renderChatUI();
     bindChatEvents();
   } catch (e) {
@@ -436,16 +613,17 @@ function renderChatError(msg) {
   if (!container) return;
   container.innerHTML = `<div style="padding:20px;color:#f66;">${escapeHtml(msg)}</div>`;
 }
-function openChatModal() {
+async function openChatModal() {
+    if (!matrixDirectory) {
+        matrixDirectory = await loadMatrixDirectory();
+    }
     const modal = Modal({ 
         id: "chatModal",
         onClose: cleanupChatVirtualizer,
         onOpen: () => {
-            // Initialize virtualizer when modal opens (DOM elements exist)
             if (!chatVirtualizer) {
                 chatVirtualizer = new ChatVirtualList();
             }
-            // Load initial history
             const room = matrixClient.getRoom(matrixRoom);
             if (room && chatVirtualizer) {
                 const initialEvents = room.getLiveTimeline().getEvents()
@@ -540,49 +718,120 @@ async function loadOlderMessages() {
         window.loadingOlder = false;
     }
 }
-function createMessageNode(event) {
-    const content = event.getContent();
+function createMessageNode(item) {
+    // Handle media group (multiple images/videos from same sender)
+    if (item._isMediaGroup) {
+        const sender = item.getSender();
+        const isSelf = sender === matrixClient.getUserId();
+        const name = isSelf
+            ? (window.currentUser?.chat_name || "Tú")
+            : (matrixDirectory?.get(sender) || sender.split(":")[0].replace("@", ""));
+        const ts = item.getTs();
+        const date = new Date(ts);
+        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const senderColor = getUserColor(sender);
+        const div = document.createElement("div");
+        div.style.cssText = `align-self:${isSelf ? "flex-end" : "flex-start"};max-width:75%;padding:3px;border-radius:12px;background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};margin-top:8px;word-break:break-word;contain:layout;`;
+        const items = item.items.map(ev => {
+            const c = ev.getContent();
+            const fullSrc = c.url ? matrixClient.mxcUrlToHttp(c.url) : null;
+            const thumbSrc = c.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(c.info.thumbnail_url) : fullSrc;
+            return { msgtype: c.msgtype, src: thumbSrc, fullSrc, body: c.body };
+        });
+        const gridEl = document.createElement("div");
+        gridEl.className = "chat-media-grid";
+        const firstContent = item.items[0].getContent();
+        if (firstContent.info && firstContent.info.w && firstContent.info.h) {
+            gridEl.style.aspectRatio = `${firstContent.info.w} / ${firstContent.info.h}`;
+            gridEl.style.minHeight = "80px";
+        } else {
+            gridEl.style.aspectRatio = "4 / 3";
+            gridEl.style.minHeight = "120px";
+        }
+        const group = { sender, ts: item.getTs(), gridEl, items };
+        renderMediaGrid(group);
+        let replyHtml = "";
+        const replyPreview = firstContent["m.reply_preview"];
+        const replyEventId = firstContent["m.relates_to"]?.["m.in_reply_to"]?.["event_id"];
+        if (replyPreview) {
+            const replySender = replyPreview.sender === matrixClient.getUserId() ? "Tú" : (matrixDirectory?.get(replyPreview.sender) || replyPreview.sender.split(":")[0].replace("@", ""));
+            const replyColor = getUserColor(replyPreview.sender);
+            let previewText = replyPreview.body || "";
+            if (replyPreview.msgtype === "m.image") previewText = "📷 Imagen";
+            else if (replyPreview.msgtype === "m.video") previewText = "🎬 Video";
+            previewText = previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
+            const clickAttr = replyEventId ? ` onclick="window.scrollToChatEvent('${replyEventId}')" style="cursor:pointer;"` : "";
+            replyHtml = `<div class="msg-reply"${clickAttr} style="margin-bottom:4px;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid ${replyColor};font-size:0.8rem;"><div style="font-weight:600;font-size:0.7rem;color:${replyColor};">${escapeHtml(replySender)}</div><div style="color:#ccc;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(previewText)}</div></div>`;
+        }
+        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>${replyHtml}`;
+        div.appendChild(group.gridEl);
+        const firstEvent = item.items[0];
+        const showReplyMenu = (e) => {
+            e.preventDefault();
+            setReplyingTo(firstEvent);
+            div.style.outline = "2px solid #3fa34d";
+            setTimeout(() => { div.style.outline = ""; }, 300);
+        };
+        div.addEventListener("contextmenu", showReplyMenu);
+        let pressTimer = null;
+        div.addEventListener("mousedown", () => { pressTimer = setTimeout(showReplyMenu, 500); });
+        div.addEventListener("mouseup", () => clearTimeout(pressTimer));
+        div.addEventListener("mouseleave", () => clearTimeout(pressTimer));
+        div.addEventListener("touchstart", () => { pressTimer = setTimeout(showReplyMenu, 500); }, { passive: true });
+        div.addEventListener("touchend", () => clearTimeout(pressTimer));
+        div.addEventListener("touchmove", () => clearTimeout(pressTimer));
+        return div;
+    }
+    // Handle single event (original logic)
+    const content = item.getContent();
     const msgtype = content.msgtype;
-    const sender = event.getSender();
+    const sender = item.getSender();
     const isSelf = sender === matrixClient.getUserId();
     const isMedia = msgtype === "m.image" || msgtype === "m.video";
-    
-    const name = isSelf 
-        ? (window.currentUser?.chat_name || "Tú") 
+    const name = isSelf
+        ? (window.currentUser?.chat_name || "Tú")
         : (matrixDirectory?.get(sender) || sender.split(":")[0].replace("@", ""));
-    
-    // Format timestamp
-    const ts = event.getTs();
+    const ts = item.getTs();
     const date = new Date(ts);
     const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
+    const senderColor = getUserColor(sender);
     const div = document.createElement("div");
-    div.style.cssText = `align-self:${isSelf ? "flex-end" : "flex-start"};max-width:75%;padding:${isMedia ? "3px" : "8px 12px"};border-radius:12px;background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};margin-top:8px;word-break:break-word;`;
+    div.style.cssText = `align-self:${isSelf ? "flex-end" : "flex-start"};max-width:75%;padding:${isMedia ? "3px" : "8px 12px"};border-radius:12px;background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};margin-top:8px;word-break:break-word;contain:layout;`;
     let replyHtml = "";
     const replyPreview = content["m.reply_preview"];
+    const replyEventId = content["m.relates_to"]?.["m.in_reply_to"]?.["event_id"];
     if (replyPreview) {
         const replySender = replyPreview.sender === matrixClient.getUserId() ? "Tú" : (matrixDirectory?.get(replyPreview.sender) || replyPreview.sender.split(":")[0].replace("@", ""));
+        const replyColor = getUserColor(replyPreview.sender);
         let previewText = replyPreview.body || "";
         if (replyPreview.msgtype === "m.image") previewText = "📷 Imagen";
         else if (replyPreview.msgtype === "m.video") previewText = "🎬 Video";
         previewText = previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
-        replyHtml = `<div class="msg-reply" style="margin-bottom:4px;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid #3fa34d;font-size:0.8rem;"><div style="font-weight:600;font-size:0.7rem;color:#3fa34d;">${escapeHtml(replySender)}</div><div style="color:#ccc;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(previewText)}</div></div>`;
+        const clickAttr = replyEventId ? ` onclick="window.scrollToChatEvent('${replyEventId}')" style="cursor:pointer;"` : "";
+        replyHtml = `<div class="msg-reply"${clickAttr} style="margin-bottom:4px;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid ${replyColor};font-size:0.8rem;"><div style="font-weight:600;font-size:0.7rem;color:${replyColor};">${escapeHtml(replySender)}</div><div style="color:#ccc;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(previewText)}</div></div>`;
     }
     if (isMedia) {
         const fullSrc = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
         const thumbSrc = content.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(content.info.thumbnail_url) : fullSrc;
         const gridEl = document.createElement("div");
         gridEl.className = "chat-media-grid";
-        const group = { sender, ts: event.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
+        if (content.info && content.info.w && content.info.h) {
+            gridEl.style.aspectRatio = `${content.info.w} / ${content.info.h}`;
+            gridEl.style.minHeight = "80px";
+        } else {
+            gridEl.style.aspectRatio = "4 / 3";
+            gridEl.style.minHeight = "120px";
+        }
+        const group = { sender, ts: item.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
         renderMediaGrid(group);
-        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;">${escapeHtml(name)}<span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>`;
+        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>${replyHtml}`;
         div.appendChild(group.gridEl);
     } else {
-        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;">${escapeHtml(name)}<span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>${replyHtml}<div style="white-space:pre-wrap;">${escapeHtml(content.body || "")}</div>`;
+        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>${replyHtml}<div style="white-space:pre-wrap;">${escapeHtml(content.body || "")}</div>`;
     }
     const showReplyMenu = (e) => {
         e.preventDefault();
-        setReplyingTo(event);
+        setReplyingTo(item);
         div.style.outline = "2px solid #3fa34d";
         setTimeout(() => { div.style.outline = ""; }, 300);
     };
@@ -616,14 +865,16 @@ async function sendChatFile(file) {
 function mediaThumbHtml(item, index, isLast, extraCount) {
   const src = item.src;
   const fullSrc = item.fullSrc || src;
+  const emoji = item.msgtype === "m.video" ? "🎬" : "📷";
   let inner;
   if (item.msgtype === "m.video") {
-    inner = src ? `<video src="${escapeHtml(src)}" muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>` : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">🎬</div>`;
+    inner = src ? `<video src="${escapeHtml(src)}" muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>` : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">${emoji}</div>`;
   } else {
-    inner = src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "imagen")}" loading="lazy" onerror="if(!this.dataset.retry){this.dataset.retry='1';this.src='${escapeHtml(fullSrc)}';}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" />` : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">📷</div>`;
+    inner = src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "imagen")}" loading="lazy" decoding="async" onerror="if(!this.dataset.retry){this.dataset.retry='1';this.src='${escapeHtml(fullSrc)}';}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" />` : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">${emoji}</div>`;
   }
   const overlay = isLast && extraCount > 0 ? `<div class="chat-media-more">+${extraCount}</div>` : "";
-  return `<div class="chat-media-item" data-index="${index}">${inner}${overlay}</div>`;
+  const emojiOverlay = `<span style="position:absolute;top:4px;left:4px;font-size:0.9em;z-index:1;pointer-events:none;">${emoji}</span>`;
+  return `<div class="chat-media-item" data-index="${index}" style="position:relative;">${inner}${emojiOverlay}${overlay}</div>`;
 }
 function renderMediaGrid(group) {
   const items = group.items;
@@ -643,6 +894,54 @@ function renderMediaGrid(group) {
 }
 // Expose to global scope so index.js can trigger it after login
 window.startMatrixChat = startMatrixChat;
+window.scrollToChatEvent = (id) => chatVirtualizer?.scrollToEvent(id);
+// ===== LIGHTBOX =====
+let _lightboxItems = [];
+let _lightboxIndex = 0;
+function openLightbox(items, index) {
+    _lightboxItems = items;
+    _lightboxIndex = index;
+    updateLightboxStage();
+    const modal = Modal({ id: "mediaLightbox" });
+    if (modal) modal.open();
+}
+function updateLightboxStage() {
+    const stage = document.getElementById("lightboxStage");
+    const counter = document.getElementById("lightboxCounter");
+    const prevBtn = document.getElementById("lightboxPrev");
+    const nextBtn = document.getElementById("lightboxNext");
+    if (!stage) return;
+    const item = _lightboxItems[_lightboxIndex];
+    const src = item.fullSrc || item.src;
+    const emoji = item.msgtype === "m.video" ? "🎬" : "📷";
+    if (item.msgtype === "m.video") {
+        stage.innerHTML = `<div style="position:relative;display:inline-block;max-width:100%;max-height:100%;"><span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><video src="${escapeHtml(src)}" controls autoplay style="max-width:100%;max-height:100%;"></video></div>`;
+    } else {
+        stage.innerHTML = `<div style="position:relative;display:inline-block;max-width:100%;max-height:100%;"><span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "")}" style="max-width:100%;max-height:100%;object-fit:contain;" /></div>`;
+    }
+    if (counter) counter.textContent = `${_lightboxIndex + 1} / ${_lightboxItems.length}`;
+    if (prevBtn) prevBtn.disabled = _lightboxIndex === 0;
+    if (nextBtn) nextBtn.disabled = _lightboxIndex === _lightboxItems.length - 1;
+}
+// Wire lightbox nav buttons once
+let _lightboxWired = false;
+function wireLightboxNav() {
+    if (_lightboxWired) return;
+    _lightboxWired = true;
+    const prevBtn = document.getElementById("lightboxPrev");
+    const nextBtn = document.getElementById("lightboxNext");
+    if (prevBtn) prevBtn.addEventListener("click", () => {
+        if (_lightboxIndex > 0) { _lightboxIndex--; updateLightboxStage(); }
+    });
+    if (nextBtn) nextBtn.addEventListener("click", () => {
+        if (_lightboxIndex < _lightboxItems.length - 1) { _lightboxIndex++; updateLightboxStage(); }
+    });
+}
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", wireLightboxNav);
+} else {
+    wireLightboxNav();
+}
 //===== public/index.js =====
 // DIAGNÓSTICO TEMPORAL: verifica si ECharts cargó.
 console.log("[sismos] typeof echarts =", typeof echarts);
@@ -4946,7 +5245,7 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
           <button class="filter-pill" data-status="encontrado">✅ <span class="pill-label">Encontrado</span></button>
         </div>
         <select class="filter-select" data-filter="city">
-          <option value="">📍 TODAS</opton>
+          <option value="">📍 TODAS</option>
         </select>
       </div>
     </div>
@@ -5660,7 +5959,7 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
         <button class="modal-close" data-modal-close aria-label="Cerrar">✕</button>
       </div>
       <div data-modal-body style="padding:0;flex:1;display:flex;flex-direction:column;overflow:hidden;">
-        <div id="chatMessages" style="flex:1;overflow-y:auto;padding:0 10px;overflow-anchor:none;">
+        <div id="chatMessages" style="flex:1;overflow-y:auto;padding:0 10px;overflow-anchor:none;overscroll-behavior:contain;">
     <div id="chatTopSpacer" style="flex: 0 0 auto; height: 0;"></div>
     <div id="chatContentWrapper" style="display:flex;flex-direction:column;gap:8px;padding:10px 0;">
         <!-- Virtualizer will inject messages here -->
