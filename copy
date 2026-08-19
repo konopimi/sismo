@@ -7,6 +7,7 @@ FILES=(
 # "public/modal.js"
 # "public/virtue.js"
 "server.js"
+"bot.js"
 
   )
 echo "Running: mcp"
