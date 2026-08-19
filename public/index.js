@@ -290,7 +290,7 @@ if (isLocalhost) {
 //  Helpers here for convenient access.
 // ================================================================
 function statusMeta(status) {
-  return (window.STATUS_META || {})[status] || (window.STATUS_META || {}).desaparecido;
+  return (window.STATUS_META || {})[status] || { color: "#888888", cssClass: "", label: "" };
 }
 function statusColor(status) {
   return statusMeta(status).color;

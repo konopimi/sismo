@@ -264,9 +264,9 @@ h1 {
   /* Background and left border are derived from the status color (set
      inline as --status-color) via color-mix, matching the main cards. */
   background: color-mix(in srgb,
-      var(--status-color, #e57373) 12%,
+      var(--status-color, #888888) 12%,
       rgba(26, 29, 36, 0.85));
-  border-left: 3px solid var(--status-color, #e57373);
+  border-left: 3px solid var(--status-color, #888888);
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
@@ -274,7 +274,7 @@ h1 {
 
 .map-sidebar-card:hover {
   background: color-mix(in srgb,
-      var(--status-color, #e57373) 20%,
+      var(--status-color, #888888) 20%,
       rgba(34, 38, 46, 0.85));
 }
 
@@ -855,9 +855,9 @@ textarea {
   /* Background and left border are derived from the status color (set
      inline as --status-color by the card renderers) via color-mix, so
      there's no per-status hardcoding to keep in sync. */
-  background: color-mix(in srgb, var(--status-color, #e57373) 12%, #1a1d24);
+  background: color-mix(in srgb, var(--status-color, #888888) 12%, #1a1d24);
   border-radius: 10px;
-  border-left: 4px solid var(--status-color, #e57373);
+  border-left: 4px solid var(--status-color, #888888);
   cursor: default;
   overflow: hidden;
   transition: background 0.15s;
@@ -868,7 +868,7 @@ textarea {
 }
 
 .card:hover {
-  background: color-mix(in srgb, var(--status-color, #e57373) 20%, #22262e);
+  background: color-mix(in srgb, var(--status-color, #888888) 20%, #22262e);
 }
 
 .card.colaborador {
@@ -1041,7 +1041,7 @@ textarea {
   text-transform: uppercase;
   padding: 5px;
   border-radius: 4px;
-  background: #e57373;
+  background: #888888;
   display: inline-block;
   letter-spacing: 0.3px;
   color: white;
@@ -1068,7 +1068,7 @@ textarea {
 }
 
 .status-tag.colaborador {
-  background: #9b59b6;
+  background: #888888;
 }
 
 .empty {

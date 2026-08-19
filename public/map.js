@@ -93,7 +93,7 @@ const STATUS_META = {
   },
   angel: { color: "#add8e6", cssClass: "angel", label: "👼", icon: "👼" },
   colaborador: {
-    color: "#9b59b6",
+    color: "#888888",
     cssClass: "colaborador",
     label: "colaborador",
     icon: "🤝",
@@ -102,7 +102,7 @@ const STATUS_META = {
 window.STATUS_META = STATUS_META;
 
 function statusColor(status) {
-  return STATUS_META[status]?.color || "#e57373";
+  return STATUS_META[status]?.color || "#888888";
 }
 
 function statusIcon(status) {
