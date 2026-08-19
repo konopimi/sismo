@@ -1774,3 +1774,13 @@ textarea {
   opacity: 0.25;
   cursor: default;
 }
+
+/* Recording button state */
+#chatMicBtn.recording {
+  color: #e53935;
+  animation: pulse-rec 1s ease-in-out infinite;
+}
+@keyframes pulse-rec {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

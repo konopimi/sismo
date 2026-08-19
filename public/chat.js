@@ -775,6 +775,57 @@ function bindChatEvents() {
         input.style.height = "auto";
         input.style.height = Math.min(input.scrollHeight, 120) + "px";
     });
+
+    // --- Audio recording ---
+    const micBtn = document.getElementById("chatMicBtn");
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+
+    function updateMicBtn(recording) {
+        if (!micBtn) return;
+        if (recording) {
+            micBtn.textContent = "⏹";
+            micBtn.title = "Detener grabación";
+            micBtn.classList.add("recording");
+        } else {
+            micBtn.textContent = "🎤";
+            micBtn.title = "Grabar mensaje de voz";
+            micBtn.classList.remove("recording");
+        }
+    }
+
+    if (micBtn) {
+        micBtn.addEventListener("click", async () => {
+            if (isRecording) {
+                if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                    mediaRecorder.stop();
+                }
+                return;
+            }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioChunks = [];
+                mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
+                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+                mediaRecorder.onstop = async () => {
+                    stream.getTracks().forEach((t) => t.stop());
+                    if (audioChunks.length === 0) { isRecording = false; updateMicBtn(false); return; }
+                    const blob = new Blob(audioChunks, { type: "audio/webm" });
+                    const file = new File([blob], "voice_message.webm", { type: "audio/webm" });
+                    await sendChatAudio(file);
+                    isRecording = false;
+                    updateMicBtn(false);
+                };
+                mediaRecorder.start();
+                isRecording = true;
+                updateMicBtn(true);
+            } catch (e) {
+                console.error("mic error:", e);
+                alert("No se pudo acceder al micrófono.");
+            }
+        });
+    }
 }
 
 function cleanupChatVirtualizer() {
@@ -971,6 +1022,25 @@ async function sendChatFile(file) {
     await matrixClient.sendMessage(matrixRoom, content);
     clearReplyingTo();
   } catch (e) { console.error("send file error:", e); alert("No se pudo enviar el archivo."); }
+}
+
+async function sendChatAudio(file) {
+  if (!matrixRoom || !file) return;
+  try {
+    const uploadRes = await matrixClient.uploadContent(file, { includeFilename: true, type: file.type });
+    const content = {
+      msgtype: "m.audio",
+      body: file.name || "voice_message.webm",
+      url: uploadRes.content_uri,
+      info: { mimetype: file.type, size: file.size },
+    };
+    if (replyingTo) {
+      content["m.relates_to"] = { "m.in_reply_to": { event_id: replyingTo.eventId } };
+      content["m.reply_preview"] = { sender: replyingTo.sender, body: replyingTo.body, msgtype: replyingTo.msgtype };
+    }
+    await matrixClient.sendMessage(matrixRoom, content);
+    clearReplyingTo();
+  } catch (e) { console.error("send audio error:", e); alert("No se pudo enviar el audio."); }
 }
 
 
