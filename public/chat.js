@@ -1072,9 +1072,11 @@ function updateLightboxStage() {
 async function fetchOcrText(eventId, container) {
     try {
         const res = await authFetch(`${API_BASE}/backlog/by-event/${encodeURIComponent(eventId)}`);
-        if (!res.ok) { container.innerHTML = ""; return; }
+        if (!res.ok) { container.innerHTML = ""; _lightboxOcrData = null; return; }
         const data = await res.json();
-        if (!data.raw_text) { container.innerHTML = ""; return; }
+        if (!data.raw_text) { container.innerHTML = ""; _lightboxOcrData = null; return; }
+        // Cache the OCR text so the overlay can render it on toggle.
+        _lightboxOcrData = { raw_text: data.raw_text, intent: data.intent || null };
         container.innerHTML = `
             <div style="padding:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:0.9rem;color:#ccc;max-height:25vh;overflow-y:auto;text-align:left;">
                 <div style="font-size:0.75rem;color:#45d6d6;margin-bottom:8px;font-weight:bold;">
@@ -1083,9 +1085,13 @@ async function fetchOcrText(eventId, container) {
                 </div>
                 <pre style="white-space:pre-wrap;word-break:break-word;margin:0;font-family:inherit;line-height:1.5;">${escapeHtml(data.raw_text)}</pre>
             </div>`;
+        // Populate the overlay text so the toggle can show it over the image.
+        const overlayText = document.getElementById("lightboxOcrText");
+        if (overlayText) overlayText.textContent = data.raw_text;
     } catch (e) {
         console.error("OCR fetch failed:", e);
         container.innerHTML = "";
+        _lightboxOcrData = null;
     }
 }
 
@@ -1102,6 +1108,33 @@ function wireLightboxNav() {
     if (nextBtn) nextBtn.addEventListener("click", () => {
         if (_lightboxIndex < _lightboxItems.length - 1) { _lightboxIndex++; updateLightboxStage(); }
     });
+
+    // OCR toggle: show/hide the semi-transparent overlay over the image.
+    const ocrToggleBtn = document.getElementById("lightboxOcrToggle");
+    const ocrOverlay = document.getElementById("lightboxOcrOverlay");
+    if (ocrToggleBtn && ocrOverlay) {
+        ocrToggleBtn.addEventListener("click", () => {
+            const isHidden = ocrOverlay.style.display === "none" || ocrOverlay.style.display === "";
+            ocrOverlay.style.display = isHidden ? "block" : "none";
+            ocrToggleBtn.textContent = isHidden ? "✕ OCR" : "📝 OCR";
+        });
+    }
+
+    // Copy OCR text to clipboard.
+    const ocrCopyBtn = document.getElementById("lightboxOcrCopy");
+    if (ocrCopyBtn) {
+        ocrCopyBtn.addEventListener("click", async () => {
+            const text = document.getElementById("lightboxOcrText")?.textContent || "";
+            if (!text) return;
+            try {
+                await navigator.clipboard.writeText(text);
+                ocrCopyBtn.textContent = "✅ Copiado";
+                setTimeout(() => { ocrCopyBtn.textContent = "📋 Copiar texto"; }, 1500);
+            } catch (e) {
+                console.error("copy failed:", e);
+            }
+        });
+    }
 }
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", wireLightboxNav);
