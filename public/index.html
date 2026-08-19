@@ -847,16 +847,6 @@
             style="flex:1;resize:none;min-height:38px;max-height:120px;font-family:inherit;"></textarea>
           <button id="chatSendBtn" style="flex:0 0 auto;">Enviar</button>
         </div>
-        <!-- Sub-tabs de colaboradores dentro del modal de chat -->
-        <div id="chatModalSubTabs" class="sub-tabs"
-          style="flex:0 0 auto;height:auto;border-top:1px solid rgba(120,120,120,0.3);border-bottom:none;">
-          <button class="sub-tab-btn active" data-subtab="chat">💬<span class="tab-label">Chat</span></button>
-          <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="tab-label">Donaciones</span></button>
-          <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="tab-label">Necesidades</span></button>
-          <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="tab-label">Logística</span></button>
-          <button class="sub-tab-btn" data-subtab="voluntarios">🤝<span class="tab-label">Voluntarios</span></button>
-          <button class="sub-tab-btn" data-subtab="backlog">🧠<span class="tab-label">Triage</span></button>
-        </div>
         <!-- Contenido alternativo del modal (listas de sub-tabs) -->
         <div id="chatModalSubPanels" style="flex:1;min-height:0;display:none;flex-direction:column;overflow:hidden;">
           <div class="sub-tab-panel active" data-subtab-panel="chat"></div>
@@ -875,6 +865,16 @@
           <div class="sub-tab-panel" data-subtab-panel="backlog">
             <div id="chatModalListBacklog" class="list"></div>
           </div>
+        </div>
+        <!-- Sub-tabs de colaboradores dentro del modal de chat (siempre al fondo) -->
+        <div id="chatModalSubTabs" class="sub-tabs"
+          style="flex:0 0 auto;height:auto;border-top:1px solid rgba(120,120,120,0.3);border-bottom:none;">
+          <button class="sub-tab-btn active" data-subtab="chat">💬<span class="tab-label">Chat</span></button>
+          <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="tab-label">Donaciones</span></button>
+          <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="tab-label">Necesidades</span></button>
+          <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="tab-label">Logística</span></button>
+          <button class="sub-tab-btn" data-subtab="voluntarios">🤝<span class="tab-label">Voluntarios</span></button>
+          <button class="sub-tab-btn" data-subtab="backlog">🧠<span class="tab-label">Triage</span></button>
         </div>
       </div>
     </div>
