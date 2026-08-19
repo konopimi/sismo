@@ -175,15 +175,10 @@ async function processMessage(roomId, event) {
         Authorization: `Bearer ${apiToken}`,
       },
       body: JSON.stringify({
-        source: "matrix",
-        room_id: roomId,
-        event_id: event.event_id,
-        sender: event.sender,
-        raw_text: text,
-        parsed_intent: intent.name,
-        confidence: intent.confidence,
-        entities: rasaRes.entities || [],
-        timestamp: Date.now(),
+        source_event_id: event.event_id,
+        creator_matrix_id: event.sender,
+        intent: intent.name,
+        extracted_data: rasaRes.entities || []
       }),
     });
     const backlogText = await backlogRes.text();

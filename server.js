@@ -285,6 +285,18 @@ db.exec(`
     created_at TEXT NOT NULL
   )
 `);
+// ========== Backlog (AI Triage) ==========
+db.exec(`
+  CREATE TABLE IF NOT EXISTS backlog (
+    id TEXT PRIMARY KEY,
+    source_event_id TEXT UNIQUE,
+    creator_matrix_id TEXT,
+    intent TEXT NOT NULL,
+    extracted_data TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at TEXT NOT NULL
+  )
+`);
 // --- Migrations for existing columns (city and image) ---
 try {
   db.exec("ALTER TABLE disappeared ADD COLUMN city TEXT");
@@ -1355,6 +1367,54 @@ app.get("/api/earthquakes", async (req, res) => {
     console.error("Error en /api/earthquakes:", error);
     res.status(500).json({ error: "No se pudo obtener la data sísmica" });
   }
+});
+
+// ========== Backlog Routes ==========
+app.get("/api/backlog", requireAuth, (req, res) => {
+  const rows = db.prepare("SELECT * FROM backlog ORDER BY created_at DESC").all();
+  res.json(rows.map(r => ({
+    ...r,
+    extracted_data: r.extracted_data ? JSON.parse(r.extracted_data) : []
+  })));
+});
+
+app.post("/api/backlog", requireAuth, (req, res) => {
+  const { source_event_id, creator_matrix_id, intent, extracted_data } = req.body;
+
+  if (!source_event_id || !intent) {
+    return res.status(400).json({ error: "source_event_id and intent are required" });
+  }
+
+  const finalId = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  const dataJson = extracted_data ? JSON.stringify(extracted_data) : "[]";
+
+  try {
+    db.prepare(
+      "INSERT INTO backlog (id, source_event_id, creator_matrix_id, intent, extracted_data, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+    ).run(finalId, source_event_id, creator_matrix_id, intent, dataJson, createdAt);
+
+    res.status(201).json({ id: finalId, status: "pending" });
+  } catch (e) {
+    // The UNIQUE constraint on source_event_id prevents duplicate backlog items
+    if (e.message.includes("UNIQUE constraint failed")) {
+      return res.status(409).json({ error: "already_exists" });
+    }
+    console.error("Backlog insert error:", e);
+    res.status(500).json({ error: "Failed to create backlog item" });
+  }
+});
+
+app.patch("/api/backlog/:id", requireAuth, (req, res) => {
+  const { status } = req.body;
+  if (!['pending', 'accepted', 'rejected'].includes(status)) {
+    return res.status(400).json({ error: "Invalid status" });
+  }
+
+  const result = db.prepare("UPDATE backlog SET status = ? WHERE id = ?").run(status, req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+
+  res.json({ ok: true });
 });
 // Static files AFTER all API routes so /api/* is never intercepted
 app.use(express.static("public"));
