@@ -2910,6 +2910,7 @@ function setActiveSubTab(target) {
   else if (target === "necesidades" && !necesidadesData.length) loadListNecesidades();
   else if (target === "logistica" && !logisticaData.length) loadListLogistica();
   else if (target === "voluntarios" && !colabData.length) loadListColab();
+  else if (target === "backlog" && !backlogData.length) loadListBacklog();
 }
 subTabBtns.forEach((btn) => {
   btn.addEventListener("click", () => setActiveSubTab(btn.dataset.subtab));
@@ -3211,6 +3212,81 @@ async function setLogisticaStatus(id, status) {
     body: JSON.stringify({ status }),
   });
   loadListLogistica();
+}
+
+// ================================================================
+//  TRIAGE (backlog del bot)
+// ================================================================
+let backlogData = [];
+const listElBacklog = document.getElementById("listBacklog");
+const BACKLOG_STATUS_LABEL = { pending: "Pendiente", accepted: "Aceptado", rejected: "Rechazado" };
+const BACKLOG_INTENT_EMOJI = {
+  donate_offer: "🎁", report_need: "🆘", food_available: "🍽️", coordinate_delivery: "🚚",
+  request_help: "🙋", status_update: "🔄", report_emergency: "🚨", ask_about_point: "📍",
+  offer_transport: "🚗", request_confirmation: "✅", gratitude: "🙏", welcome_member: "👋",
+  request_supplies: "📦", report_issue: "⚠️", share_info: "ℹ️",
+};
+async function loadListBacklog() {
+  if (!getAuthToken()) { backlogData = []; renderBacklog(); return; }
+  try {
+    const res = await fetch(`${API_BASE}/backlog`, {
+      headers: { Authorization: `Bearer ${getAuthToken()}` },
+    });
+    if (res.status === 401) { clearAuthToken(); showLoginForm(); return; }
+    backlogData = await res.json();
+    renderBacklog();
+  } catch {
+    listElBacklog.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
+  }
+}
+function backlogCardHtml(item) {
+  const date = new Date(item.created_at).toLocaleString("es-CO", {
+    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+  });
+  const emoji = BACKLOG_INTENT_EMOJI[item.intent] || "🧠";
+  const entities = Array.isArray(item.extracted_data) && item.extracted_data.length
+    ? item.extracted_data.map((e) => `${escapeHtml(e.entity || "")}: ${escapeHtml(e.value || "")}`).join(" · ")
+    : "sin entidades";
+  return `
+    <div class="card backlog" data-id="${item.id}">
+      <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
+        <span class="name">${emoji} ${escapeHtml(item.intent)}</span>
+        <span class="status-tag backlog-${escapeHtml(item.status || "pending")}">${BACKLOG_STATUS_LABEL[item.status] || item.status}</span>
+      </div>
+      <div class="card-main">
+        <div class="card-inner">
+          <div class="info">
+            <span class="meta">${entities}</span>
+            <span class="meta">🕒 ${date} · 👤 ${escapeHtml(item.creator_matrix_id || "—")}</span>
+          </div>
+        </div>
+      </div>
+      <div style="padding:6px;display:flex;gap:6px;justify-content:flex-end;">
+        <button class="btn-small" onclick="setBacklogStatus('${item.id}','accepted')">✅ Aceptar</button>
+        <button class="btn-small btn-delete" onclick="setBacklogStatus('${item.id}','rejected')">✕ Rechazar</button>
+      </div>
+    </div>
+  `;
+}
+function renderBacklog() {
+  const q = searchInput.value;
+  const searched = q.trim()
+    ? backlogData.filter((b) => fuzzyMatch(q, b.intent || "") || fuzzyMatch(q, b.creator_matrix_id || ""))
+    : backlogData;
+  if (!searched.length) {
+    listElBacklog.innerHTML = `<div class="empty">${backlogData.length ? "Sin resultados." : "Aún no hay mensajes para revisar."}</div>`;
+    return;
+  }
+  renderVirtualList(listElBacklog, searched, backlogCardHtml);
+}
+async function setBacklogStatus(id, status) {
+  const res = await fetch(`${API_BASE}/backlog/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAuthToken()}` },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error"); return; }
+  loadListBacklog();
 }
 // Deep link: #anuncio/ abre directamente ese anuncio en su modal.
 function handleAnuncioDeepLink() {

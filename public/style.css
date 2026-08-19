@@ -1660,6 +1660,21 @@ textarea {
   color: #d63031;
 }
 
+.status-tag.backlog-pending {
+  background: rgba(214, 143, 0, 0.25);
+  color: #e0a500;
+}
+
+.status-tag.backlog-accepted {
+  background: rgba(63, 163, 77, 0.2);
+  color: #3fa34d;
+}
+
+.status-tag.backlog-rejected {
+  background: rgba(214, 48, 49, 0.2);
+  color: #d63031;
+}
+
 /* ===== Media grid (WhatsApp-style album) inside chat bubbles ===== */
 .msg-sender-name {
   padding: 3px 5px;
