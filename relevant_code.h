@@ -630,6 +630,8 @@ async function openChatModal() {
                     .filter(e => e.getType() === "m.room.message");
                 chatVirtualizer.setEvents(initialEvents);
             }
+            // Reset the modal sub-tabs to the chat view on open.
+            if (typeof setChatModalSubTab === "function") setChatModalSubTab("chat");
         }
     });
     if (modal) modal.open();
@@ -675,6 +677,17 @@ function bindChatEvents() {
         fileInput.addEventListener("change", async () => {
             for (const file of Array.from(fileInput.files || [])) await sendChatFile(file);
             fileInput.value = "";
+        });
+    }
+    // Camera button: opens the device camera (mobile) or a file picker
+    // filtered to images (desktop) via the capture attribute.
+    const cameraBtn = document.getElementById("chatCameraBtn");
+    const cameraInput = document.getElementById("chatCameraInput");
+    if (cameraBtn && cameraInput) {
+        cameraBtn.addEventListener("click", () => cameraInput.click());
+        cameraInput.addEventListener("change", async () => {
+            for (const file of Array.from(cameraInput.files || [])) await sendChatFile(file);
+            cameraInput.value = "";
         });
     }
     
@@ -736,7 +749,7 @@ function createMessageNode(item) {
             const c = ev.getContent();
             const fullSrc = c.url ? matrixClient.mxcUrlToHttp(c.url) : null;
             const thumbSrc = c.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(c.info.thumbnail_url) : fullSrc;
-            return { msgtype: c.msgtype, src: thumbSrc, fullSrc, body: c.body };
+            return { msgtype: c.msgtype, src: thumbSrc, fullSrc, body: c.body, eventId: ev.getId() };
         });
         const gridEl = document.createElement("div");
         gridEl.className = "chat-media-grid";
@@ -822,7 +835,7 @@ function createMessageNode(item) {
             gridEl.style.aspectRatio = "4 / 3";
             gridEl.style.minHeight = "120px";
         }
-        const group = { sender, ts: item.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
+        const group = { sender, ts: item.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body, eventId: item.getId() }] };
         renderMediaGrid(group);
         div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>${replyHtml}`;
         div.appendChild(group.gridEl);
@@ -919,9 +932,38 @@ function updateLightboxStage() {
     } else {
         stage.innerHTML = `<div style="position:relative;display:inline-block;max-width:100%;max-height:100%;"><span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "")}" style="max-width:100%;max-height:100%;object-fit:contain;" /></div>`;
     }
+    // OCR / extracted-text panel below the media (images only)
+    const ocrContainer = document.getElementById("lightboxOcr");
+    if (ocrContainer) {
+        if (item.msgtype === "m.image" && item.eventId) {
+            ocrContainer.innerHTML = `<div style="text-align:center;color:#666;font-size:0.8rem;">Cargando texto extraído…</div>`;
+            fetchOcrText(item.eventId, ocrContainer);
+        } else {
+            ocrContainer.innerHTML = "";
+        }
+    }
     if (counter) counter.textContent = `${_lightboxIndex + 1} / ${_lightboxItems.length}`;
     if (prevBtn) prevBtn.disabled = _lightboxIndex === 0;
     if (nextBtn) nextBtn.disabled = _lightboxIndex === _lightboxItems.length - 1;
+}
+async function fetchOcrText(eventId, container) {
+    try {
+        const res = await authFetch(`${API_BASE}/backlog/by-event/${encodeURIComponent(eventId)}`);
+        if (!res.ok) { container.innerHTML = ""; return; }
+        const data = await res.json();
+        if (!data.raw_text) { container.innerHTML = ""; return; }
+        container.innerHTML = `
+            <div style="padding:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:0.9rem;color:#ccc;max-height:25vh;overflow-y:auto;text-align:left;">
+                <div style="font-size:0.75rem;color:#45d6d6;margin-bottom:8px;font-weight:bold;">
+                    🧠 Texto extraído
+                    ${data.intent ? `<span style="background:rgba(69,214,214,0.2);padding:2px 6px;border-radius:4px;margin-left:6px;">${escapeHtml(data.intent)}</span>` : ''}
+                </div>
+                <pre style="white-space:pre-wrap;word-break:break-word;margin:0;font-family:inherit;line-height:1.5;">${escapeHtml(data.raw_text)}</pre>
+            </div>`;
+    } catch (e) {
+        console.error("OCR fetch failed:", e);
+        container.innerHTML = "";
+    }
 }
 // Wire lightbox nav buttons once
 let _lightboxWired = false;
@@ -941,6 +983,74 @@ if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", wireLightboxNav);
 } else {
     wireLightboxNav();
+}
+// ================================================================
+//  SUB-TABS DENTRO DEL MODAL DE CHAT
+//  Replica las sub-tabs de la pestaña Colaboradores dentro del modal
+//  de chat. Al hacer clic, cambia el contenido del modal entre el chat
+//  y las listas (donaciones/necesidades/logística/voluntarios/triage).
+// ================================================================
+let _chatModalSubTabWired = false;
+function setChatModalSubTab(target) {
+  const tabs = document.getElementById("chatModalSubTabs");
+  const panels = document.getElementById("chatModalSubPanels");
+  const messages = document.getElementById("chatMessages");
+  const inputBar = document.getElementById("chatInput")?.closest("div");
+  const replyBar = document.getElementById("chatReplyBar");
+  if (!tabs || !panels) return;
+  const btns = tabs.querySelectorAll(".sub-tab-btn");
+  const panelEls = panels.querySelectorAll(".sub-tab-panel");
+  btns.forEach((b) => b.classList.toggle("active", b.dataset.subtab === target));
+  panelEls.forEach((p) => p.classList.toggle("active", p.dataset.subtabPanel === target));
+  const isChat = target === "chat";
+  // Chat view: show messages + input bar, hide the list panels.
+  if (messages) messages.style.display = isChat ? "" : "none";
+  // Explicitly set "flex" (not "") so the flex layout is never dropped
+  // when toggling visibility — an empty string removes the inline style
+  // and the div falls back to display:block, breaking the row.
+  if (inputBar) inputBar.style.display = isChat ? "flex" : "none";
+  if (replyBar) replyBar.style.display = isChat ? "flex" : "none";
+  panels.style.display = isChat ? "none" : "flex";
+  // Lazy-load the target list into the modal's own container.
+  if (!isChat) {
+    if (target === "donaciones") renderModalList("chatModalListDonaciones", donacionesData, donacionCardHtml, "Aún no hay donaciones ofrecidas.");
+    else if (target === "necesidades") renderModalList("chatModalListNecesidades", necesidadesData, necesidadCardHtml, "Aún no hay necesidades reportadas.");
+    else if (target === "logistica") renderModalList("chatModalListLogistica", logisticaData, logisticaCardHtml, "Aún no hay tareas de logística.");
+    else if (target === "voluntarios") renderModalList("chatModalListColab", colabData, colabCardHtml, "Todavía nadie se ha unido como colaborador.");
+    else if (target === "backlog") renderModalList("chatModalListBacklog", backlogData, backlogCardHtml, "Aún no hay mensajes para revisar.");
+  }
+}
+function wireChatModalSubTabs() {
+  if (_chatModalSubTabWired) return;
+  _chatModalSubTabWired = true;
+  const tabs = document.getElementById("chatModalSubTabs");
+  if (!tabs) return;
+  const btns = tabs.querySelectorAll(".sub-tab-btn");
+  btns.forEach((btn) => btn.addEventListener("click", () => setChatModalSubTab(btn.dataset.subtab)));
+}
+// Render a data list into a modal container using the shared card renderers
+// (defined in index.js). Falls back to a plain message if renderers are missing.
+function renderModalList(containerId, data, cardHtmlFn, emptyMsg) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!data || !data.length) {
+    el.innerHTML = `<div class="empty">${emptyMsg}</div>`;
+    return;
+  }
+  if (typeof cardHtmlFn !== "function") {
+    el.innerHTML = `<div class="empty">No se pudo renderizar.</div>`;
+    return;
+  }
+  if (typeof renderVirtualList === "function") {
+    renderVirtualList(el, data, cardHtmlFn);
+  } else {
+    el.innerHTML = data.map(cardHtmlFn).join("");
+  }
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", wireChatModalSubTabs);
+} else {
+  wireChatModalSubTabs();
 }
 //===== public/index.js =====
 // DIAGNÓSTICO TEMPORAL: verifica si ECharts cargó.
@@ -1234,7 +1344,7 @@ if (isLocalhost) {
 //  Helpers here for convenient access.
 // ================================================================
 function statusMeta(status) {
-  return (window.STATUS_META || {})[status] || (window.STATUS_META || {}).desaparecido;
+  return (window.STATUS_META || {})[status] || { color: "#888888", cssClass: "", label: "" };
 }
 function statusColor(status) {
   return statusMeta(status).color;
@@ -1271,9 +1381,25 @@ const SEPIA_BASE_HUE = 60;
 // given status color. Standard "black → any color" technique: black → white
 // → sepia → saturate to a pure hue → rotate to the target hue.
 function placeholderFilter(status) {
-  const hue = hexToHue(statusMeta(status).color);
+  const color = statusMeta(status).color;
+  const hue = hexToHue(color);
+  // Achromatic (gray) colors have no hue; the sepia pipeline would tint
+  // them red/orange. Return a plain grayscale filter instead.
+  if (isGray(color)) {
+    return "brightness(0) invert(100%) grayscale(100%)";
+  }
   const rotate = hue - SEPIA_BASE_HUE;
   return `brightness(0) invert(100%) sepia(100%) saturate(10000%) hue-rotate(${rotate.toFixed(1)}deg)`;
+}
+// True when a hex color is achromatic (r === g === b), i.e. a shade of gray.
+function isGray(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec((hex || "").trim());
+  if (!m) return false;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return r === g && g === b;
 }
 // ================================================================
 //  UTILIDADES
@@ -2999,8 +3125,9 @@ function entityCardHtml(item, type, placeholderImg) {
   const cardStatusClass = found ? "encontrado" : statusCssClass(item.status);
   const statusTagLabel = isAngel ? "👼" : statusLabel(item.status);
   const statusTagClass = found ? "encontrado" : statusCssClass(item.status);
+  const statusColorHex = statusColor(found ? "encontrado" : item.status);
   return `
-        <div class="card ${cardStatusClass}" data-id="${item.id}" data-type="${type}" style = "${isAngel && "background:#6fa8dc; color: white; opacity: 0.62; border-left: 4px solid white; "}" >
+        <div class="card ${cardStatusClass}" data-id="${item.id}" data-type="${type}" style="--status-color:${statusColorHex};${isAngel && "background:#6fa8dc; color: white; opacity: 0.62; border-left: 4px solid white; "}" >
     <div style="padding:5px;background:rgba(var(--surface),0.38)">
       <span class="name"
         style="${isAngel && " color:white;"}"
@@ -3325,6 +3452,7 @@ function buildingCardHtml(item) {
   const statusClass = item.status || "seguro";
   const statusTagLabel = statusLabel(statusClass);
   const statusTagClass = statusCssClass(statusClass);
+  const statusColorHex = statusColor(statusClass);
   let imgHtml = "";
   if (item.photo_url) {
     imgHtml = `<img class="card-photo" src="${escapeHtml(item.photo_url)}" alt="Foto" />`;
@@ -3334,7 +3462,7 @@ function buildingCardHtml(item) {
     imgHtml = `<img style="opacity:0.62;" class="card-photo" src="${BUILDING_PLACEHOLDER}" alt="Imagen" />`;
   }
   return `
-        <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
+        <div class="card ${statusClass}" data-id="${item.id}" data-type="building" style="--status-color:${statusColorHex};">
 <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
               <span class="name">${escapeHtml(item.name)}${item.private ? " 🔒" : ""}</span>
 </div>
@@ -3740,7 +3868,7 @@ function colabCardHtml(item) {
   metaParts.push(date);
   const imgHtml = `<img style="opacity:0.62;filter:${placeholderFilter("colaborador")};" class="card-photo" src="${COLAB_PLACEHOLDER}" alt="Colaborador" />`;
   return `
-        <div class="card colaborador" data-id="${item.id}" data-type="colaborador">
+        <div class="card colaborador" data-id="${item.id}" data-type="colaborador" style="--status-color:${statusColor("colaborador")};">
 <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
               <span class="name">${escapeHtml(item.name)}</span>
 </div>
@@ -3854,6 +3982,7 @@ function setActiveSubTab(target) {
   else if (target === "necesidades" && !necesidadesData.length) loadListNecesidades();
   else if (target === "logistica" && !logisticaData.length) loadListLogistica();
   else if (target === "voluntarios" && !colabData.length) loadListColab();
+  else if (target === "backlog" && !backlogData.length) loadListBacklog();
 }
 subTabBtns.forEach((btn) => {
   btn.addEventListener("click", () => setActiveSubTab(btn.dataset.subtab));
@@ -4152,6 +4281,86 @@ async function setLogisticaStatus(id, status) {
     body: JSON.stringify({ status }),
   });
   loadListLogistica();
+}
+// ================================================================
+//  TRIAGE (backlog del bot)
+// ================================================================
+let backlogData = [];
+const listElBacklog = document.getElementById("listBacklog");
+const BACKLOG_STATUS_LABEL = { pending: "Pendiente", accepted: "Aceptado", rejected: "Rechazado" };
+const BACKLOG_INTENT_EMOJI = {
+  donate_offer: "🎁", report_need: "🆘", food_available: "🍽️", coordinate_delivery: "🚚",
+  request_help: "🙋", status_update: "🔄", report_emergency: "🚨", ask_about_point: "📍",
+  offer_transport: "🚗", request_confirmation: "✅", gratitude: "🙏", welcome_member: "👋",
+  request_supplies: "📦", report_issue: "⚠️", share_info: "ℹ️",
+};
+async function loadListBacklog() {
+  if (!getAuthToken()) { backlogData = []; renderBacklog(); return; }
+  try {
+    const res = await fetch(`${API_BASE}/backlog`, {
+      headers: { Authorization: `Bearer ${getAuthToken()}` },
+    });
+    if (res.status === 401) { clearAuthToken(); showLoginForm(); return; }
+    backlogData = await res.json();
+    renderBacklog();
+  } catch {
+    listElBacklog.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
+  }
+}
+function backlogCardHtml(item) {
+  const date = new Date(item.created_at).toLocaleString("es-CO", {
+    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+  });
+  const emoji = BACKLOG_INTENT_EMOJI[item.intent] || "🧠";
+  const entities = Array.isArray(item.extracted_data) && item.extracted_data.length
+    ? item.extracted_data.map((e) => `${escapeHtml(e.entity || "")}: ${escapeHtml(e.value || "")}`).join(" · ")
+    : "sin entidades";
+  const rawText = item.raw_text ? `<span class="meta">💬 ${escapeHtml(item.raw_text)}</span>` : "";
+  const rawJson = item.raw_json
+    ? `<details class="backlog-raw"><summary>🔍 raw JSON</summary><pre>${escapeHtml(item.raw_json)}</pre></details>`
+    : "";
+  return `
+    <div class="card backlog" data-id="${item.id}">
+      <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
+        <span class="name">${emoji} ${escapeHtml(item.intent)}</span>
+        <span class="status-tag backlog-${escapeHtml(item.status || "pending")}">${BACKLOG_STATUS_LABEL[item.status] || item.status}</span>
+      </div>
+      <div class="card-main">
+        <div class="card-inner">
+          <div class="info">
+            ${rawText}
+            <span class="meta">${entities}</span>
+            <span class="meta">🕒 ${date} · 👤 ${escapeHtml(item.creator_name || item.creator_matrix_id || "—")}</span>
+            ${rawJson}
+          </div>
+        </div>
+      </div>
+      <div style="padding:6px;display:flex;gap:6px;justify-content:flex-end;">
+        <button class="btn-small" onclick="setBacklogStatus('${item.id}','accepted')">✅ Aceptar</button>
+        <button class="btn-small btn-delete" onclick="setBacklogStatus('${item.id}','rejected')">✕ Rechazar</button>
+      </div>
+    </div>
+  `;
+}
+function renderBacklog() {
+  const q = searchInput.value;
+  const searched = q.trim()
+    ? backlogData.filter((b) => fuzzyMatch(q, b.intent || "") || fuzzyMatch(q, b.creator_matrix_id || ""))
+    : backlogData;
+  if (!searched.length) {
+    listElBacklog.innerHTML = `<div class="empty">${backlogData.length ? "Sin resultados." : "Aún no hay mensajes para revisar."}</div>`;
+    return;
+  }
+  renderVirtualList(listElBacklog, searched, backlogCardHtml);
+}
+async function setBacklogStatus(id, status) {
+  const res = await fetch(`${API_BASE}/backlog/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAuthToken()}` },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error"); return; }
+  loadListBacklog();
 }
 // Deep link: #anuncio/ abre directamente ese anuncio en su modal.
 function handleAnuncioDeepLink() {
@@ -5330,6 +5539,7 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
         <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="tab-label">Necesidades</span></button>
         <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="tab-label">Logística</span></button>
         <button class="sub-tab-btn" data-subtab="voluntarios">🤝<span class="tab-label">Voluntarios</span></button>
+        <button class="sub-tab-btn" data-subtab="backlog">🧠<span class="tab-label">Triage</span></button>
       </div>
       <!-- Panel Chat: lista de conversaciones -->
       <div class="sub-tab-panel active" data-subtab-panel="chat">
@@ -5353,6 +5563,10 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
         <div id="colabListWrapper">
           <div id="listColab" class="list"></div>
         </div>
+      </div>
+      <!-- Panel Triage (backlog del bot) -->
+      <div class="sub-tab-panel" data-subtab-panel="backlog">
+        <div id="listBacklog" class="list"></div>
       </div>
     </div>
     <div id="colabLoginPrompt" style="padding:16px;text-align:center;color:#999;font-size:0.9rem;">
@@ -5959,13 +6173,14 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
         <button class="modal-close" data-modal-close aria-label="Cerrar">✕</button>
       </div>
       <div data-modal-body style="padding:0;flex:1;display:flex;flex-direction:column;overflow:hidden;">
-        <div id="chatMessages" style="flex:1;overflow-y:auto;padding:0 10px;overflow-anchor:none;overscroll-behavior:contain;">
-    <div id="chatTopSpacer" style="flex: 0 0 auto; height: 0;"></div>
-    <div id="chatContentWrapper" style="display:flex;flex-direction:column;gap:8px;padding:10px 0;">
-        <!-- Virtualizer will inject messages here -->
-    </div>
-    <div id="chatBottomSpacer" style="flex: 0 0 auto; height: 0;"></div>
-</div>
+        <div id="chatMessages"
+          style="flex:1;overflow-y:auto;padding:0 10px;overflow-anchor:none;overscroll-behavior:contain;">
+          <div id="chatTopSpacer" style="flex: 0 0 auto; height: 0;"></div>
+          <div id="chatContentWrapper" style="display:flex;flex-direction:column;gap:8px;padding:10px 0;">
+            <!-- Virtualizer will inject messages here -->
+          </div>
+          <div id="chatBottomSpacer" style="flex: 0 0 auto; height: 0;"></div>
+        </div>
         <!-- Barra de respuesta (se muestra cuando se responde a un mensaje) -->
         <div id="chatReplyBar"
           style="display:none;padding:6px 8px;background:rgba(120,120,120,0.15);border-top:1px solid rgba(120,120,120,0.2);flex:0 0 auto;">
@@ -5977,12 +6192,44 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
           </div>
         </div>
         <div
-          style="display:flex;gap:6px;padding:5px;border-top:1px solid rgba(120,120,120,0.3);flex:0 0 auto;align-items:flex-end;">
+          style="display:flex;gap:6px;padding:5px;border-top:1px solid rgba(120,120,120,0.3);flex:0 0 auto;align-items:flex-end;min-width:100%;box-sizing:border-box;overflow:hidden;">
           <button id="chatAttachBtn" type="button" title="Adjuntar imagen o video" style="flex:0 0 auto;">📎</button>
+          <button id="chatCameraBtn" type="button" title="Tomar foto con la cámara" style="flex:0 0 auto;">📷</button>
           <input type="file" id="chatFileInput" accept="image/*,video/*" multiple style="display:none;" />
+          <input type="file" id="chatCameraInput" accept="image/*" capture="environment" style="display:none;" />
           <textarea id="chatInput" rows="1" placeholder="Escribe un mensaje..."
-            style="flex:1;resize:none;min-height:38px;max-height:120px;font-family:inherit;"></textarea>
+            style="flex:1 1 auto; resize:none; min-height:38px; max-height:120px; font-family:inherit; min-width:0; width:100%; box-sizing:border-box;"></textarea>
           <button id="chatSendBtn" style="flex:0 0 auto;">Enviar</button>
+        </div>
+        <!-- Contenido alternativo del modal (listas de sub-tabs) -->
+        <div id="chatModalSubPanels" style="flex:1;min-height:0;display:none;flex-direction:column;overflow:hidden;">
+          <div class="sub-tab-panel active" data-subtab-panel="chat"></div>
+          <div class="sub-tab-panel" data-subtab-panel="donaciones">
+            <div id="chatModalListDonaciones" class="list"></div>
+          </div>
+          <div class="sub-tab-panel" data-subtab-panel="necesidades">
+            <div id="chatModalListNecesidades" class="list"></div>
+          </div>
+          <div class="sub-tab-panel" data-subtab-panel="logistica">
+            <div id="chatModalListLogistica" class="list"></div>
+          </div>
+          <div class="sub-tab-panel" data-subtab-panel="voluntarios">
+            <div id="chatModalListColab" class="list"></div>
+          </div>
+          <div class="sub-tab-panel" data-subtab-panel="backlog">
+            <div id="chatModalListBacklog" class="list"></div>
+          </div>
+        </div>
+        <!-- Sub-tabs de colaboradores dentro del modal de chat (siempre al fondo) -->
+        <div id="chatModalSubTabs" class="sub-tabs"
+          style="flex:0 0 auto;height:auto;border-top:1px solid rgba(120,120,120,0.3);border-bottom:none;">
+          <button class="sub-tab-btn active" data-subtab="chat" style="margin-right: auto;">💬<span
+              class="tab-label">Chat</span></button>
+          <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="tab-label">Donaciones</span></button>
+          <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="tab-label">Necesidades</span></button>
+          <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="tab-label">Logística</span></button>
+          <button class="sub-tab-btn" data-subtab="voluntarios">🤝<span class="tab-label">Voluntarios</span></button>
+          <button class="sub-tab-btn" data-subtab="backlog">🧠<span class="tab-label">Triage</span></button>
         </div>
       </div>
     </div>
@@ -6010,8 +6257,11 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
       <div data-modal-body
         style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;">
         <button id="lightboxPrev" class="lightbox-nav lightbox-prev" aria-label="Anterior">‹</button>
-        <div id="lightboxStage"
-          style="max-width:100%;max-height:100%;display:flex;align-items:center;justify-content:center;"></div>
+        <div style="display:flex;flex-direction:column;flex:1;min-height:0;width:100%;">
+          <div id="lightboxStage"
+            style="max-width:100%;max-height:100%;display:flex;align-items:center;justify-content:center;flex:1;min-height:0;"></div>
+          <div id="lightboxOcr" style="width:100%;max-width:800px;margin:0 auto;padding:0 12px 12px;"></div>
+        </div>
         <button id="lightboxNext" class="lightbox-nav lightbox-next" aria-label="Siguiente">›</button>
       </div>
     </div>
@@ -6712,16 +6962,16 @@ h1 {
   /* Background and left border are derived from the status color (set
      inline as --status-color) via color-mix, matching the main cards. */
   background: color-mix(in srgb,
-      var(--status-color, #e57373) 12%,
+      var(--status-color, #888888) 12%,
       rgba(26, 29, 36, 0.85));
-  border-left: 3px solid var(--status-color, #e57373);
+  border-left: 3px solid var(--status-color, #888888);
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
 }
 .map-sidebar-card:hover {
   background: color-mix(in srgb,
-      var(--status-color, #e57373) 20%,
+      var(--status-color, #888888) 20%,
       rgba(34, 38, 46, 0.85));
 }
 /* Angel is a special light-blue case (deceased), not a dark status tint. */
@@ -7227,9 +7477,9 @@ textarea {
   /* Background and left border are derived from the status color (set
      inline as --status-color by the card renderers) via color-mix, so
      there's no per-status hardcoding to keep in sync. */
-  background: color-mix(in srgb, var(--status-color, #e57373) 12%, #1a1d24);
+  background: color-mix(in srgb, var(--status-color, #888888) 12%, #1a1d24);
   border-radius: 10px;
-  border-left: 4px solid var(--status-color, #e57373);
+  border-left: 4px solid var(--status-color, #888888);
   cursor: default;
   overflow: hidden;
   transition: background 0.15s;
@@ -7239,7 +7489,7 @@ textarea {
     rgba(60, 60, 60, 0.8) 0px 3px 0px;
 }
 .card:hover {
-  background: color-mix(in srgb, var(--status-color, #e57373) 20%, #22262e);
+  background: color-mix(in srgb, var(--status-color, #888888) 20%, #22262e);
 }
 .card.colaborador {
   min-height: 120px;
@@ -7387,7 +7637,7 @@ textarea {
   text-transform: uppercase;
   padding: 5px;
   border-radius: 4px;
-  background: #e57373;
+  background: #888888;
   display: inline-block;
   letter-spacing: 0.3px;
   color: white;
@@ -7409,7 +7659,7 @@ textarea {
   color: #222;
 }
 .status-tag.colaborador {
-  background: #9b59b6;
+  background: #888888;
 }
 .empty {
   display: none;
@@ -7907,6 +8157,35 @@ textarea {
 .status-tag.logistica-cancelado {
   background: rgba(214, 48, 49, 0.2);
   color: #d63031;
+}
+.status-tag.backlog-pending {
+  background: rgba(214, 143, 0, 0.25);
+  color: #e0a500;
+}
+.status-tag.backlog-accepted {
+  background: rgba(63, 163, 77, 0.2);
+  color: #3fa34d;
+}
+.status-tag.backlog-rejected {
+  background: rgba(214, 48, 49, 0.2);
+  color: #d63031;
+}
+.backlog-raw pre {
+  margin: 6px 0 0;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 6px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.backlog-raw summary {
+  cursor: pointer;
+  color: #aaa;
+  font-size: 0.8rem;
 }
 /* ===== Media grid (WhatsApp-style album) inside chat bubbles ===== */
 .msg-sender-name {
@@ -8503,7 +8782,7 @@ const STATUS_META = {
   },
   angel: { color: "#add8e6", cssClass: "angel", label: "👼", icon: "👼" },
   colaborador: {
-    color: "#9b59b6",
+    color: "#888888",
     cssClass: "colaborador",
     label: "colaborador",
     icon: "🤝",
@@ -8511,7 +8790,7 @@ const STATUS_META = {
 };
 window.STATUS_META = STATUS_META;
 function statusColor(status) {
-  return STATUS_META[status]?.color || "#e57373";
+  return STATUS_META[status]?.color || "#888888";
 }
 function statusIcon(status) {
   return STATUS_META[status]?.icon || "❓";
@@ -9391,6 +9670,14 @@ function resolveDisplayName(user) {
     "Anónimo"
   );
 }
+// Map a Matrix user id (@localpart:domain) back to a collaborator display name.
+// The localpart is the collaborator id (see provisionMatrixAccount).
+function resolveMatrixDisplayName(matrixId) {
+  if (!matrixId || typeof matrixId !== "string") return "Anónimo";
+  const localpart = matrixId.replace(/^@/, "").split(":")[0];
+  const user = db.prepare("SELECT id, name, display_name, contact FROM collaborators WHERE id = ?").get(localpart);
+  return resolveDisplayName(user);
+}
 // ========== Matrix (Dendrite) account provisioning ==========
 // Dendrite supports the Synapse-compatible shared-secret registration endpoint.
 // We create the Matrix account server-side (username + password) so the user
@@ -9588,6 +9875,27 @@ db.exec(`
     created_at TEXT NOT NULL
   )
 `);
+// ========== Backlog (AI Triage) ==========
+db.exec(`
+  CREATE TABLE IF NOT EXISTS backlog (
+    id TEXT PRIMARY KEY,
+    source_event_id TEXT UNIQUE,
+    creator_matrix_id TEXT,
+    intent TEXT NOT NULL,
+    extracted_data TEXT,
+    raw_text TEXT,
+    raw_json TEXT,
+    enriched_data TEXT,
+    message_count INTEGER DEFAULT 1,
+    status TEXT DEFAULT 'pending',
+    created_at TEXT NOT NULL
+  )
+`);
+// Migrations for existing backlog tables (raw message + raw payload for debugging)
+try { db.exec("ALTER TABLE backlog ADD COLUMN raw_text TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE backlog ADD COLUMN raw_json TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE backlog ADD COLUMN enriched_data TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE backlog ADD COLUMN message_count INTEGER DEFAULT 1"); } catch (e) {}
 // --- Migrations for existing columns (city and image) ---
 try {
   db.exec("ALTER TABLE disappeared ADD COLUMN city TEXT");
@@ -10628,6 +10936,62 @@ app.get("/api/earthquakes", async (req, res) => {
     res.status(500).json({ error: "No se pudo obtener la data sísmica" });
   }
 });
+// ========== Backlog Routes ==========
+app.get("/api/backlog", requireAuth, (req, res) => {
+  const rows = db.prepare("SELECT * FROM backlog ORDER BY created_at DESC").all();
+  res.json(rows.map(r => ({
+    ...r,
+    creator_name: resolveMatrixDisplayName(r.creator_matrix_id),
+    extracted_data: r.extracted_data ? JSON.parse(r.extracted_data) : []
+  })));
+});
+app.post("/api/backlog", requireAuth, (req, res) => {
+  const { source_event_id, creator_matrix_id, intent, extracted_data, raw_text, raw_json, enriched_data, message_count } = req.body;
+  if (!source_event_id || !intent) {
+    return res.status(400).json({ error: "source_event_id and intent are required" });
+  }
+  const finalId = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  const dataJson = extracted_data ? JSON.stringify(extracted_data) : "[]";
+  const rawJson = typeof raw_json === "string" ? raw_json : (raw_json ? JSON.stringify(raw_json) : null);
+  const enrichedJson = typeof enriched_data === "string" ? enriched_data : (enriched_data ? JSON.stringify(enriched_data) : null);
+  const msgCount = Number.isInteger(message_count) && message_count > 0 ? message_count : 1;
+  try {
+    db.prepare(
+      "INSERT INTO backlog (id, source_event_id, creator_matrix_id, intent, extracted_data, raw_text, raw_json, enriched_data, message_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).run(finalId, source_event_id, creator_matrix_id, intent, dataJson, raw_text || null, rawJson, enrichedJson, msgCount, createdAt);
+    res.status(201).json({ id: finalId, status: "pending" });
+  } catch (e) {
+    // The UNIQUE constraint on source_event_id prevents duplicate backlog items
+    if (e.message.includes("UNIQUE constraint failed")) {
+      return res.status(409).json({ error: "already_exists" });
+    }
+    console.error("Backlog insert error:", e);
+    res.status(500).json({ error: "Failed to create backlog item" });
+  }
+});
+app.patch("/api/backlog/:id", requireAuth, (req, res) => {
+  const { status } = req.body;
+  if (!['pending', 'accepted', 'rejected'].includes(status)) {
+    return res.status(400).json({ error: "Invalid status" });
+  }
+  const result = db.prepare("UPDATE backlog SET status = ? WHERE id = ?").run(status, req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.json({ ok: true });
+});
+// Fetch OCR text + intent for the Lightbox, keyed by Matrix event id.
+app.get("/api/backlog/by-event/:eventId", requireAuth, (req, res) => {
+  const row = db.prepare(
+    "SELECT raw_text, intent, enriched_data, extracted_data FROM backlog WHERE source_event_id = ?"
+  ).get(req.params.eventId);
+  if (!row) return res.json({});
+  res.json({
+    raw_text: row.raw_text,
+    intent: row.intent,
+    enriched_data: row.enriched_data ? JSON.parse(row.enriched_data) : null,
+    extracted_data: row.extracted_data ? JSON.parse(row.extracted_data) : []
+  });
+});
 // Static files AFTER all API routes so /api/* is never intercepted
 app.use(express.static("public"));
 app.listen(PORT, () => {
@@ -10797,15 +11161,12 @@ async function processMessage(roomId, event) {
         Authorization: `Bearer ${apiToken}`,
       },
       body: JSON.stringify({
-        source: "matrix",
-        room_id: roomId,
-        event_id: event.event_id,
-        sender: event.sender,
+        source_event_id: event.event_id,
+        creator_matrix_id: event.sender,
+        intent: intent.name,
+        extracted_data: rasaRes.entities || [],
         raw_text: text,
-        parsed_intent: intent.name,
-        confidence: intent.confidence,
-        entities: rasaRes.entities || [],
-        timestamp: Date.now(),
+        raw_json: JSON.stringify({ matrix_event: event, rasa_response: rasaRes }, null, 2)
       }),
     });
     const backlogText = await backlogRes.text();
