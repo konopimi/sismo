@@ -1,5 +1,17 @@
 import fs from "fs";
 
+// --- Cargar .env.bot manualmente ---
+const envPath = "/opt/sismo-api/.env.bot";
+if (fs.existsSync(envPath)) {
+  const content = fs.readFileSync(envPath, "utf8");
+  for (const line of content.split(/\r?\n/)) {
+    const match = line.match(/^\s*([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$/);
+    if (match && !process.env[match[1]]) {
+      process.env[match[1]] = match[2];
+    }
+  }
+}
+
 const ENV = {
   HS: process.env.MATRIX_HOMESERVER_URL || "http://localhost:8008",
   ACCESS_TOKEN: process.env.MATRIX_ACCESS_TOKEN,
@@ -40,14 +52,12 @@ async function matrixFetch(path, opts = {}) {
   return res.json();
 }
 
-// 1. Login if we don't have a token
 async function login() {
   if (ENV.ACCESS_TOKEN) {
-    // Verify token works
     try {
       const whoami = await matrixFetch("/_matrix/client/v3/account/whoami");
       myUserId = whoami.user_id;
-      console.log("[bot] Using existing token for", myUserId);
+      console.log("[bot] Token OK for", myUserId);
       return;
     } catch (e) {
       console.log("[bot] Token invalid, trying password login...");
@@ -55,7 +65,7 @@ async function login() {
   }
   if (!ENV.LOCALPART || !ENV.MATRIX_PASS) {
     throw new Error(
-      "Falta MATRIX_ACCESS_TOKEN o MATRIX_PASSWORD + MATRIX_LOCALPART",
+      "Falta MATRIX_ACCESS_TOKEN o MATRIX_PASSWORD + MATRIX_LOCALPART en .env.bot",
     );
   }
   const data = await matrixFetch("/_matrix/client/v3/login", {
@@ -70,19 +80,17 @@ async function login() {
   myUserId = data.user_id;
   console.log("[bot] Logged in as", myUserId);
   console.log("[bot] ACCESS_TOKEN:", data.access_token);
-  console.log("[bot] → Guardá ese token en .env.bot como MATRIX_ACCESS_TOKEN");
+  console.log(
+    "[bot] → Guardá ese token en .env.bot como MATRIX_ACCESS_TOKEN para no volver a loguear con password",
+  );
 }
 
-// 2. Resolve and join room
 async function joinRoom() {
-  // Resolve alias
   const aliasRes = await matrixFetch(
     `/_matrix/client/v3/directory/room/${encodeURIComponent(ENV.ROOM_ALIAS)}`,
   );
   targetRoomId = aliasRes.room_id;
-  console.log("[bot] Resolved room", ENV.ROOM_ALIAS, "→", targetRoomId);
-
-  // Join
+  console.log("[bot] Room", ENV.ROOM_ALIAS, "→", targetRoomId);
   try {
     await matrixFetch(
       `/_matrix/client/v3/rooms/${encodeURIComponent(targetRoomId)}/join`,
@@ -91,8 +99,8 @@ async function joinRoom() {
     console.log("[bot] Joined room");
   } catch (e) {
     if (
-      e.message.includes("M_UNKNOWN") ||
-      e.message.includes("already in the room")
+      e.message.includes("already in the room") ||
+      e.message.includes("M_UNKNOWN")
     ) {
       console.log("[bot] Already in room");
     } else {
@@ -101,7 +109,6 @@ async function joinRoom() {
   }
 }
 
-// 3. Process a single message event
 async function processMessage(roomId, event) {
   if (event.sender === myUserId) return;
   if (event.content?.msgtype !== "m.text") return;
@@ -109,7 +116,6 @@ async function processMessage(roomId, event) {
   const text = event.content.body;
   console.log(`[bot] 📩 ${event.sender}: ${text.substring(0, 120)}`);
 
-  // Rasa NLU
   let rasaRes;
   try {
     rasaRes = await fetch(ENV.RASA_URL, {
@@ -138,7 +144,6 @@ async function processMessage(roomId, event) {
     return;
   }
 
-  // Login to sismo-api
   let apiToken;
   try {
     const loginRes = await fetch(`${ENV.API_BASE}/auth/login`, {
@@ -150,14 +155,12 @@ async function processMessage(roomId, event) {
       }),
     }).then((r) => r.json());
     apiToken = loginRes.token;
-    if (!apiToken)
-      throw new Error("No token in response: " + JSON.stringify(loginRes));
+    if (!apiToken) throw new Error("No token: " + JSON.stringify(loginRes));
   } catch (e) {
-    console.error("[bot] ❌ sismo-api login failed:", e.message);
+    console.error("[bot] ❌ API login failed:", e.message);
     return;
   }
 
-  // POST backlog
   try {
     const backlogRes = await fetch(`${ENV.API_BASE}/backlog`, {
       method: "POST",
@@ -188,14 +191,12 @@ async function processMessage(roomId, event) {
   }
 }
 
-// 4. Main sync loop
 async function syncLoop() {
-  // Load previous sync token
   if (fs.existsSync(STORAGE_FILE)) {
     try {
       const saved = JSON.parse(fs.readFileSync(STORAGE_FILE, "utf8"));
       syncToken = saved.next_batch;
-      console.log("[bot] Resumed from sync token");
+      console.log("[bot] Resumed sync");
     } catch { }
   }
 
@@ -228,8 +229,7 @@ async function syncLoop() {
   }
 }
 
-// Start
 await login();
 await joinRoom();
-console.log("[bot] Starting sync loop...");
+console.log("[bot] Starting sync...");
 await syncLoop();
