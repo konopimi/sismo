@@ -841,12 +841,12 @@
           </div>
         </div>
         <div
-          style="display:flex;gap:6px;padding:5px;border-top:1px solid rgba(120,120,120,0.3);min-width:100%;box-sizing:border-box;">
-          <button id="chatAttachBtn" type="button" title="Adjuntar imagen o video" style="">📎</button>
+          style="display:flex;gap:6px;padding:5px;border-top:1px solid rgba(120,120,120,0.3);flex:0 0 auto;align-items:flex-end;width:100%;box-sizing:border-box;">
+          <button id="chatAttachBtn" type="button" title="Adjuntar imagen o video" style="flex:0 0 auto;">📎</button>
           <input type="file" id="chatFileInput" accept="image/*,video/*" multiple style="display:none;" />
           <textarea id="chatInput" rows="1" placeholder="Escribe un mensaje..."
-            style="flex:1;resize:none;min-height:38px;max-height:120px;font-family:inherit;width:100%;min-width:0;"></textarea>
-          <button id="chatSendBtn" style="">Enviar</button>
+            style="flex:1 1 auto;resize:none;min-height:38px;max-height:120px;font-family:inherit;min-width:0;"></textarea>
+          <button id="chatSendBtn" style="flex:0 0 auto;">Enviar</button>
         </div>
         <!-- Contenido alternativo del modal (listas de sub-tabs) -->
         <div id="chatModalSubPanels" style="flex:1;min-height:0;display:none;flex-direction:column;overflow:hidden;">
