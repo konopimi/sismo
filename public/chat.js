@@ -1013,6 +1013,7 @@ window.scrollToChatEvent = (id) => chatVirtualizer?.scrollToEvent(id);
 // ===== LIGHTBOX =====
 let _lightboxItems = [];
 let _lightboxIndex = 0;
+let _lightboxOcrData = null; // Store current OCR data for overlay
 
 function openLightbox(items, index) {
     _lightboxItems = items;
@@ -1027,6 +1028,8 @@ function updateLightboxStage() {
     const counter = document.getElementById("lightboxCounter");
     const prevBtn = document.getElementById("lightboxPrev");
     const nextBtn = document.getElementById("lightboxNext");
+    const ocrToggleBtn = document.getElementById("lightboxOcrToggle");
+    const ocrOverlay = document.getElementById("lightboxOcrOverlay");
     if (!stage) return;
 
     const item = _lightboxItems[_lightboxIndex];
@@ -1049,6 +1052,17 @@ function updateLightboxStage() {
             ocrContainer.innerHTML = "";
         }
     }
+
+    // Show/hide OCR toggle button for images with eventId
+    if (ocrToggleBtn) {
+        if (item.msgtype === "m.image" && item.eventId) {
+            ocrToggleBtn.style.display = "flex";
+        } else {
+            ocrToggleBtn.style.display = "none";
+        }
+    }
+    // Hide overlay when changing image
+    if (ocrOverlay) ocrOverlay.style.display = "none";
 
     if (counter) counter.textContent = `${_lightboxIndex + 1} / ${_lightboxItems.length}`;
     if (prevBtn) prevBtn.disabled = _lightboxIndex === 0;
