@@ -216,6 +216,27 @@ class ChatVirtualList {
         });
     }
 
+    scrollToEvent(eventId) {
+        if (this._isDestroyed) return;
+        const index = this.events.findIndex(e => e.getId() === eventId);
+        if (index < 0) return;
+
+        // Calculate cumulative height up to this event
+        let top = 0;
+        for (let i = 0; i < index; i++) {
+            top += this.heights.get(this.events[i].getId()) || this.DEFAULT_HEIGHT;
+        }
+
+        this.container.scrollTop = top;
+
+        // Highlight the node briefly
+        const node = this.nodes.get(eventId);
+        if (node) {
+            node.style.outline = "2px solid #3fa34d";
+            setTimeout(() => { node.style.outline = ""; }, 1500);
+        }
+    }
+
     _onScroll() {
         if (this._isDestroyed) return;
         if (this._stickRaf) {
@@ -805,6 +826,7 @@ function createMessageNode(item) {
 
     let replyHtml = "";
     const replyPreview = content["m.reply_preview"];
+    const replyEventId = content["m.relates_to"]?.["m.in_reply_to"]?.["event_id"];
     if (replyPreview) {
         const replySender = replyPreview.sender === matrixClient.getUserId() ? "Tú" : (matrixDirectory?.get(replyPreview.sender) || replyPreview.sender.split(":")[0].replace("@", ""));
         const replyColor = getUserColor(replyPreview.sender);
@@ -812,7 +834,8 @@ function createMessageNode(item) {
         if (replyPreview.msgtype === "m.image") previewText = "📷 Imagen";
         else if (replyPreview.msgtype === "m.video") previewText = "🎬 Video";
         previewText = previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
-        replyHtml = `<div class="msg-reply" style="margin-bottom:4px;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid ${replyColor};font-size:0.8rem;"><div style="font-weight:600;font-size:0.7rem;color:${replyColor};">${escapeHtml(replySender)}</div><div style="color:#ccc;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(previewText)}</div></div>`;
+        const clickAttr = replyEventId ? ` onclick="window.scrollToChatEvent('${replyEventId}')" style="cursor:pointer;"` : "";
+        replyHtml = `<div class="msg-reply"${clickAttr} style="margin-bottom:4px;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid ${replyColor};font-size:0.8rem;"><div style="font-weight:600;font-size:0.7rem;color:${replyColor};">${escapeHtml(replySender)}</div><div style="color:#ccc;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(previewText)}</div></div>`;
     }
 
     if (isMedia) {
@@ -906,6 +929,7 @@ function renderMediaGrid(group) {
 
 // Expose to global scope so index.js can trigger it after login
 window.startMatrixChat = startMatrixChat;
+window.scrollToChatEvent = (id) => chatVirtualizer?.scrollToEvent(id);
 
 // ===== LIGHTBOX =====
 let _lightboxItems = [];
