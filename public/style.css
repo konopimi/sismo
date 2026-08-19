@@ -1675,6 +1675,25 @@ textarea {
   color: #d63031;
 }
 
+.backlog-raw pre {
+  margin: 6px 0 0;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 6px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.backlog-raw summary {
+  cursor: pointer;
+  color: #aaa;
+  font-size: 0.8rem;
+}
+
 /* ===== Media grid (WhatsApp-style album) inside chat bubbles ===== */
 .msg-sender-name {
   padding: 3px 5px;

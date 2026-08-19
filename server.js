@@ -83,6 +83,14 @@ function resolveDisplayName(user) {
     "Anónimo"
   );
 }
+// Map a Matrix user id (@localpart:domain) back to a collaborator display name.
+// The localpart is the collaborator id (see provisionMatrixAccount).
+function resolveMatrixDisplayName(matrixId) {
+  if (!matrixId || typeof matrixId !== "string") return "Anónimo";
+  const localpart = matrixId.replace(/^@/, "").split(":")[0];
+  const user = db.prepare("SELECT id, name, display_name, contact FROM collaborators WHERE id = ?").get(localpart);
+  return resolveDisplayName(user);
+}
 
 // ========== Matrix (Dendrite) account provisioning ==========
 // Dendrite supports the Synapse-compatible shared-secret registration endpoint.
@@ -293,10 +301,15 @@ db.exec(`
     creator_matrix_id TEXT,
     intent TEXT NOT NULL,
     extracted_data TEXT,
+    raw_text TEXT,
+    raw_json TEXT,
     status TEXT DEFAULT 'pending',
     created_at TEXT NOT NULL
   )
 `);
+// Migrations for existing backlog tables (raw message + raw payload for debugging)
+try { db.exec("ALTER TABLE backlog ADD COLUMN raw_text TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE backlog ADD COLUMN raw_json TEXT"); } catch (e) {}
 // --- Migrations for existing columns (city and image) ---
 try {
   db.exec("ALTER TABLE disappeared ADD COLUMN city TEXT");
@@ -1374,12 +1387,13 @@ app.get("/api/backlog", requireAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM backlog ORDER BY created_at DESC").all();
   res.json(rows.map(r => ({
     ...r,
+    creator_name: resolveMatrixDisplayName(r.creator_matrix_id),
     extracted_data: r.extracted_data ? JSON.parse(r.extracted_data) : []
   })));
 });
 
 app.post("/api/backlog", requireAuth, (req, res) => {
-  const { source_event_id, creator_matrix_id, intent, extracted_data } = req.body;
+  const { source_event_id, creator_matrix_id, intent, extracted_data, raw_text, raw_json } = req.body;
 
   if (!source_event_id || !intent) {
     return res.status(400).json({ error: "source_event_id and intent are required" });
@@ -1388,11 +1402,12 @@ app.post("/api/backlog", requireAuth, (req, res) => {
   const finalId = crypto.randomUUID();
   const createdAt = new Date().toISOString();
   const dataJson = extracted_data ? JSON.stringify(extracted_data) : "[]";
+  const rawJson = typeof raw_json === "string" ? raw_json : (raw_json ? JSON.stringify(raw_json) : null);
 
   try {
     db.prepare(
-      "INSERT INTO backlog (id, source_event_id, creator_matrix_id, intent, extracted_data, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-    ).run(finalId, source_event_id, creator_matrix_id, intent, dataJson, createdAt);
+      "INSERT INTO backlog (id, source_event_id, creator_matrix_id, intent, extracted_data, raw_text, raw_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    ).run(finalId, source_event_id, creator_matrix_id, intent, dataJson, raw_text || null, rawJson, createdAt);
 
     res.status(201).json({ id: finalId, status: "pending" });
   } catch (e) {

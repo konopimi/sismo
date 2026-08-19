@@ -178,7 +178,9 @@ async function processMessage(roomId, event) {
         source_event_id: event.event_id,
         creator_matrix_id: event.sender,
         intent: intent.name,
-        extracted_data: rasaRes.entities || []
+        extracted_data: rasaRes.entities || [],
+        raw_text: text,
+        raw_json: JSON.stringify({ matrix_event: event, rasa_response: rasaRes }, null, 2)
       }),
     });
     const backlogText = await backlogRes.text();

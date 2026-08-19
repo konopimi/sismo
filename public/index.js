@@ -3247,6 +3247,10 @@ function backlogCardHtml(item) {
   const entities = Array.isArray(item.extracted_data) && item.extracted_data.length
     ? item.extracted_data.map((e) => `${escapeHtml(e.entity || "")}: ${escapeHtml(e.value || "")}`).join(" · ")
     : "sin entidades";
+  const rawText = item.raw_text ? `<span class="meta">💬 ${escapeHtml(item.raw_text)}</span>` : "";
+  const rawJson = item.raw_json
+    ? `<details class="backlog-raw"><summary>🔍 raw JSON</summary><pre>${escapeHtml(item.raw_json)}</pre></details>`
+    : "";
   return `
     <div class="card backlog" data-id="${item.id}">
       <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
@@ -3256,8 +3260,10 @@ function backlogCardHtml(item) {
       <div class="card-main">
         <div class="card-inner">
           <div class="info">
+            ${rawText}
             <span class="meta">${entities}</span>
-            <span class="meta">🕒 ${date} · 👤 ${escapeHtml(item.creator_matrix_id || "—")}</span>
+            <span class="meta">🕒 ${date} · 👤 ${escapeHtml(item.creator_name || item.creator_matrix_id || "—")}</span>
+            ${rawJson}
           </div>
         </div>
       </div>
