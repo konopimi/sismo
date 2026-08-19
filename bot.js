@@ -292,7 +292,9 @@ async function structureWithNIM(rawText) {
     throw new Error(`NIM failed: ${res.status} ${errText.substring(0, 200)}`);
   }
   const data = await res.json();
-  const parsed = JSON.parse(data.choices[0].message.content);
+  const raw = data.choices[0].message.content.trim();
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
+  const parsed = JSON.parse(cleaned);
   if (!parsed.intent || !Array.isArray(parsed.items)) throw new Error("Malformed NIM output");
   return parsed;
 }
