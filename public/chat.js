@@ -8,6 +8,17 @@
 
 const MATRIX_ROOM_ALIAS = "#ayuda-en-cali:matrix.sismoinfo.co";
 
+// Deterministic color from user ID
+function getUserColor(userId) {
+    let hash = 0;
+    for (let i = 0; i < userId.length; i++) {
+        hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+        hash |= 0;
+    }
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 70%, 75%)`;
+}
+
 // ================================================================
 //  CHAT VIRTUALIZER (Bidirectional DOM Windowing)
 // ================================================================
@@ -414,11 +425,12 @@ function updateReplyBar() {
     let name = replyingTo.sender === matrixClient.getUserId()
       ? "Tú"
       : (matrixDirectory?.get(replyingTo.sender) || replyingTo.sender.split(":")[0].replace("@", ""));
+    const replyColor = getUserColor(replyingTo.sender);
     let previewText = replyingTo.body || "";
     if (replyingTo.msgtype === "m.image") previewText = "📷 Imagen";
     else if (replyingTo.msgtype === "m.video") previewText = "🎬 Video";
     previewText = previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
-    preview.innerHTML = `<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong>${escapeHtml(name)}</strong> ${escapeHtml(previewText)}</div>`;
+    preview.innerHTML = `<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong style="color:${replyColor};">${escapeHtml(name)}</strong> ${escapeHtml(previewText)}</div>`;
     bar.style.display = "flex";
     if (name.includes("-") && name.length === 36) {
       loadMatrixDirectory().then((dir) => {
@@ -724,6 +736,7 @@ function createMessageNode(item) {
         const ts = item.getTs();
         const date = new Date(ts);
         const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const senderColor = getUserColor(sender);
 
 
         const div = document.createElement("div");
@@ -749,7 +762,7 @@ function createMessageNode(item) {
 
         const group = { sender, ts: item.getTs(), gridEl, items };
         renderMediaGrid(group);
-        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;">${escapeHtml(name)}<span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>`;
+        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>`;
         div.appendChild(group.gridEl);
 
         const firstEvent = item.items[0];
@@ -785,20 +798,21 @@ function createMessageNode(item) {
     const ts = item.getTs();
     const date = new Date(ts);
     const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const senderColor = getUserColor(sender);
 
     const div = document.createElement("div");
     div.style.cssText = `align-self:${isSelf ? "flex-end" : "flex-start"};max-width:75%;padding:${isMedia ? "3px" : "8px 12px"};border-radius:12px;background:${isSelf ? "rgba(63,163,77,0.35)" : "rgba(120,120,120,0.25)"};margin-top:8px;word-break:break-word;contain:layout;`;
-
 
     let replyHtml = "";
     const replyPreview = content["m.reply_preview"];
     if (replyPreview) {
         const replySender = replyPreview.sender === matrixClient.getUserId() ? "Tú" : (matrixDirectory?.get(replyPreview.sender) || replyPreview.sender.split(":")[0].replace("@", ""));
+        const replyColor = getUserColor(replyPreview.sender);
         let previewText = replyPreview.body || "";
         if (replyPreview.msgtype === "m.image") previewText = "📷 Imagen";
         else if (replyPreview.msgtype === "m.video") previewText = "🎬 Video";
         previewText = previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
-        replyHtml = `<div class="msg-reply" style="margin-bottom:4px;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid #3fa34d;font-size:0.8rem;"><div style="font-weight:600;font-size:0.7rem;color:#3fa34d;">${escapeHtml(replySender)}</div><div style="color:#ccc;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(previewText)}</div></div>`;
+        replyHtml = `<div class="msg-reply" style="margin-bottom:4px;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid ${replyColor};font-size:0.8rem;"><div style="font-weight:600;font-size:0.7rem;color:${replyColor};">${escapeHtml(replySender)}</div><div style="color:#ccc;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(previewText)}</div></div>`;
     }
 
     if (isMedia) {
@@ -815,10 +829,10 @@ function createMessageNode(item) {
         }
         const group = { sender, ts: item.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
         renderMediaGrid(group);
-        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;">${escapeHtml(name)}<span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>`;
+        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>`;
         div.appendChild(group.gridEl);
     } else {
-        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;">${escapeHtml(name)}<span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>${replyHtml}<div style="white-space:pre-wrap;">${escapeHtml(content.body || "")}</div>`;
+        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>${replyHtml}<div style="white-space:pre-wrap;">${escapeHtml(content.body || "")}</div>`;
     }
 
     const showReplyMenu = (e) => {
