@@ -306,7 +306,8 @@ db.exec(`
     enriched_data TEXT,
     message_count INTEGER DEFAULT 1,
     status TEXT DEFAULT 'pending',
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    audio_url TEXT
   )
 `);
 // ========== Media Text (Standalone OCR Storage) ==========
@@ -317,7 +318,8 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS media_text (
     source_event_id TEXT PRIMARY KEY,
     raw_text TEXT,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    audio_url TEXT
   )
 `);
 // Migrations for existing backlog tables (raw message + raw payload for debugging)
@@ -325,6 +327,8 @@ try { db.exec("ALTER TABLE backlog ADD COLUMN raw_text TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE backlog ADD COLUMN raw_json TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE backlog ADD COLUMN enriched_data TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE backlog ADD COLUMN message_count INTEGER DEFAULT 1"); } catch (e) {}
+try { db.exec("ALTER TABLE backlog ADD COLUMN audio_url TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE media_text ADD COLUMN audio_url TEXT"); } catch (e) {}
 // --- Migrations for existing columns (city and image) ---
 try {
   db.exec("ALTER TABLE disappeared ADD COLUMN city TEXT");

@@ -180,6 +180,7 @@ async function resolveReplyContext(roomId, eventId) {
       sender: event.sender,
       content: event.content || {},
       isImage: event.content?.msgtype === "m.image",
+      isAudio: event.content?.msgtype === "m.audio",
       isText: event.content?.msgtype === "m.text",
     };
   } catch (e) {
@@ -328,12 +329,15 @@ async function processMessageBatch(userId, messages) {
 
   const textParts = [];
   const imageUrls = [];
+  const audioUrls = [];
   const seenUrls = new Set();
 
   for (const [eventId, parent] of parentMap) {
     if (parent.isImage && parent.content?.url && !seenUrls.has(parent.content.url)) {
       seenUrls.add(parent.content.url);
       imageUrls.push({ url: parent.content.url, source: "parent", eventId });
+    } else if (parent.isAudio && parent.content?.url) {
+      audioUrls.push({ url: parent.content.url, source: "parent", eventId });
     } else if (parent.isText && parent.content?.body) {
       textParts.push(`[Contexto anterior: ${parent.content.body}]`);
     }
@@ -345,6 +349,14 @@ async function processMessageBatch(userId, messages) {
       seenUrls.add(msg.imageUrl);
       imageUrls.push({ url: msg.imageUrl, source: "direct", eventId: msg.eventId });
     }
+    if (msg.audioUrl) {
+      audioUrls.push({ url: msg.audioUrl, source: "direct", eventId: msg.eventId });
+    }
+  }
+
+  // Log audio (transcription TBD)
+  for (const { url, source, eventId } of audioUrls) {
+    console.log(`[bot] 🎤 Audio ${source} (${eventId}): ${url}`);
   }
 
   const ocrParts = [];
@@ -506,6 +518,7 @@ async function doSync() {
       eventId: event.event_id,
       text: content.msgtype === "m.text" ? text : "",
       imageUrl: content.msgtype === "m.image" ? content.url : null,
+      audioUrl: content.msgtype === "m.audio" ? content.url : null,
       replyTo: isReply || null,
       timestamp: event.origin_server_ts,
     };
