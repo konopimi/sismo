@@ -1122,9 +1122,9 @@ function updateLightboxStage() {
 
     const emoji = item.msgtype === "m.video" ? "🎬" : "📷";
     if (item.msgtype === "m.video") {
-        stage.innerHTML = `<div style="position:relative;display:inline-block;max-width:100%;max-height:100%;"><span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><video src="${escapeHtml(src)}" controls autoplay style="max-width:100%;max-height:100%;"></video></div>`;
+        stage.innerHTML = `<div style="position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;max-width:100%;max-height:100%;"><span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><video src="${escapeHtml(src)}" controls autoplay style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;"></video></div>`;
     } else {
-        stage.innerHTML = `<div style="position:relative;display:inline-block;max-width:100%;max-height:100%;"><span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "")}" style="max-width:100%;max-height:100%;object-fit:contain;" /></div>`;
+        stage.innerHTML = `<div style="position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;max-width:100%;max-height:100%;"><span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "")}" style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;" /></div>`;
     }
 
     // OCR / extracted-text panel below the media (images only)
