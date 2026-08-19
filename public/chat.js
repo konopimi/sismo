@@ -703,6 +703,8 @@ async function openChatModal() {
                     .filter(e => e.getType() === "m.room.message");
                 chatVirtualizer.setEvents(initialEvents);
             }
+            // Reset the modal sub-tabs to the chat view on open.
+            if (typeof setChatModalSubTab === "function") setChatModalSubTab("chat");
         }
     });
     if (modal) modal.open();
@@ -1048,5 +1050,80 @@ if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", wireLightboxNav);
 } else {
     wireLightboxNav();
+}
+
+// ================================================================
+//  SUB-TABS DENTRO DEL MODAL DE CHAT
+//  Replica las sub-tabs de la pestaña Colaboradores dentro del modal
+//  de chat. Al hacer clic, cambia el contenido del modal entre el chat
+//  y las listas (donaciones/necesidades/logística/voluntarios/triage).
+// ================================================================
+let _chatModalSubTabWired = false;
+function setChatModalSubTab(target) {
+  const tabs = document.getElementById("chatModalSubTabs");
+  const panels = document.getElementById("chatModalSubPanels");
+  const messages = document.getElementById("chatMessages");
+  const inputBar = document.getElementById("chatInput")?.closest("div");
+  const replyBar = document.getElementById("chatReplyBar");
+  if (!tabs || !panels) return;
+
+  const btns = tabs.querySelectorAll(".sub-tab-btn");
+  const panelEls = panels.querySelectorAll(".sub-tab-panel");
+
+  btns.forEach((b) => b.classList.toggle("active", b.dataset.subtab === target));
+  panelEls.forEach((p) => p.classList.toggle("active", p.dataset.subtabPanel === target));
+
+  const isChat = target === "chat";
+  // Chat view: show messages + input bar, hide the list panels.
+  if (messages) messages.style.display = isChat ? "" : "none";
+  if (inputBar) inputBar.style.display = isChat ? "" : "none";
+  if (replyBar) replyBar.style.display = isChat ? "" : "none";
+  panels.style.display = isChat ? "none" : "flex";
+
+  // Lazy-load the target list into the modal's own container.
+  if (!isChat) {
+    if (target === "donaciones") renderModalList("chatModalListDonaciones", donacionesData, donacionCardHtml, "Aún no hay donaciones ofrecidas.");
+    else if (target === "necesidades") renderModalList("chatModalListNecesidades", necesidadesData, necesidadCardHtml, "Aún no hay necesidades reportadas.");
+    else if (target === "logistica") renderModalList("chatModalListLogistica", logisticaData, logisticaCardHtml, "Aún no hay tareas de logística.");
+    else if (target === "voluntarios") renderModalList("chatModalListColab", colabData, colabCardHtml, "Todavía nadie se ha unido como colaborador.");
+    else if (target === "backlog") renderModalList("chatModalListBacklog", backlogData, backlogCardHtml, "Aún no hay mensajes para revisar.");
+  }
+}
+
+function wireChatModalSubTabs() {
+  if (_chatModalSubTabWired) return;
+  _chatModalSubTabWired = true;
+
+  const tabs = document.getElementById("chatModalSubTabs");
+  if (!tabs) return;
+
+  const btns = tabs.querySelectorAll(".sub-tab-btn");
+  btns.forEach((btn) => btn.addEventListener("click", () => setChatModalSubTab(btn.dataset.subtab)));
+}
+
+// Render a data list into a modal container using the shared card renderers
+// (defined in index.js). Falls back to a plain message if renderers are missing.
+function renderModalList(containerId, data, cardHtmlFn, emptyMsg) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!data || !data.length) {
+    el.innerHTML = `<div class="empty">${emptyMsg}</div>`;
+    return;
+  }
+  if (typeof cardHtmlFn !== "function") {
+    el.innerHTML = `<div class="empty">No se pudo renderizar.</div>`;
+    return;
+  }
+  if (typeof renderVirtualList === "function") {
+    renderVirtualList(el, data, cardHtmlFn);
+  } else {
+    el.innerHTML = data.map(cardHtmlFn).join("");
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", wireChatModalSubTabs);
+} else {
+  wireChatModalSubTabs();
 }
 
