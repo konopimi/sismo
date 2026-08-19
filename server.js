@@ -309,6 +309,17 @@ db.exec(`
     created_at TEXT NOT NULL
   )
 `);
+// ========== Media Text (Standalone OCR Storage) ==========
+// Decoupled from the backlog/triage pipeline: every image's extracted text
+// is persisted here keyed by its own Matrix event id, so the Lightbox can
+// show OCR text even when the message never triggered a triage item.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS media_text (
+    source_event_id TEXT PRIMARY KEY,
+    raw_text TEXT,
+    created_at TEXT NOT NULL
+  )
+`);
 // Migrations for existing backlog tables (raw message + raw payload for debugging)
 try { db.exec("ALTER TABLE backlog ADD COLUMN raw_text TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE backlog ADD COLUMN raw_json TEXT"); } catch (e) {}
