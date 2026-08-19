@@ -303,6 +303,8 @@ db.exec(`
     extracted_data TEXT,
     raw_text TEXT,
     raw_json TEXT,
+    enriched_data TEXT,
+    message_count INTEGER DEFAULT 1,
     status TEXT DEFAULT 'pending',
     created_at TEXT NOT NULL
   )
@@ -310,6 +312,8 @@ db.exec(`
 // Migrations for existing backlog tables (raw message + raw payload for debugging)
 try { db.exec("ALTER TABLE backlog ADD COLUMN raw_text TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE backlog ADD COLUMN raw_json TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE backlog ADD COLUMN enriched_data TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE backlog ADD COLUMN message_count INTEGER DEFAULT 1"); } catch (e) {}
 // --- Migrations for existing columns (city and image) ---
 try {
   db.exec("ALTER TABLE disappeared ADD COLUMN city TEXT");
@@ -1393,7 +1397,7 @@ app.get("/api/backlog", requireAuth, (req, res) => {
 });
 
 app.post("/api/backlog", requireAuth, (req, res) => {
-  const { source_event_id, creator_matrix_id, intent, extracted_data, raw_text, raw_json } = req.body;
+  const { source_event_id, creator_matrix_id, intent, extracted_data, raw_text, raw_json, enriched_data, message_count } = req.body;
 
   if (!source_event_id || !intent) {
     return res.status(400).json({ error: "source_event_id and intent are required" });
@@ -1403,11 +1407,13 @@ app.post("/api/backlog", requireAuth, (req, res) => {
   const createdAt = new Date().toISOString();
   const dataJson = extracted_data ? JSON.stringify(extracted_data) : "[]";
   const rawJson = typeof raw_json === "string" ? raw_json : (raw_json ? JSON.stringify(raw_json) : null);
+  const enrichedJson = typeof enriched_data === "string" ? enriched_data : (enriched_data ? JSON.stringify(enriched_data) : null);
+  const msgCount = Number.isInteger(message_count) && message_count > 0 ? message_count : 1;
 
   try {
     db.prepare(
-      "INSERT INTO backlog (id, source_event_id, creator_matrix_id, intent, extracted_data, raw_text, raw_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    ).run(finalId, source_event_id, creator_matrix_id, intent, dataJson, raw_text || null, rawJson, createdAt);
+      "INSERT INTO backlog (id, source_event_id, creator_matrix_id, intent, extracted_data, raw_text, raw_json, enriched_data, message_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).run(finalId, source_event_id, creator_matrix_id, intent, dataJson, raw_text || null, rawJson, enrichedJson, msgCount, createdAt);
 
     res.status(201).json({ id: finalId, status: "pending" });
   } catch (e) {
@@ -1430,6 +1436,20 @@ app.patch("/api/backlog/:id", requireAuth, (req, res) => {
   if (result.changes === 0) return res.status(404).json({ error: "not found" });
 
   res.json({ ok: true });
+});
+
+// Fetch OCR text + intent for the Lightbox, keyed by Matrix event id.
+app.get("/api/backlog/by-event/:eventId", requireAuth, (req, res) => {
+  const row = db.prepare(
+    "SELECT raw_text, intent, enriched_data, extracted_data FROM backlog WHERE source_event_id = ?"
+  ).get(req.params.eventId);
+  if (!row) return res.json({});
+  res.json({
+    raw_text: row.raw_text,
+    intent: row.intent,
+    enriched_data: row.enriched_data ? JSON.parse(row.enriched_data) : null,
+    extracted_data: row.extracted_data ? JSON.parse(row.extracted_data) : []
+  });
 });
 // Static files AFTER all API routes so /api/* is never intercepted
 app.use(express.static("public"));

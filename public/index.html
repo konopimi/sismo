@@ -841,11 +841,11 @@
           </div>
         </div>
         <div
-          style="display:flex;gap:6px;padding:5px;border-top:1px solid rgba(120,120,120,0.3);flex:0 0 auto;align-items:flex-end;width:100%;box-sizing:border-box;">
+          style="display:flex;gap:6px;padding:5px;border-top:1px solid rgba(120,120,120,0.3);flex:0 0 auto;align-items:flex-end;min-width:100%;box-sizing:border-box;overflow:hidden;">
           <button id="chatAttachBtn" type="button" title="Adjuntar imagen o video" style="flex:0 0 auto;">📎</button>
           <input type="file" id="chatFileInput" accept="image/*,video/*" multiple style="display:none;" />
           <textarea id="chatInput" rows="1" placeholder="Escribe un mensaje..."
-            style="flex:1 1 0%;resize:none;min-height:38px;max-height:120px;font-family:inherit;min-width:0;width:auto;"></textarea>
+            style="flex:1 1 auto; resize:none; min-height:38px; max-height:120px; font-family:inherit; min-width:0; width:100%; box-sizing:border-box;"></textarea>
           <button id="chatSendBtn" style="flex:0 0 auto;">Enviar</button>
         </div>
         <!-- Contenido alternativo del modal (listas de sub-tabs) -->
@@ -870,7 +870,8 @@
         <!-- Sub-tabs de colaboradores dentro del modal de chat (siempre al fondo) -->
         <div id="chatModalSubTabs" class="sub-tabs"
           style="flex:0 0 auto;height:auto;border-top:1px solid rgba(120,120,120,0.3);border-bottom:none;">
-          <button class="sub-tab-btn active" data-subtab="chat">💬<span class="tab-label">Chat</span></button>
+          <button class="sub-tab-btn active" data-subtab="chat" style="margin-right: auto;">💬<span
+              class="tab-label">Chat</span></button>
           <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="tab-label">Donaciones</span></button>
           <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="tab-label">Necesidades</span></button>
           <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="tab-label">Logística</span></button>
@@ -906,8 +907,11 @@
       <div data-modal-body
         style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;">
         <button id="lightboxPrev" class="lightbox-nav lightbox-prev" aria-label="Anterior">‹</button>
-        <div id="lightboxStage"
-          style="max-width:100%;max-height:100%;display:flex;align-items:center;justify-content:center;"></div>
+        <div style="display:flex;flex-direction:column;flex:1;min-height:0;width:100%;">
+          <div id="lightboxStage"
+            style="max-width:100%;max-height:100%;display:flex;align-items:center;justify-content:center;flex:1;min-height:0;"></div>
+          <div id="lightboxOcr" style="width:100%;max-width:800px;margin:0 auto;padding:0 12px 12px;"></div>
+        </div>
         <button id="lightboxNext" class="lightbox-nav lightbox-next" aria-label="Siguiente">›</button>
       </div>
     </div>

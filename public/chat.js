@@ -819,7 +819,7 @@ function createMessageNode(item) {
             const c = ev.getContent();
             const fullSrc = c.url ? matrixClient.mxcUrlToHttp(c.url) : null;
             const thumbSrc = c.info?.thumbnail_url ? matrixClient.mxcUrlToHttp(c.info.thumbnail_url) : fullSrc;
-            return { msgtype: c.msgtype, src: thumbSrc, fullSrc, body: c.body };
+            return { msgtype: c.msgtype, src: thumbSrc, fullSrc, body: c.body, eventId: ev.getId() };
         });
 
         const gridEl = document.createElement("div");
@@ -917,7 +917,7 @@ function createMessageNode(item) {
             gridEl.style.aspectRatio = "4 / 3";
             gridEl.style.minHeight = "120px";
         }
-        const group = { sender, ts: item.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body }] };
+        const group = { sender, ts: item.getTs(), gridEl, items: [{ msgtype, src: thumbSrc, fullSrc, body: content.body, eventId: item.getId() }] };
         renderMediaGrid(group);
         div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>${replyHtml}`;
         div.appendChild(group.gridEl);
@@ -1027,9 +1027,40 @@ function updateLightboxStage() {
         stage.innerHTML = `<div style="position:relative;display:inline-block;max-width:100%;max-height:100%;"><span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "")}" style="max-width:100%;max-height:100%;object-fit:contain;" /></div>`;
     }
 
+    // OCR / extracted-text panel below the media (images only)
+    const ocrContainer = document.getElementById("lightboxOcr");
+    if (ocrContainer) {
+        if (item.msgtype === "m.image" && item.eventId) {
+            ocrContainer.innerHTML = `<div style="text-align:center;color:#666;font-size:0.8rem;">Cargando texto extraído…</div>`;
+            fetchOcrText(item.eventId, ocrContainer);
+        } else {
+            ocrContainer.innerHTML = "";
+        }
+    }
+
     if (counter) counter.textContent = `${_lightboxIndex + 1} / ${_lightboxItems.length}`;
     if (prevBtn) prevBtn.disabled = _lightboxIndex === 0;
     if (nextBtn) nextBtn.disabled = _lightboxIndex === _lightboxItems.length - 1;
+}
+
+async function fetchOcrText(eventId, container) {
+    try {
+        const res = await authFetch(`${API_BASE}/backlog/by-event/${encodeURIComponent(eventId)}`);
+        if (!res.ok) { container.innerHTML = ""; return; }
+        const data = await res.json();
+        if (!data.raw_text) { container.innerHTML = ""; return; }
+        container.innerHTML = `
+            <div style="padding:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:0.9rem;color:#ccc;max-height:25vh;overflow-y:auto;text-align:left;">
+                <div style="font-size:0.75rem;color:#45d6d6;margin-bottom:8px;font-weight:bold;">
+                    🧠 Texto extraído
+                    ${data.intent ? `<span style="background:rgba(69,214,214,0.2);padding:2px 6px;border-radius:4px;margin-left:6px;">${escapeHtml(data.intent)}</span>` : ''}
+                </div>
+                <pre style="white-space:pre-wrap;word-break:break-word;margin:0;font-family:inherit;line-height:1.5;">${escapeHtml(data.raw_text)}</pre>
+            </div>`;
+    } catch (e) {
+        console.error("OCR fetch failed:", e);
+        container.innerHTML = "";
+    }
 }
 
 // Wire lightbox nav buttons once
