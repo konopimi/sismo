@@ -755,6 +755,18 @@ function bindChatEvents() {
             fileInput.value = "";
         });
     }
+
+    // Camera button: opens the device camera (mobile) or a file picker
+    // filtered to images (desktop) via the capture attribute.
+    const cameraBtn = document.getElementById("chatCameraBtn");
+    const cameraInput = document.getElementById("chatCameraInput");
+    if (cameraBtn && cameraInput) {
+        cameraBtn.addEventListener("click", () => cameraInput.click());
+        cameraInput.addEventListener("change", async () => {
+            for (const file of Array.from(cameraInput.files || [])) await sendChatFile(file);
+            cameraInput.value = "";
+        });
+    }
     
     input.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
