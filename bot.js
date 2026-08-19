@@ -1,6 +1,5 @@
 import fs from "fs";
 
-// --- Cargar .env.bot manualmente ---
 const envPath = "/opt/sismo-api/.env.bot";
 if (fs.existsSync(envPath)) {
   const content = fs.readFileSync(envPath, "utf8");
@@ -65,7 +64,7 @@ async function login() {
   }
   if (!ENV.LOCALPART || !ENV.MATRIX_PASS) {
     throw new Error(
-      "Falta MATRIX_ACCESS_TOKEN o MATRIX_PASSWORD + MATRIX_LOCALPART en .env.bot",
+      "Falta MATRIX_ACCESS_TOKEN o MATRIX_PASSWORD + MATRIX_LOCALPART",
     );
   }
   const data = await matrixFetch("/_matrix/client/v3/login", {
@@ -79,10 +78,6 @@ async function login() {
   ENV.ACCESS_TOKEN = data.access_token;
   myUserId = data.user_id;
   console.log("[bot] Logged in as", myUserId);
-  console.log("[bot] ACCESS_TOKEN:", data.access_token);
-  console.log(
-    "[bot] → Guardá ese token en .env.bot como MATRIX_ACCESS_TOKEN para no volver a loguear con password",
-  );
 }
 
 async function joinRoom() {
@@ -90,7 +85,6 @@ async function joinRoom() {
     `/_matrix/client/v3/directory/room/${encodeURIComponent(ENV.ROOM_ALIAS)}`,
   );
   targetRoomId = aliasRes.room_id;
-  console.log("[bot] Room", ENV.ROOM_ALIAS, "→", targetRoomId);
   try {
     await matrixFetch(
       `/_matrix/client/v3/rooms/${encodeURIComponent(targetRoomId)}/join`,
@@ -107,6 +101,27 @@ async function joinRoom() {
       throw e;
     }
   }
+}
+
+async function apiLogin() {
+  const url = `${ENV.API_BASE}/auth/login`;
+  console.log("[bot] Logging into API at", url);
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identifier: ENV.BOT_EMAIL, password: ENV.BOT_PASS }),
+  });
+  const text = await res.text();
+  console.log(
+    "[bot] API login status:",
+    res.status,
+    "body:",
+    text.substring(0, 200),
+  );
+  if (!res.ok) throw new Error(`API login ${res.status}: ${text}`);
+  const data = JSON.parse(text);
+  if (!data.token) throw new Error("No token in response: " + text);
+  return data.token;
 }
 
 async function processMessage(roomId, event) {
@@ -146,16 +161,7 @@ async function processMessage(roomId, event) {
 
   let apiToken;
   try {
-    const loginRes = await fetch(`${ENV.API_BASE}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        identifier: ENV.BOT_EMAIL,
-        password: ENV.BOT_PASS,
-      }),
-    }).then((r) => r.json());
-    apiToken = loginRes.token;
-    if (!apiToken) throw new Error("No token: " + JSON.stringify(loginRes));
+    apiToken = await apiLogin();
   } catch (e) {
     console.error("[bot] ❌ API login failed:", e.message);
     return;
@@ -180,11 +186,15 @@ async function processMessage(roomId, event) {
         timestamp: Date.now(),
       }),
     });
+    const backlogText = await backlogRes.text();
     if (backlogRes.ok) {
-      console.log("[bot] ✅ Backlog created");
+      console.log("[bot] ✅ Backlog created:", backlogText.substring(0, 100));
     } else {
-      const errText = await backlogRes.text();
-      console.error("[bot] ❌ Backlog POST", backlogRes.status, errText);
+      console.error(
+        "[bot] ❌ Backlog POST",
+        backlogRes.status,
+        backlogText.substring(0, 200),
+      );
     }
   } catch (e) {
     console.error("[bot] ❌ Backlog error:", e.message);
