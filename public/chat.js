@@ -19,6 +19,14 @@ function getUserColor(userId) {
     return `hsl(${hue}, 70%, 75%)`;
 }
 
+// Format seconds into mm:ss
+function formatDuration(seconds) {
+    if (!seconds || isNaN(seconds)) return "";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 // ================================================================
 //  CHAT VIRTUALIZER (Bidirectional DOM Windowing)
 // ================================================================
@@ -501,6 +509,7 @@ function updateReplyBar() {
     let previewText = replyingTo.body || "";
     if (replyingTo.msgtype === "m.image") previewText = "📷 Imagen";
     else if (replyingTo.msgtype === "m.video") previewText = "🎬 Video";
+    else if (replyingTo.msgtype === "m.audio") previewText = "🎤 Audio";
     previewText = previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
     preview.innerHTML = `<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong style="color:${replyColor};">${escapeHtml(name)}</strong> ${escapeHtml(previewText)}</div>`;
     bar.style.display = "flex";
@@ -908,6 +917,7 @@ function createMessageNode(item) {
             let previewText = replyPreview.body || "";
             if (replyPreview.msgtype === "m.image") previewText = "📷 Imagen";
             else if (replyPreview.msgtype === "m.video") previewText = "🎬 Video";
+            else if (replyPreview.msgtype === "m.audio") previewText = "🎤 Audio";
             previewText = previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
             const clickAttr = replyEventId ? ` onclick="window.scrollToChatEvent('${replyEventId}')" style="cursor:pointer;"` : "";
             replyHtml = `<div class="msg-reply"${clickAttr} style="margin-bottom:4px;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid ${replyColor};font-size:0.8rem;"><div style="font-weight:600;font-size:0.7rem;color:${replyColor};">${escapeHtml(replySender)}</div><div style="color:#ccc;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(previewText)}</div></div>`;
@@ -963,6 +973,7 @@ function createMessageNode(item) {
         let previewText = replyPreview.body || "";
         if (replyPreview.msgtype === "m.image") previewText = "📷 Imagen";
         else if (replyPreview.msgtype === "m.video") previewText = "🎬 Video";
+        else if (replyPreview.msgtype === "m.audio") previewText = "🎤 Audio";
         previewText = previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
         const clickAttr = replyEventId ? ` onclick="window.scrollToChatEvent('${replyEventId}')" style="cursor:pointer;"` : "";
         replyHtml = `<div class="msg-reply"${clickAttr} style="margin-bottom:4px;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid ${replyColor};font-size:0.8rem;"><div style="font-weight:600;font-size:0.7rem;color:${replyColor};">${escapeHtml(replySender)}</div><div style="color:#ccc;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(previewText)}</div></div>`;
@@ -984,6 +995,10 @@ function createMessageNode(item) {
         renderMediaGrid(group);
         div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>${replyHtml}`;
         div.appendChild(group.gridEl);
+    } else if (msgtype === "m.audio") {
+        const audioSrc = content.url ? matrixClient.mxcUrlToHttp(content.url) : null;
+        const duration = content.info?.duration ? formatDuration(content.info.duration) : "";
+        div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>${replyHtml}<div style="display:flex;align-items:center;gap:8px;padding:4px 0;"><audio controls style="height:28px;flex:1;" src="${escapeHtml(audioSrc || "")}"></audio>${duration ? `<span style="font-size:0.75em;opacity:0.7;">${duration}</span>` : ""}</div>`;
     } else {
         div.innerHTML = `<div class="msg-sender-name" style="font-size:70%;opacity:0.7;display:flex;align-items:center;gap:6px;"><span style="color:${senderColor};font-weight:600;">${escapeHtml(name)}</span><span style="font-size:60%;opacity:0.6;">${escapeHtml(timeStr)}</span></div>${replyHtml}<div style="white-space:pre-wrap;">${escapeHtml(content.body || "")}</div>`;
     }
