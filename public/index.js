@@ -2071,8 +2071,9 @@ function entityCardHtml(item, type, placeholderImg) {
   const cardStatusClass = found ? "encontrado" : statusCssClass(item.status);
   const statusTagLabel = isAngel ? "👼" : statusLabel(item.status);
   const statusTagClass = found ? "encontrado" : statusCssClass(item.status);
+  const statusColorHex = statusColor(found ? "encontrado" : item.status);
   return `
-        <div class="card ${cardStatusClass}" data-id="${item.id}" data-type="${type}" style = "${isAngel && "background:#6fa8dc; color: white; opacity: 0.62; border-left: 4px solid white; "}" >
+        <div class="card ${cardStatusClass}" data-id="${item.id}" data-type="${type}" style="--status-color:${statusColorHex};${isAngel && "background:#6fa8dc; color: white; opacity: 0.62; border-left: 4px solid white; "}" >
     <div style="padding:5px;background:rgba(var(--surface),0.38)">
       <span class="name"
         style="${isAngel && " color:white;"}"
@@ -2397,6 +2398,7 @@ function buildingCardHtml(item) {
   const statusClass = item.status || "seguro";
   const statusTagLabel = statusLabel(statusClass);
   const statusTagClass = statusCssClass(statusClass);
+  const statusColorHex = statusColor(statusClass);
   let imgHtml = "";
   if (item.photo_url) {
     imgHtml = `<img class="card-photo" src="${escapeHtml(item.photo_url)}" alt="Foto" />`;
@@ -2406,7 +2408,7 @@ function buildingCardHtml(item) {
     imgHtml = `<img style="opacity:0.62;" class="card-photo" src="${BUILDING_PLACEHOLDER}" alt="Imagen" />`;
   }
   return `
-        <div class="card ${statusClass}" data-id="${item.id}" data-type="building">
+        <div class="card ${statusClass}" data-id="${item.id}" data-type="building" style="--status-color:${statusColorHex};">
 <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
               <span class="name">${escapeHtml(item.name)}${item.private ? " 🔒" : ""}</span>
 </div>
@@ -2812,7 +2814,7 @@ function colabCardHtml(item) {
   metaParts.push(date);
   const imgHtml = `<img style="opacity:0.62;filter:${placeholderFilter("colaborador")};" class="card-photo" src="${COLAB_PLACEHOLDER}" alt="Colaborador" />`;
   return `
-        <div class="card colaborador" data-id="${item.id}" data-type="colaborador">
+        <div class="card colaborador" data-id="${item.id}" data-type="colaborador" style="--status-color:${statusColor("colaborador")};">
 <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
               <span class="name">${escapeHtml(item.name)}</span>
 </div>
