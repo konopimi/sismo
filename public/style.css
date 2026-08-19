@@ -1739,10 +1739,15 @@ textarea {
 }
 
 /* ===== Lightbox ===== */
+#lightboxStage {
+  overflow: hidden;
+}
 #lightboxStage img,
 #lightboxStage video {
   max-width: 100%;
-  max-height: calc(100vh - 60px);
+  max-height: 100%;
+  width: auto;
+  height: auto;
   object-fit: contain;
   display: block;
 }
