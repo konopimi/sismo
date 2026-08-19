@@ -327,9 +327,25 @@ const SEPIA_BASE_HUE = 60;
 // given status color. Standard "black → any color" technique: black → white
 // → sepia → saturate to a pure hue → rotate to the target hue.
 function placeholderFilter(status) {
-  const hue = hexToHue(statusMeta(status).color);
+  const color = statusMeta(status).color;
+  const hue = hexToHue(color);
+  // Achromatic (gray) colors have no hue; the sepia pipeline would tint
+  // them red/orange. Return a plain grayscale filter instead.
+  if (isGray(color)) {
+    return "brightness(0) invert(100%) grayscale(100%)";
+  }
   const rotate = hue - SEPIA_BASE_HUE;
   return `brightness(0) invert(100%) sepia(100%) saturate(10000%) hue-rotate(${rotate.toFixed(1)}deg)`;
+}
+// True when a hex color is achromatic (r === g === b), i.e. a shade of gray.
+function isGray(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec((hex || "").trim());
+  if (!m) return false;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return r === g && g === b;
 }
 // ================================================================
 //  UTILIDADES
