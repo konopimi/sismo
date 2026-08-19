@@ -861,14 +861,16 @@ async function sendChatFile(file) {
 function mediaThumbHtml(item, index, isLast, extraCount) {
   const src = item.src;
   const fullSrc = item.fullSrc || src;
+  const emoji = item.msgtype === "m.video" ? "🎬" : "📷";
   let inner;
   if (item.msgtype === "m.video") {
-    inner = src ? `<video src="${escapeHtml(src)}" muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>` : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">🎬</div>`;
+    inner = src ? `<video src="${escapeHtml(src)}" muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>` : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">${emoji}</div>`;
   } else {
-    inner = src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "imagen")}" loading="lazy" decoding="async" onerror="if(!this.dataset.retry){this.dataset.retry='1';this.src='${escapeHtml(fullSrc)}';}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" />` : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">📷</div>`;
+    inner = src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "imagen")}" loading="lazy" decoding="async" onerror="if(!this.dataset.retry){this.dataset.retry='1';this.src='${escapeHtml(fullSrc)}';}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" />` : `<div style="color:#999;display:flex;align-items:center;justify-content:center;height:100%;">${emoji}</div>`;
   }
   const overlay = isLast && extraCount > 0 ? `<div class="chat-media-more">+${extraCount}</div>` : "";
-  return `<div class="chat-media-item" data-index="${index}">${inner}${overlay}</div>`;
+  const emojiOverlay = `<span style="position:absolute;top:4px;left:4px;font-size:0.9em;z-index:1;pointer-events:none;">${emoji}</span>`;
+  return `<div class="chat-media-item" data-index="${index}" style="position:relative;">${inner}${emojiOverlay}${overlay}</div>`;
 }
 
 function renderMediaGrid(group) {
