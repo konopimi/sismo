@@ -1449,18 +1449,48 @@ app.patch("/api/backlog/:id", requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// Standalone OCR storage — independent of triage decisions.
+app.post("/api/media-text", requireAuth, (req, res) => {
+  const { source_event_id, raw_text } = req.body || {};
+  if (!source_event_id || !raw_text) {
+    return res.status(400).json({ error: "source_event_id and raw_text are required" });
+  }
+  const createdAt = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO media_text (source_event_id, raw_text, created_at)
+     VALUES (?, ?, ?)
+     ON CONFLICT(source_event_id) DO UPDATE SET raw_text = excluded.raw_text`
+  ).run(source_event_id, raw_text, createdAt);
+  res.status(201).json({ ok: true });
+});
+
 // Fetch OCR text + intent for the Lightbox, keyed by Matrix event id.
 app.get("/api/backlog/by-event/:eventId", requireAuth, (req, res) => {
+  // 1. Check backlog first (triaged messages)
   const row = db.prepare(
     "SELECT raw_text, intent, enriched_data, extracted_data FROM backlog WHERE source_event_id = ?"
   ).get(req.params.eventId);
-  if (!row) return res.json({});
-  res.json({
-    raw_text: row.raw_text,
-    intent: row.intent,
-    enriched_data: row.enriched_data ? JSON.parse(row.enriched_data) : null,
-    extracted_data: row.extracted_data ? JSON.parse(row.extracted_data) : []
-  });
+
+  if (row) {
+    return res.json({
+      raw_text: row.raw_text,
+      intent: row.intent,
+      enriched_data: row.enriched_data ? JSON.parse(row.enriched_data) : null,
+      extracted_data: row.extracted_data ? JSON.parse(row.extracted_data) : []
+    });
+  }
+
+  // 2. Fallback to media_text (non-triaged images)
+  const mediaRow = db.prepare(
+    "SELECT raw_text FROM media_text WHERE source_event_id = ?"
+  ).get(req.params.eventId);
+
+  if (mediaRow) {
+    return res.json({ raw_text: mediaRow.raw_text, intent: null, enriched_data: null, extracted_data: [] });
+  }
+
+  // 3. Nothing found
+  res.json({});
 });
 // Static files AFTER all API routes so /api/* is never intercepted
 app.use(express.static("public"));

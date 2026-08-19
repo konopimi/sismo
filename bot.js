@@ -351,7 +351,22 @@ async function processMessageBatch(userId, messages) {
   for (const { url, source, eventId } of imageUrls) {
     console.log(`[bot] 🔍 OCR ${source} image (${eventId})...`);
     const ocrText = await extractTextFromImage(url);
-    if (ocrText) ocrParts.push(ocrText);
+    if (ocrText) {
+      ocrParts.push(ocrText);
+
+      // Persist immediately, keyed by this image's own event ID — independent
+      // of whatever Rasa/NIM/whitelist decide about the batch downstream.
+      try {
+        await safeApiCall(`${ENV.API_BASE}/api/media-text`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ source_event_id: eventId, raw_text: ocrText })
+        });
+        console.log(`[bot] ✅ Persisted OCR for ${eventId}`);
+      } catch (e) {
+        console.error(`[bot] ⚠️ Failed to persist OCR for ${eventId}:`, e.message);
+      }
+    }
   }
 
   let combinedText = textParts.join('\n');
