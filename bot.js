@@ -433,9 +433,9 @@ async function processMessageBatch(userId, messages) {
   let finalEntities = entities;
   let enrichedData = null;
 
-  // Low confidence: always route through NIM for enrichment before saving
-  if (intent.confidence < ENV.THRESHOLD) {
-    console.log("[bot] 🐢 Low confidence, NIM structuring");
+  // Low confidence OR explicit fallback: always route through NIM for enrichment before saving
+  if (intent.name === "nlu_fallback" || intent.confidence < ENV.THRESHOLD) {
+    console.log("[bot] 🐢 Low confidence / Fallback, NIM structuring");
     try {
       const structured = await structureWithNIM(combinedText);
       if (structured.intent !== "unknown") finalIntent = structured.intent;
@@ -467,6 +467,11 @@ async function processMessageBatch(userId, messages) {
     } catch (e) {
       console.error("[bot] ⚠️ NIM failed, using Rasa raw:", e.message);
     }
+  }
+
+  if (finalIntent === "nlu_fallback") {
+    console.log("[bot] ⏭️ Unresolvable fallback, skipping save");
+    return;
   }
 
   try {
