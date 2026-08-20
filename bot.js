@@ -438,8 +438,8 @@ async function processMessageBatch(userId, messages) {
       enrichedData = structured;
       console.log(`[bot] ✅ NIM: ${finalIntent}`);
     } catch (e) {
-      console.error("[bot] ⚠️ NIM failed, skipping:", e.message);
-      return;
+      console.error("[bot] ⚠️ NIM failed, saving with Rasa raw:", e.message);
+      // fall through — save with Rasa's intent even if low confidence
     }
   } else if (intent.confidence > 0.90 && entities.length >= 2) {
     console.log("[bot] ⚡ Fast path");
@@ -517,10 +517,6 @@ async function doSync() {
     const content = event.content || {};
     if (content.msgtype === "m.reaction") continue;
     if (content["m.relates_to"]?.rel_type === "m.replace") continue;
-    if (content.msgtype === "m.audio") {
-      console.log(`[bot] ⏭️ Skipping voice message from ${event.sender}`);
-      continue;
-    }
 
     let text = content.body || "";
     const isReply = content["m.relates_to"]?.["m.in_reply_to"]?.event_id;
