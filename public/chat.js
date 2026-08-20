@@ -52,6 +52,19 @@ class ChatVirtualList {
     this._pendingScrollTo = null;
     this._isDestroyed = false;
 
+    // Track active user interaction (touch/mouse) so _stickToBottom
+    // doesn't fight the browser's momentum/overscroll animation.
+    this._userInteracting = false;
+    this._onPointerDown = () => { this._userInteracting = true; };
+    this._onPointerUp = () => {
+      // Small delay so trailing momentum from the gesture doesn't
+      // immediately get fought by the next stick call.
+      setTimeout(() => { this._userInteracting = false; }, 150);
+    };
+    this.container.addEventListener("pointerdown", this._onPointerDown, { passive: true });
+    this.container.addEventListener("pointerup", this._onPointerUp, { passive: true });
+    this.container.addEventListener("pointercancel", this._onPointerUp, { passive: true });
+
     // ResizeObserver: sticky bottom when pinned, compensate when scrolled up
     this._resizeObserver = new ResizeObserver((entries) => {
       if (this._isDestroyed) return;
@@ -64,7 +77,7 @@ class ChatVirtualList {
         const newH = entry.target.offsetHeight;
         const oldH = this.heights.get(id) || this.DEFAULT_HEIGHT;
 
-        if (oldH !== newH) {
+        if (Math.abs(newH - oldH) >= 2) {
           this.heights.set(id, newH);
           changed = true;
 
@@ -96,6 +109,9 @@ class ChatVirtualList {
   destroy() {
     this._isDestroyed = true;
     this.container.removeEventListener("scroll", this._onScroll);
+    this.container.removeEventListener("pointerdown", this._onPointerDown);
+    this.container.removeEventListener("pointerup", this._onPointerUp);
+    this.container.removeEventListener("pointercancel", this._onPointerUp);
     this._resizeObserver.disconnect();
     this.nodes.forEach((node) => node.remove());
     this.nodes.clear();
@@ -250,7 +266,7 @@ class ChatVirtualList {
   }
 
   _stickToBottom() {
-    if (this._isDestroyed || !this.isAtBottom) return;
+    if (this._isDestroyed || !this.isAtBottom || this._userInteracting) return;
     if (this._stickRaf) cancelAnimationFrame(this._stickRaf);
     this._stickRaf = requestAnimationFrame(() => {
       if (this._isDestroyed) return;
@@ -543,7 +559,8 @@ function updateReplyBar() {
     previewText =
       previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
     preview.innerHTML = `<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong style="color:${replyColor};">${escapeHtml(name)}</strong> ${escapeHtml(previewText)}</div>`;
-    bar.style.visibility = "visible";
+    suspendStickDuringTransition(bar);
+    bar.classList.add("visible");
     if (name.includes("-") && name.length === 36) {
       loadMatrixDirectory().then((dir) => {
         matrixDirectory = dir;
@@ -555,9 +572,29 @@ function updateReplyBar() {
       });
     }
   } else {
-    bar.style.visibility = "hidden";
-    preview.innerHTML = "";
+    suspendStickDuringTransition(bar);
+    bar.classList.remove("visible");
+    // Clear preview after transition so text doesn't vanish mid-collapse
+    setTimeout(() => { preview.innerHTML = ""; }, 160);
   }
+}
+
+function suspendStickDuringTransition(el) {
+  if (!chatVirtualizer) return;
+  chatVirtualizer._userInteracting = true;
+  const done = () => {
+    el.removeEventListener("transitionend", done);
+    chatVirtualizer._userInteracting = false;
+    chatVirtualizer._stickToBottom();
+  };
+  el.addEventListener("transitionend", done, { once: true });
+  // Fallback in case transitionend doesn't fire (e.g. modal closed mid-transition)
+  setTimeout(() => {
+    if (chatVirtualizer && chatVirtualizer._userInteracting) {
+      chatVirtualizer._userInteracting = false;
+      chatVirtualizer._stickToBottom();
+    }
+  }, 200);
 }
 
 function matrixSdk() {
@@ -1470,7 +1507,7 @@ function setChatModalSubTab(target) {
   // and the div falls back to display:block, breaking the row.
   if (inputBar) inputBar.style.display = isChat ? "flex" : "none";
   // Only show reply bar if we're actually replying to something.
-  if (replyBar) replyBar.style.visibility = (isChat && replyingTo) ? "visible" : "hidden";
+  if (replyBar) replyBar.classList.toggle("visible", isChat && replyingTo);
   panels.style.display = isChat ? "none" : "flex";
 
   // Lazy-load the target list into the modal's own container.
