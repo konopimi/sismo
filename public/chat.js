@@ -527,6 +527,7 @@ function clearReplyingTo() {
 }
 function updateReplyBar() {
   const bar = document.getElementById("chatReplyBar");
+  const placeholder = document.getElementById("chatReplyBarPlaceholder");
   const preview = document.getElementById("chatReplyPreview");
   if (!bar || !preview) return;
   if (replyingTo) {
@@ -544,6 +545,8 @@ function updateReplyBar() {
       previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
     preview.innerHTML = `<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong style="color:${replyColor};">${escapeHtml(name)}</strong> ${escapeHtml(previewText)}</div>`;
     bar.style.display = "flex";
+    // Reserve space in layout to prevent scroll jump/vibration
+    if (placeholder) placeholder.style.height = bar.offsetHeight + "px";
     if (name.includes("-") && name.length === 36) {
       loadMatrixDirectory().then((dir) => {
         matrixDirectory = dir;
@@ -556,6 +559,7 @@ function updateReplyBar() {
     }
   } else {
     bar.style.display = "none";
+    if (placeholder) placeholder.style.height = "0";
     preview.innerHTML = "";
   }
 }
