@@ -280,9 +280,13 @@ The JSON must strictly follow this schema:
   "contact": "string",
   "notes": "string"
 }
-Rules:
+CRITICAL RULES — extract ONLY what is explicitly stated in the text:
+- NEVER invent quantities, units, locations, or contacts that are not present.
+- If a quantity is not stated, set "quantity" to null (do NOT guess a number).
+- If a unit is not stated, set "unit" to null (do NOT use articles like "unas"/"unos" as units).
+- If a location is not stated, set "location" to null (do NOT use the first word of the sentence).
+- If no items are mentioned, use [].
 - Use "unknown" for intent if unclear.
-- Use [] for items if none are found.
 - Extract quantities as numbers, not strings.`
         },
         { role: "user", content: rawText }
@@ -331,11 +335,13 @@ Rules:
 function nimEntitiesToFlat(structured) {
   const out = [];
   for (const i of structured.items || []) {
-    out.push({ entity: "item", value: i.name });
+    if (i.name) out.push({ entity: "item", value: i.name });
     if (i.quantity != null) out.push({ entity: "quantity", value: String(i.quantity) });
     if (i.unit) out.push({ entity: "unit", value: i.unit });
   }
-  if (structured.location) out.push({ entity: "location", value: structured.location });
+  if (structured.location && structured.location !== "desconocido" && structured.location !== "desconocida") {
+    out.push({ entity: "location", value: structured.location });
+  }
   if (structured.urgency) out.push({ entity: "urgency", value: structured.urgency });
   return out;
 }
