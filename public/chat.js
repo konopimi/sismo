@@ -1459,7 +1459,8 @@ function setChatModalSubTab(target) {
   // when toggling visibility — an empty string removes the inline style
   // and the div falls back to display:block, breaking the row.
   if (inputBar) inputBar.style.display = isChat ? "flex" : "none";
-  if (replyBar) replyBar.style.display = isChat ? "flex" : "none";
+  // Only show reply bar if we're actually replying to something.
+  if (replyBar) replyBar.style.display = (isChat && replyingTo) ? "flex" : "none";
   panels.style.display = isChat ? "none" : "flex";
 
   // Lazy-load the target list into the modal's own container.
