@@ -527,7 +527,6 @@ function clearReplyingTo() {
 }
 function updateReplyBar() {
   const bar = document.getElementById("chatReplyBar");
-  const placeholder = document.getElementById("chatReplyBarPlaceholder");
   const preview = document.getElementById("chatReplyPreview");
   if (!bar || !preview) return;
   if (replyingTo) {
@@ -544,9 +543,7 @@ function updateReplyBar() {
     previewText =
       previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
     preview.innerHTML = `<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong style="color:${replyColor};">${escapeHtml(name)}</strong> ${escapeHtml(previewText)}</div>`;
-    bar.style.display = "flex";
-    // Reserve space in layout to prevent scroll jump/vibration
-    if (placeholder) placeholder.style.height = bar.offsetHeight + "px";
+    bar.style.visibility = "visible";
     if (name.includes("-") && name.length === 36) {
       loadMatrixDirectory().then((dir) => {
         matrixDirectory = dir;
@@ -558,8 +555,7 @@ function updateReplyBar() {
       });
     }
   } else {
-    bar.style.display = "none";
-    if (placeholder) placeholder.style.height = "0";
+    bar.style.visibility = "hidden";
     preview.innerHTML = "";
   }
 }
@@ -1474,7 +1470,7 @@ function setChatModalSubTab(target) {
   // and the div falls back to display:block, breaking the row.
   if (inputBar) inputBar.style.display = isChat ? "flex" : "none";
   // Only show reply bar if we're actually replying to something.
-  if (replyBar) replyBar.style.display = (isChat && replyingTo) ? "flex" : "none";
+  if (replyBar) replyBar.style.visibility = (isChat && replyingTo) ? "visible" : "hidden";
   panels.style.display = isChat ? "none" : "flex";
 
   // Lazy-load the target list into the modal's own container.
