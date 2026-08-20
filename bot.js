@@ -273,7 +273,7 @@ async function structureWithNIM(rawText) {
 Respond with ONLY a valid JSON object. Do not include markdown formatting (like \`\`\`json), prose, or explanations.
 The JSON must strictly follow this schema:
 {
-  "intent": "donate_offer" | "request_help" | "report_need" | "report_emergency" | "find_supplier" | "volunteer_recruitment" | "request_item" | "unknown",
+  "intent": "donate_offer" | "request_help" | "report_need" | "report_emergency" | "find_supplier" | "volunteer_recruitment" | "request_item" | "mental_health" | "unknown",
   "items": [{"name": "string", "quantity": number, "unit": "string"}],
   "location": "string",
   "urgency": "low" | "medium" | "high" | "critical",

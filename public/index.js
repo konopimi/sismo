@@ -3243,6 +3243,7 @@ const BACKLOG_INTENT_EMOJI = {
   request_help: "🙋", status_update: "🔄", report_emergency: "🚨", ask_about_point: "📍",
   offer_transport: "🚗", request_confirmation: "✅", gratitude: "🙏", welcome_member: "👋",
   request_supplies: "📦", report_issue: "⚠️", share_info: "ℹ️",
+  find_supplier: "🔍", volunteer_recruitment: "🤝", request_item: "📦", mental_health: "🧠",
 };
 async function loadListBacklog() {
   if (!getAuthToken()) { backlogData = []; renderBacklog(); return; }
