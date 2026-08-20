@@ -845,13 +845,15 @@
           <div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto;">
             <button id="chatAttachBtn" type="button" title="Adjuntar imagen o video" style="flex:0 0 auto;">📎</button>
             <button id="chatCameraBtn" type="button" title="Tomar foto con la cámara" style="flex:0 0 auto;">📷</button>
-            <button id="chatMicBtn" type="button" title="Grabar mensaje de voz" style="flex:0 0 auto;">🎤</button>
           </div>
           <input type="file" id="chatFileInput" accept="image/*,video/*" multiple style="display:none;" />
           <input type="file" id="chatCameraInput" accept="image/*" capture="environment" style="display:none;" />
           <textarea id="chatInput" rows="1" placeholder="Escribe un mensaje..."
             style="flex:1 1 auto; resize:none; min-height:100%; max-height:300px; font-family:inherit; min-width:0; width:100%; box-sizing:border-box;"></textarea>
-          <button id="chatSendBtn" style="flex:0 0 auto;">Enviar</button>
+          <div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto;">
+            <button id="chatMicBtn" type="button" title="Grabar mensaje de voz" style="flex:0 0 auto;">🎤</button>
+            <button id="chatSendBtn" style="flex:0 0 auto;">Enviar</button>
+          </div>
         </div>
         <!-- Contenido alternativo del modal (listas de sub-tabs) -->
         <div id="chatModalSubPanels" style="flex:1;min-height:0;display:none;flex-direction:column;overflow:hidden;">
