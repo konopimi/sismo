@@ -3287,7 +3287,7 @@ function backlogCardHtml(item) {
         </div>
       </div>
       <div style="padding:6px;display:flex;gap:6px;justify-content:flex-end;">
-        <button class="btn-small" onclick="setBacklogStatus('${item.id}','accepted')">✅ Aceptar</button>
+        <button class="btn-small" onclick="openPromoteModal('${item.id}')">✅ Aceptar y promover</button>
         <button class="btn-small btn-delete" onclick="setBacklogStatus('${item.id}','rejected')">✕ Rechazar</button>
       </div>
     </div>
@@ -3328,7 +3328,7 @@ function openBacklogModal(item) {
     ${rawJson}
   `;
   modalActions.innerHTML = `
-    <button class="btn-small" onclick="setBacklogStatus('${item.id}','accepted'); closeModal();">✅ Aceptar</button>
+    <button class="btn-small" onclick="openPromoteModal('${item.id}'); closeModal();">✅ Aceptar y promover</button>
     <button class="btn-small btn-delete" onclick="setBacklogStatus('${item.id}','rejected'); closeModal();">✕ Rechazar</button>
   `;
   document.getElementById("commentsContainer").style.display = "none";
