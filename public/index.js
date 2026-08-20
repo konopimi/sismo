@@ -3303,6 +3303,45 @@ function renderBacklog() {
   }
   renderVirtualList(listElBacklog, searched, backlogCardHtml);
 }
+// Open a backlog item in the detail modal (same as other item types).
+function openBacklogModal(item) {
+  const emoji = BACKLOG_INTENT_EMOJI[item.intent] || "🧠";
+  const date = new Date(item.created_at).toLocaleString("es-CO", {
+    day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+  modalTitle.textContent = `${emoji} ${item.intent || "Mensaje"}`;
+  modalStatus.innerHTML = `<span class="status-tag backlog-${escapeHtml(item.status || "pending")}">${BACKLOG_STATUS_LABEL[item.status] || item.status}</span>`;
+  modalMeta.innerHTML = `
+    <span>🕒 ${date}</span>
+    <span>👤 ${escapeHtml(item.creator_name || item.creator_matrix_id || "—")}</span>
+  `;
+  const entities = Array.isArray(item.extracted_data) && item.extracted_data.length
+    ? item.extracted_data.map((e) => `<span class="meta">${escapeHtml(e.entity || "")}: ${escapeHtml(e.value || "")}</span>`).join("")
+    : `<span class="meta">sin entidades</span>`;
+  const rawJson = item.raw_json
+    ? `<details class="backlog-raw"><summary>🔍 raw JSON</summary><pre>${escapeHtml(item.raw_json)}</pre></details>`
+    : "";
+  modalBody.innerHTML = `
+    <div style="white-space:pre-wrap;margin-bottom:12px;">${escapeHtml(item.raw_text || "")}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">${entities}</div>
+    ${rawJson}
+  `;
+  modalActions.innerHTML = `
+    <button class="btn-small" onclick="setBacklogStatus('${item.id}','accepted'); closeModal();">✅ Aceptar</button>
+    <button class="btn-small btn-delete" onclick="setBacklogStatus('${item.id}','rejected'); closeModal();">✕ Rechazar</button>
+  `;
+  document.getElementById("commentsContainer").style.display = "none";
+  detailModal.open();
+}
+// Click a backlog card to open its detail modal.
+listElBacklog.addEventListener("click", (e) => {
+  if (e.target.closest("button")) return;
+  const card = e.target.closest(".card");
+  if (!card) return;
+  const id = card.dataset.id;
+  const item = backlogData.find((b) => String(b.id) === String(id));
+  if (item) openBacklogModal(item);
+});
 async function setBacklogStatus(id, status) {
   const res = await fetch(`${API_BASE}/backlog/${id}`, {
     method: "PATCH",
