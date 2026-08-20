@@ -245,7 +245,16 @@ async function structureWithNIM(rawText) {
     properties: {
       intent: {
         type: "string",
-        enum: ["donate_offer", "request_help", "report_need", "report_emergency", "unknown"]
+        enum: [
+          "donate_offer",
+          "request_help",
+          "report_need",
+          "report_emergency",
+          "find_supplier",
+          "volunteer_recruitment",
+          "request_item",
+          "unknown"
+        ]
       },
       items: {
         type: "array",
