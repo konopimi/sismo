@@ -20,8 +20,8 @@ const ENV = {
     process.env.MATRIX_ROOM_ALIAS || "#ayuda-en-cali:matrix.sismoinfo.co",
   API_BASE: process.env.API_BASE || "http://127.0.0.1:3000",
   RASA_URL: process.env.RASA_URL || "http://127.0.0.1:5005/model/parse",
-  THRESHOLD: parseFloat(process.env.CONFIDENCE_THRESHOLD || "0.8"),
-  WHITELIST: (process.env.INTENT_WHITELIST || "")
+  THRESHOLD: parseFloat(process.env.CONFIDENCE_THRESHOLD || "0.5"),
+  BLACKLIST: (process.env.INTENT_BLACKLIST || "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
@@ -414,12 +414,9 @@ async function processMessageBatch(userId, messages) {
 
   console.log(`[bot] 🧠 Rasa: ${intent.name} (${intent.confidence})`);
 
-  if (intent.confidence < ENV.THRESHOLD) {
-    console.log("[bot] ⏭️ Below threshold, skipping NIM");
-    return;
-  }
-  if (ENV.WHITELIST.length && !ENV.WHITELIST.includes(intent.name)) {
-    console.log(`[bot] ⏭️ '${intent.name}' not in whitelist`);
+  // Blacklist: block known-noise intents
+  if (ENV.BLACKLIST.includes(intent.name)) {
+    console.log(`[bot] ⏭️ '${intent.name}' blacklisted`);
     return;
   }
 
@@ -427,7 +424,24 @@ async function processMessageBatch(userId, messages) {
   let finalEntities = entities;
   let enrichedData = null;
 
-  if (intent.confidence > 0.90 && entities.length >= 2) {
+  // Low confidence: always route through NIM for enrichment before saving
+  if (intent.confidence < ENV.THRESHOLD) {
+    console.log("[bot] 🐢 Low confidence, NIM structuring");
+    try {
+      const structured = await structureWithNIM(combinedText);
+      if (structured.intent !== "unknown") finalIntent = structured.intent;
+      finalEntities = structured.items.map(i => ({
+        entity: "item", value: i.name, quantity: i.quantity || null,
+        unit: i.unit || null, location: structured.location || null,
+        urgency: structured.urgency || null
+      }));
+      enrichedData = structured;
+      console.log(`[bot] ✅ NIM: ${finalIntent}`);
+    } catch (e) {
+      console.error("[bot] ⚠️ NIM failed, skipping:", e.message);
+      return;
+    }
+  } else if (intent.confidence > 0.90 && entities.length >= 2) {
     console.log("[bot] ⚡ Fast path");
   } else {
     console.log("[bot] 🐢 Slow path: NIM structuring");
