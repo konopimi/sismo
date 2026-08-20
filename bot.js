@@ -161,6 +161,11 @@ function shouldFlushImmediately(msg, buffer) {
   const text = msg.text || "";
   if (text.includes("@room")) return true;
 
+  // Media (image/audio) is a self-contained unit: flush any pending text first,
+  // then process the media alone. This prevents OCR from multiple images (or
+  // an image + unrelated text) being merged into one spurious batch.
+  if (msg.imageUrl || msg.audioUrl) return true;
+
   const isShortShout = text.length < 30 && text === text.toUpperCase() && SHOUT_PATTERN.test(text);
   const isLossPhrase = LOSS_PATTERN.test(text);
   if (isShortShout || isLossPhrase) return true;
@@ -588,7 +593,14 @@ async function doSync() {
     };
 
     const buffer = getBuffer(event.sender);
-    if (shouldFlushImmediately(msg, buffer)) {
+    const isMedia = !!(msg.imageUrl || msg.audioUrl);
+    if (isMedia) {
+      // Flush any pending text first (as its own batch), then process the
+      // media alone so its OCR is never merged with other messages.
+      if (buffer.messages.length > 0) await buffer.flush();
+      buffer.add(msg);
+      await buffer.flush();
+    } else if (shouldFlushImmediately(msg, buffer)) {
       buffer.add(msg);
       await buffer.flush();
     } else {
