@@ -306,13 +306,20 @@ class ChatVirtualList {
     }
     this.container.scrollTop = top;
 
-    const node = this.nodes.get(this.events[index].getId());
-    if (node) {
+    const eventId = this.events[index].getId();
+    const strobeNode = () => {
+      const node = this.nodes.get(eventId);
+      if (!node) {
+        // Node not rendered yet (virtualization) — retry next frame
+        requestAnimationFrame(strobeNode);
+        return;
+      }
       node.classList.add("chat-highlight-strobe");
       setTimeout(() => {
         node.classList.remove("chat-highlight-strobe");
       }, 1800);
-    }
+    };
+    requestAnimationFrame(strobeNode);
   }
 
   _onScroll() {
