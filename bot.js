@@ -308,6 +308,20 @@ Rules:
   return parsed;
 }
 
+// Flatten NIM structured output into { entity, value } entries the frontend renders.
+// Each item becomes an "item" entity; quantity/unit/location/urgency become their own entries.
+function nimEntitiesToFlat(structured) {
+  const out = [];
+  for (const i of structured.items || []) {
+    out.push({ entity: "item", value: i.name });
+    if (i.quantity != null) out.push({ entity: "quantity", value: String(i.quantity) });
+    if (i.unit) out.push({ entity: "unit", value: i.unit });
+  }
+  if (structured.location) out.push({ entity: "location", value: structured.location });
+  if (structured.urgency) out.push({ entity: "urgency", value: structured.urgency });
+  return out;
+}
+
 // ================================================================
 //  BATCH PROCESSOR
 // ================================================================
@@ -429,7 +443,8 @@ async function processMessageBatch(userId, messages) {
   }
 
   let finalIntent = intent.name;
-  let finalEntities = entities;
+  // Normalize Rasa entities to { entity, value } shape the frontend renders
+  let finalEntities = entities.map((e) => ({ entity: e.entity, value: e.value }));
   let enrichedData = null;
 
   // Low confidence OR explicit fallback: always route through NIM for enrichment before saving
@@ -438,11 +453,7 @@ async function processMessageBatch(userId, messages) {
     try {
       const structured = await structureWithNIM(combinedText);
       if (structured.intent !== "unknown") finalIntent = structured.intent;
-      finalEntities = structured.items.map(i => ({
-        entity: "item", value: i.name, quantity: i.quantity || null,
-        unit: i.unit || null, location: structured.location || null,
-        urgency: structured.urgency || null
-      }));
+      finalEntities = nimEntitiesToFlat(structured);
       enrichedData = structured;
       console.log(`[bot] ✅ NIM: ${finalIntent}`);
     } catch (e) {
@@ -456,11 +467,7 @@ async function processMessageBatch(userId, messages) {
     try {
       const structured = await structureWithNIM(combinedText);
       if (structured.intent !== "unknown") finalIntent = structured.intent;
-      finalEntities = structured.items.map(i => ({
-        entity: "item", value: i.name, quantity: i.quantity || null,
-        unit: i.unit || null, location: structured.location || null,
-        urgency: structured.urgency || null
-      }));
+      finalEntities = nimEntitiesToFlat(structured);
       enrichedData = structured;
       console.log(`[bot] ✅ NIM: ${finalIntent}`);
     } catch (e) {
