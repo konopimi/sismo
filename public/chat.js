@@ -542,7 +542,9 @@ function updateReplyBar() {
     else if (replyingTo.msgtype === "m.audio") previewText = "🎤 Audio";
     previewText =
       previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
-    preview.innerHTML = `<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong style="color:${replyColor};">${escapeHtml(name)}</strong> ${escapeHtml(previewText)}</div>`;
+    preview.innerHTML = `<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;"><strong style="color:${replyColor};">${escapeHtml(name)}</strong> ${escapeHtml(previewText)}</div>`;
+    preview.style.cursor = "pointer";
+    preview.onclick = () => window.scrollToChatEvent(replyingTo.eventId);
     bar.style.visibility = "visible";
     if (name.includes("-") && name.length === 36) {
       loadMatrixDirectory().then((dir) => {
