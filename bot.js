@@ -154,16 +154,34 @@ function getBuffer(userId) {
   return userBuffers.get(userId);
 }
 
+const SHOUT_PATTERN = /(AUXILIO|URGENTE|SOCORRO|EMERGENCIA|AYUDA|PELIGRO)/i;
+const LOSS_PATTERN = /(se\s+va(n)?\s+(a\s+)?perder|ayudaa+|ya\s+no\s+hay|sin\s+nada)/i;
+
 function shouldFlushImmediately(msg, buffer) {
   const text = msg.text || "";
   if (text.includes("@room")) return true;
-  const distressWords = /(AUXILIO|URGENTE|SOCORRO|EMERGENCIA|AYUDA|PELIGRO)/i;
-  if (text.length < 30 && text === text.toUpperCase() && distressWords.test(text)) return true;
+
+  const isShortShout = text.length < 30 && text === text.toUpperCase() && SHOUT_PATTERN.test(text);
+  const isLossPhrase = LOSS_PATTERN.test(text);
+  if (isShortShout || isLossPhrase) return true;
+
   if (msg.replyTo && buffer.messages.length > 0) {
     const age = msg.timestamp - buffer.messages[0].timestamp;
     if (age > 5 * 60 * 1000) return true;
   }
   return false;
+}
+
+// ================================================================
+//  PAYMENT-INFO DETECTION (fraud vector flagging)
+// ================================================================
+const PAYMENT_CONTEXT = /(cuenta|nequi|bancolombia|llave|transfier|consignar|ahorros|corriente)/i;
+const ACCOUNT_NUMBER = /\b\d{8,14}\b/;
+const NEQUI_HANDLE = /@\w{4,}(?!\.(jpg|png|jpeg|webp|mp4|opus))/i;
+
+function detectPaymentInfo(text) {
+  if (!text || !PAYMENT_CONTEXT.test(text)) return false;
+  return ACCOUNT_NUMBER.test(text) || NEQUI_HANDLE.test(text);
 }
 
 // ================================================================
@@ -416,6 +434,8 @@ async function processMessageBatch(userId, messages) {
 
   console.log(`[bot] 📦 Batch from ${userId}: "${combinedText.substring(0, 150)}..."`);
 
+  const paymentFlag = detectPaymentInfo(combinedText);
+
   let rasaRes;
   try {
     const res = await fetch(ENV.RASA_URL, {
@@ -436,8 +456,8 @@ async function processMessageBatch(userId, messages) {
 
   console.log(`[bot] 🧠 Rasa: ${intent.name} (${intent.confidence})`);
 
-  // Blacklist: block known-noise intents
-  if (ENV.BLACKLIST.includes(intent.name)) {
+  // Blacklist: block known-noise intents (unless payment info is present)
+  if (ENV.BLACKLIST.includes(intent.name) && !paymentFlag) {
     console.log(`[bot] ⏭️ '${intent.name}' blacklisted`);
     return;
   }
@@ -475,9 +495,14 @@ async function processMessageBatch(userId, messages) {
     }
   }
 
-  if (finalIntent === "nlu_fallback") {
+  if (finalIntent === "nlu_fallback" && !paymentFlag) {
     console.log("[bot] ⏭️ Unresolvable fallback, skipping save");
     return;
+  }
+
+  if (paymentFlag) {
+    finalEntities.push({ entity: "payment_info_detected", value: "true" });
+    console.log(`[bot] 🚩 Payment info detected in batch from ${userId}`);
   }
 
   try {
