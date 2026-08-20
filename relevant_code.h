@@ -1180,9 +1180,9 @@ function updateLightboxStage() {
   const src = item.fullSrc || item.src;
   const emoji = item.msgtype === "m.video" ? "🎬" : "📷";
   if (item.msgtype === "m.video") {
-    stage.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><video src="${escapeHtml(src)}" controls autoplay style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;"></video>`;
+    stage.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><video src="${escapeHtml(src)}" controls autoplay style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;flex:0 1 auto;min-height:0;"></video>`;
   } else {
-    stage.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "")}" style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;"/>`;
+    stage.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "")}" style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;flex:0 1 auto;min-height:0;"/>`;
   }
   // OCR / extracted-text panel below the media (images only)
   const ocrContainer = document.getElementById("lightboxOcr");
@@ -4645,6 +4645,7 @@ const BACKLOG_INTENT_EMOJI = {
   request_help: "🙋", status_update: "🔄", report_emergency: "🚨", ask_about_point: "📍",
   offer_transport: "🚗", request_confirmation: "✅", gratitude: "🙏", welcome_member: "👋",
   request_supplies: "📦", report_issue: "⚠️", share_info: "ℹ️",
+  find_supplier: "🔍", volunteer_recruitment: "🤝", request_item: "📦", mental_health: "🧠",
 };
 async function loadListBacklog() {
   if (!getAuthToken()) { backlogData = []; renderBacklog(); return; }
@@ -4705,6 +4706,45 @@ function renderBacklog() {
   }
   renderVirtualList(listElBacklog, searched, backlogCardHtml);
 }
+// Open a backlog item in the detail modal (same as other item types).
+function openBacklogModal(item) {
+  const emoji = BACKLOG_INTENT_EMOJI[item.intent] || "🧠";
+  const date = new Date(item.created_at).toLocaleString("es-CO", {
+    day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+  modalTitle.textContent = `${emoji} ${item.intent || "Mensaje"}`;
+  modalStatus.innerHTML = `<span class="status-tag backlog-${escapeHtml(item.status || "pending")}">${BACKLOG_STATUS_LABEL[item.status] || item.status}</span>`;
+  modalMeta.innerHTML = `
+    <span>🕒 ${date}</span>
+    <span>👤 ${escapeHtml(item.creator_name || item.creator_matrix_id || "—")}</span>
+  `;
+  const entities = Array.isArray(item.extracted_data) && item.extracted_data.length
+    ? item.extracted_data.map((e) => `<span class="meta">${escapeHtml(e.entity || "")}: ${escapeHtml(e.value || "")}</span>`).join("")
+    : `<span class="meta">sin entidades</span>`;
+  const rawJson = item.raw_json
+    ? `<details class="backlog-raw"><summary>🔍 raw JSON</summary><pre>${escapeHtml(item.raw_json)}</pre></details>`
+    : "";
+  modalBody.innerHTML = `
+    <div style="white-space:pre-wrap;margin-bottom:12px;">${escapeHtml(item.raw_text || "")}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">${entities}</div>
+    ${rawJson}
+  `;
+  modalActions.innerHTML = `
+    <button class="btn-small" onclick="setBacklogStatus('${item.id}','accepted'); closeModal();">✅ Aceptar</button>
+    <button class="btn-small btn-delete" onclick="setBacklogStatus('${item.id}','rejected'); closeModal();">✕ Rechazar</button>
+  `;
+  document.getElementById("commentsContainer").style.display = "none";
+  detailModal.open();
+}
+// Click a backlog card to open its detail modal.
+listElBacklog.addEventListener("click", (e) => {
+  if (e.target.closest("button")) return;
+  const card = e.target.closest(".card");
+  if (!card) return;
+  const id = card.dataset.id;
+  const item = backlogData.find((b) => String(b.id) === String(id));
+  if (item) openBacklogModal(item);
+});
 async function setBacklogStatus(id, status) {
   const res = await fetch(`${API_BASE}/backlog/${id}`, {
     method: "PATCH",
@@ -6545,13 +6585,15 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
         </div>
         <div
           style="display:flex;gap:6px;padding:5px;border-top:1px solid rgba(120,120,120,0.3);flex:0 0 auto;align-items:flex-end;min-width:100%;box-sizing:border-box;overflow:hidden;">
-          <button id="chatAttachBtn" type="button" title="Adjuntar imagen o video" style="flex:0 0 auto;">📎</button>
-          <button id="chatCameraBtn" type="button" title="Tomar foto con la cámara" style="flex:0 0 auto;">📷</button>
-          <button id="chatMicBtn" type="button" title="Grabar mensaje de voz" style="flex:0 0 auto;">🎤</button>
+          <div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto;">
+            <button id="chatAttachBtn" type="button" title="Adjuntar imagen o video" style="flex:0 0 auto;">📎</button>
+            <button id="chatCameraBtn" type="button" title="Tomar foto con la cámara" style="flex:0 0 auto;">📷</button>
+            <button id="chatMicBtn" type="button" title="Grabar mensaje de voz" style="flex:0 0 auto;">🎤</button>
+          </div>
           <input type="file" id="chatFileInput" accept="image/*,video/*" multiple style="display:none;" />
           <input type="file" id="chatCameraInput" accept="image/*" capture="environment" style="display:none;" />
           <textarea id="chatInput" rows="1" placeholder="Escribe un mensaje..."
-            style="flex:1 1 auto; resize:none; min-height:38px; max-height:120px; font-family:inherit; min-width:0; width:100%; box-sizing:border-box;"></textarea>
+            style="flex:1 1 auto; resize:none; min-height:100%; max-height:300px; font-family:inherit; min-width:0; width:100%; box-sizing:border-box;"></textarea>
           <button id="chatSendBtn" style="flex:0 0 auto;">Enviar</button>
         </div>
         <!-- Contenido alternativo del modal (listas de sub-tabs) -->
@@ -6614,7 +6656,7 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
         style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;">
         <button id="lightboxPrev" class="lightbox-nav lightbox-prev" aria-label="Anterior">‹</button>
         <div id="lightboxStage"
-          style="display:flex;flex-direction:column;flex:1;min-height:100%;max-height:100%;width:100%;position:relative;overflow:hidden;">
+          style="display:flex;align-items:center;justify-content:center;flex:1;min-height:0;max-height:100%;width:100%;position:relative;overflow:hidden;">
           <!-- <div id="lightboxStage" -->
           <!--   style="max-width:100%;max-height:100%;display:flex;align-items:center;justify-content:center;flex:1;min-height:100%;;overflow:hidden;"> -->
           <!-- </div> -->
@@ -8479,6 +8521,16 @@ textarea {
   display: flex;
   flex-direction: column;
 }
+/* Chat modal sub-tab panels: allow vertical scrolling of list content */
+#chatModalSubPanels .sub-tab-panel {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+#chatModalSubPanels .sub-tab-panel .list {
+  padding-bottom: 40px;
+  overflow-y: auto;
+  min-height: 0;
+}
 /* ============================================================
    Status tags por tipo (donaciones / necesidades / logística)
    ============================================================ */
@@ -8601,8 +8653,21 @@ textarea {
   pointer-events: none;
 }
 /* ===== Lightbox ===== */
+#mediaLightbox {
+  padding: 0;
+  overflow: hidden;
+}
+#mediaLightbox .modal-content {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+#mediaLightbox [data-modal-body] {
+  min-height: 0;
+}
 #lightboxStage {
   overflow: hidden;
+  min-height: 0;
 }
 #lightboxStage img,
 #lightboxStage video {
@@ -8610,6 +8675,7 @@ textarea {
   max-height: 100%;
   width: auto;
   height: auto;
+  min-height: 0;
   object-fit: contain;
   display: block;
 }
@@ -11447,8 +11513,8 @@ const ENV = {
     process.env.MATRIX_ROOM_ALIAS || "#ayuda-en-cali:matrix.sismoinfo.co",
   API_BASE: process.env.API_BASE || "http://127.0.0.1:3000",
   RASA_URL: process.env.RASA_URL || "http://127.0.0.1:5005/model/parse",
-  THRESHOLD: parseFloat(process.env.CONFIDENCE_THRESHOLD || "0.8"),
-  WHITELIST: (process.env.INTENT_WHITELIST || "")
+  THRESHOLD: parseFloat(process.env.CONFIDENCE_THRESHOLD || "0.5"),
+  BLACKLIST: (process.env.INTENT_BLACKLIST || "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
@@ -11570,16 +11636,33 @@ function getBuffer(userId) {
   if (!userBuffers.has(userId)) userBuffers.set(userId, new UserBuffer(userId));
   return userBuffers.get(userId);
 }
+const SHOUT_PATTERN = /(AUXILIO|URGENTE|SOCORRO|EMERGENCIA|AYUDA|PELIGRO)/i;
+const LOSS_PATTERN = /(se\s+va(n)?\s+(a\s+)?perder|ayudaa+|ya\s+no\s+hay|sin\s+nada)/i;
 function shouldFlushImmediately(msg, buffer) {
   const text = msg.text || "";
   if (text.includes("@room")) return true;
-  const distressWords = /(AUXILIO|URGENTE|SOCORRO|EMERGENCIA|AYUDA|PELIGRO)/i;
-  if (text.length < 30 && text === text.toUpperCase() && distressWords.test(text)) return true;
+  // Media (image/audio) is a self-contained unit: flush any pending text first,
+  // then process the media alone. This prevents OCR from multiple images (or
+  // an image + unrelated text) being merged into one spurious batch.
+  if (msg.imageUrl || msg.audioUrl) return true;
+  const isShortShout = text.length < 30 && text === text.toUpperCase() && SHOUT_PATTERN.test(text);
+  const isLossPhrase = LOSS_PATTERN.test(text);
+  if (isShortShout || isLossPhrase) return true;
   if (msg.replyTo && buffer.messages.length > 0) {
     const age = msg.timestamp - buffer.messages[0].timestamp;
     if (age > 5 * 60 * 1000) return true;
   }
   return false;
+}
+// ================================================================
+//  PAYMENT-INFO DETECTION (fraud vector flagging)
+// ================================================================
+const PAYMENT_CONTEXT = /(cuenta|nequi|bancolombia|llave|transfier|consignar|ahorros|corriente)/i;
+const ACCOUNT_NUMBER = /\b\d{8,14}\b/;
+const NEQUI_HANDLE = /@\w{4,}(?!\.(jpg|png|jpeg|webp|mp4|opus))/i;
+function detectPaymentInfo(text) {
+  if (!text || !PAYMENT_CONTEXT.test(text)) return false;
+  return ACCOUNT_NUMBER.test(text) || NEQUI_HANDLE.test(text);
 }
 // ================================================================
 //  REPLY CONTEXT RESOLUTION
@@ -11650,32 +11733,6 @@ async function extractTextFromImage(mxcUrl) {
 //  NIM STRUCTURED EXTRACTION (SLOW PATH)
 // ================================================================
 async function structureWithNIM(rawText) {
-  const schema = {
-    type: "object",
-    properties: {
-      intent: {
-        type: "string",
-        enum: ["donate_offer", "request_help", "report_need", "report_emergency", "unknown"]
-      },
-      items: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            name: { type: "string" },
-            quantity: { type: "number" },
-            unit: { type: "string" }
-          },
-          required: ["name"]
-        }
-      },
-      location: { type: "string" },
-      urgency: { type: "string", enum: ["low", "medium", "high", "critical"] },
-      contact: { type: "string" },
-      notes: { type: "string" }
-    },
-    required: ["intent", "items"]
-  };
   const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -11683,29 +11740,77 @@ async function structureWithNIM(rawText) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "meta/llama-3.3-70b-instruct",
+      model: "meta/llama-3.1-8b-instruct",
       messages: [
         {
           role: "system",
-          content: `You extract structured disaster-response data from Spanish text. Output MUST match the JSON schema exactly. Use "unknown" if unclear. Use [] if no items found.`
+          content: `You are a precise data extraction engine for disaster response.
+Respond with ONLY a valid JSON object. Do not include markdown formatting (like \`\`\`json), prose, or explanations.
+The JSON must strictly follow this schema:
+{
+  "intent": "donate_offer" | "request_help" | "report_need" | "report_emergency" | "find_supplier" | "volunteer_recruitment" | "request_item" | "mental_health" | "unknown",
+  "items": [{"name": "string", "quantity": number, "unit": "string"}],
+  "location": "string",
+  "urgency": "low" | "medium" | "high" | "critical",
+  "contact": "string",
+  "notes": "string"
+}
+CRITICAL RULES — extract ONLY what is explicitly stated in the text:
+- NEVER invent quantities, units, locations, or contacts that are not present.
+- If a quantity is not stated, set "quantity" to null (do NOT guess a number).
+- If a unit is not stated, set "unit" to null (do NOT use articles like "unas"/"unos" as units).
+- If a location is not stated, set "location" to null (do NOT use the first word of the sentence).
+- If no items are mentioned, use [].
+- Use "unknown" for intent if unclear.
+- Extract quantities as numbers, not strings.`
         },
         { role: "user", content: rawText }
       ],
       temperature: 0,
-      max_tokens: 1024,
-      nvext: { guided_json: schema }
+      max_tokens: 1024
     })
   });
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`NIM failed: ${res.status} ${errText.substring(0, 200)}`);
+    throw new Error(`NIM API failed: ${res.status} ${errText.substring(0, 200)}`);
   }
   const data = await res.json();
-  const raw = data.choices[0].message.content.trim();
-  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
-  const parsed = JSON.parse(cleaned);
-  if (!parsed.intent || !Array.isArray(parsed.items)) throw new Error("Malformed NIM output");
+  const raw = data.choices?.[0]?.message?.content?.trim() || "";
+  if (!raw) throw new Error("NIM returned empty content");
+  // Robust JSON extraction: find the first { ... } block to ignore markdown or prose
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    console.error("[bot] ❌ NIM raw output (no JSON found):", raw);
+    throw new Error("No JSON object found in NIM output");
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (e) {
+    console.error("[bot] ❌ NIM JSON parse error:", e.message, "| Raw snippet:", jsonMatch[0].substring(0, 150));
+    throw new Error("Malformed JSON in NIM output");
+  }
+  // Basic schema validation
+  if (!parsed.intent || !Array.isArray(parsed.items)) {
+    console.error("[bot] ❌ NIM schema validation failed:", parsed);
+    throw new Error("Malformed NIM output schema: missing intent or items array.");
+  }
   return parsed;
+}
+// Flatten NIM structured output into { entity, value } entries the frontend renders.
+// Each item becomes an "item" entity; quantity/unit/location/urgency become their own entries.
+function nimEntitiesToFlat(structured) {
+  const out = [];
+  for (const i of structured.items || []) {
+    if (i.name) out.push({ entity: "item", value: i.name });
+    if (i.quantity != null) out.push({ entity: "quantity", value: String(i.quantity) });
+    if (i.unit) out.push({ entity: "unit", value: i.unit });
+  }
+  if (structured.location && structured.location !== "desconocido" && structured.location !== "desconocida") {
+    out.push({ entity: "location", value: structured.location });
+  }
+  if (structured.urgency) out.push({ entity: "urgency", value: structured.urgency });
+  return out;
 }
 // ================================================================
 //  BATCH PROCESSOR
@@ -11789,6 +11894,7 @@ async function processMessageBatch(userId, messages) {
     return;
   }
   console.log(`[bot] 📦 Batch from ${userId}: "${combinedText.substring(0, 150)}..."`);
+  const paymentFlag = detectPaymentInfo(combinedText);
   let rasaRes;
   try {
     const res = await fetch(ENV.RASA_URL, {
@@ -11806,34 +11912,49 @@ async function processMessageBatch(userId, messages) {
   const entities = rasaRes.entities || [];
   if (!intent) { console.log("[bot] ⚠️ No intent from Rasa"); return; }
   console.log(`[bot] 🧠 Rasa: ${intent.name} (${intent.confidence})`);
-  if (intent.confidence < ENV.THRESHOLD) {
-    console.log("[bot] ⏭️ Below threshold, skipping NIM");
-    return;
-  }
-  if (ENV.WHITELIST.length && !ENV.WHITELIST.includes(intent.name)) {
-    console.log(`[bot] ⏭️ '${intent.name}' not in whitelist`);
+  // Blacklist: block known-noise intents (unless payment info is present)
+  if (ENV.BLACKLIST.includes(intent.name) && !paymentFlag) {
+    console.log(`[bot] ⏭️ '${intent.name}' blacklisted`);
     return;
   }
   let finalIntent = intent.name;
-  let finalEntities = entities;
+  // Normalize Rasa entities to { entity, value } shape the frontend renders
+  let finalEntities = entities.map((e) => ({ entity: e.entity, value: e.value }));
   let enrichedData = null;
-  if (intent.confidence > 0.90 && entities.length >= 2) {
+  // Low confidence OR explicit fallback: always route through NIM for enrichment before saving
+  if (intent.name === "nlu_fallback" || intent.confidence < ENV.THRESHOLD) {
+    console.log("[bot] 🐢 Low confidence / Fallback, NIM structuring");
+    try {
+      const structured = await structureWithNIM(combinedText);
+      if (structured.intent !== "unknown") finalIntent = structured.intent;
+      finalEntities = nimEntitiesToFlat(structured);
+      enrichedData = structured;
+      console.log(`[bot] ✅ NIM: ${finalIntent}`);
+    } catch (e) {
+      console.error("[bot] ⚠️ NIM failed, saving with Rasa raw:", e.message);
+      // fall through — save with Rasa's intent even if low confidence
+    }
+  } else if (intent.confidence > 0.90 && entities.length >= 2) {
     console.log("[bot] ⚡ Fast path");
   } else {
     console.log("[bot] 🐢 Slow path: NIM structuring");
     try {
       const structured = await structureWithNIM(combinedText);
       if (structured.intent !== "unknown") finalIntent = structured.intent;
-      finalEntities = structured.items.map(i => ({
-        entity: "item", value: i.name, quantity: i.quantity || null,
-        unit: i.unit || null, location: structured.location || null,
-        urgency: structured.urgency || null
-      }));
+      finalEntities = nimEntitiesToFlat(structured);
       enrichedData = structured;
       console.log(`[bot] ✅ NIM: ${finalIntent}`);
     } catch (e) {
       console.error("[bot] ⚠️ NIM failed, using Rasa raw:", e.message);
     }
+  }
+  if (finalIntent === "nlu_fallback" && !paymentFlag) {
+    console.log("[bot] ⏭️ Unresolvable fallback, skipping save");
+    return;
+  }
+  if (paymentFlag) {
+    finalEntities.push({ entity: "payment_info_detected", value: "true" });
+    console.log(`[bot] 🚩 Payment info detected in batch from ${userId}`);
   }
   try {
     const res = await safeApiCall(`${ENV.API_BASE}/api/backlog`, {
@@ -11875,10 +11996,13 @@ async function doSync() {
     }
   }));
   const data = await matrixGet(`/_matrix/client/v3/sync?${params.toString()}`);
-  nextBatch = data.next_batch;
-  fs.writeFileSync(STORAGE_FILE, JSON.stringify({ next_batch: nextBatch }));
   const roomData = data.rooms?.join?.[targetRoomId];
-  if (!roomData) return;
+  if (!roomData) {
+    // No events, but still advance the token so we don't re-read the same batch.
+    nextBatch = data.next_batch;
+    fs.writeFileSync(STORAGE_FILE, JSON.stringify({ next_batch: nextBatch }));
+    return;
+  }
   const events = roomData.timeline?.events || [];
   for (const event of events) {
     if (event.sender === myUserId) continue;
@@ -11886,10 +12010,6 @@ async function doSync() {
     const content = event.content || {};
     if (content.msgtype === "m.reaction") continue;
     if (content["m.relates_to"]?.rel_type === "m.replace") continue;
-    if (content.msgtype === "m.audio") {
-      console.log(`[bot] ⏭️ Skipping voice message from ${event.sender}`);
-      continue;
-    }
     let text = content.body || "";
     const isReply = content["m.relates_to"]?.["m.in_reply_to"]?.event_id;
     if (isReply) {
@@ -11904,13 +12024,25 @@ async function doSync() {
       timestamp: event.origin_server_ts,
     };
     const buffer = getBuffer(event.sender);
-    if (shouldFlushImmediately(msg, buffer)) {
+    const isMedia = !!(msg.imageUrl || msg.audioUrl);
+    if (isMedia) {
+      // Flush any pending text first (as its own batch), then process the
+      // media alone so its OCR is never merged with other messages.
+      if (buffer.messages.length > 0) await buffer.flush();
+      buffer.add(msg);
+      await buffer.flush();
+    } else if (shouldFlushImmediately(msg, buffer)) {
       buffer.add(msg);
       await buffer.flush();
     } else {
       buffer.add(msg);
     }
   }
+  // Persist the sync token ONLY after events are safely handed to buffers.
+  // This narrows the data-loss window from the full 8s buffer timeout to the
+  // synchronous event loop above (milliseconds).
+  nextBatch = data.next_batch;
+  fs.writeFileSync(STORAGE_FILE, JSON.stringify({ next_batch: nextBatch }));
 }
 // ================================================================
 //  BOOT
