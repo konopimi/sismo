@@ -240,42 +240,6 @@ async function extractTextFromImage(mxcUrl) {
 //  NIM STRUCTURED EXTRACTION (SLOW PATH)
 // ================================================================
 async function structureWithNIM(rawText) {
-  const schema = {
-    type: "object",
-    properties: {
-      intent: {
-        type: "string",
-        enum: [
-          "donate_offer",
-          "request_help",
-          "report_need",
-          "report_emergency",
-          "find_supplier",
-          "volunteer_recruitment",
-          "request_item",
-          "unknown"
-        ]
-      },
-      items: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            name: { type: "string" },
-            quantity: { type: "number" },
-            unit: { type: "string" }
-          },
-          required: ["name"]
-        }
-      },
-      location: { type: "string" },
-      urgency: { type: "string", enum: ["low", "medium", "high", "critical"] },
-      contact: { type: "string" },
-      notes: { type: "string" }
-    },
-    required: ["intent", "items"]
-  };
-
   const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -287,25 +251,60 @@ async function structureWithNIM(rawText) {
       messages: [
         {
           role: "system",
-          content: `You extract structured disaster-response data from Spanish text. Output MUST match the JSON schema exactly. Use "unknown" if unclear. Use [] if no items found.`
+          content: `You are a precise data extraction engine for disaster response.
+Respond with ONLY a valid JSON object. Do not include markdown formatting (like \`\`\`json), prose, or explanations.
+The JSON must strictly follow this schema:
+{
+  "intent": "donate_offer" | "request_help" | "report_need" | "report_emergency" | "find_supplier" | "volunteer_recruitment" | "request_item" | "unknown",
+  "items": [{"name": "string", "quantity": number, "unit": "string"}],
+  "location": "string",
+  "urgency": "low" | "medium" | "high" | "critical",
+  "contact": "string",
+  "notes": "string"
+}
+Rules:
+- Use "unknown" for intent if unclear.
+- Use [] for items if none are found.
+- Extract quantities as numbers, not strings.`
         },
         { role: "user", content: rawText }
       ],
       temperature: 0,
-      max_tokens: 1024,
-      nvext: { guided_json: schema }
+      max_tokens: 1024
     })
   });
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`NIM failed: ${res.status} ${errText.substring(0, 200)}`);
+    throw new Error(`NIM API failed: ${res.status} ${errText.substring(0, 200)}`);
   }
+
   const data = await res.json();
-  const raw = data.choices[0].message.content.trim();
-  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
-  const parsed = JSON.parse(cleaned);
-  if (!parsed.intent || !Array.isArray(parsed.items)) throw new Error("Malformed NIM output");
+  const raw = data.choices?.[0]?.message?.content?.trim() || "";
+
+  if (!raw) throw new Error("NIM returned empty content");
+
+  // Robust JSON extraction: find the first { ... } block to ignore markdown or prose
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    console.error("[bot] ❌ NIM raw output (no JSON found):", raw);
+    throw new Error("No JSON object found in NIM output");
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (e) {
+    console.error("[bot] ❌ NIM JSON parse error:", e.message, "| Raw snippet:", jsonMatch[0].substring(0, 150));
+    throw new Error("Malformed JSON in NIM output");
+  }
+
+  // Basic schema validation
+  if (!parsed.intent || !Array.isArray(parsed.items)) {
+    console.error("[bot] ❌ NIM schema validation failed:", parsed);
+    throw new Error("Malformed NIM output schema: missing intent or items array.");
+  }
+
   return parsed;
 }
 
