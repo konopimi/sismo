@@ -548,11 +548,14 @@ async function doSync() {
   }));
 
   const data = await matrixGet(`/_matrix/client/v3/sync?${params.toString()}`);
-  nextBatch = data.next_batch;
-  fs.writeFileSync(STORAGE_FILE, JSON.stringify({ next_batch: nextBatch }));
 
   const roomData = data.rooms?.join?.[targetRoomId];
-  if (!roomData) return;
+  if (!roomData) {
+    // No events, but still advance the token so we don't re-read the same batch.
+    nextBatch = data.next_batch;
+    fs.writeFileSync(STORAGE_FILE, JSON.stringify({ next_batch: nextBatch }));
+    return;
+  }
 
   const events = roomData.timeline?.events || [];
   for (const event of events) {
@@ -586,6 +589,12 @@ async function doSync() {
       buffer.add(msg);
     }
   }
+
+  // Persist the sync token ONLY after events are safely handed to buffers.
+  // This narrows the data-loss window from the full 8s buffer timeout to the
+  // synchronous event loop above (milliseconds).
+  nextBatch = data.next_batch;
+  fs.writeFileSync(STORAGE_FILE, JSON.stringify({ next_batch: nextBatch }));
 }
 
 // ================================================================
