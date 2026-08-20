@@ -1299,9 +1299,9 @@ function updateLightboxStage() {
 
   const emoji = item.msgtype === "m.video" ? "🎬" : "📷";
   if (item.msgtype === "m.video") {
-    stage.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><video src="${escapeHtml(src)}" controls autoplay style="max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;"></video>`;
+    stage.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><video src="${escapeHtml(src)}" controls autoplay style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;flex:0 1 auto;min-height:0;"></video>`;
   } else {
-    stage.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "")}" style="max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;"/>`;
+    stage.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "")}" style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;flex:0 1 auto;min-height:0;"/>`;
   }
 
   // OCR / extracted-text panel below the media (images only)
