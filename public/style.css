@@ -1594,6 +1594,17 @@ textarea {
   flex-direction: column;
 }
 
+/* Chat modal sub-tab panels: allow vertical scrolling of list content */
+#chatModalSubPanels .sub-tab-panel {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+#chatModalSubPanels .sub-tab-panel .list {
+  padding-bottom: 40px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
 /* ============================================================
    Status tags por tipo (donaciones / necesidades / logística)
    ============================================================ */
