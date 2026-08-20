@@ -1,3 +1,10 @@
+/* ===== CHAT REPLY BAR ===== */
+#chatReplyBar.visible {
+  max-height: 60px;
+  padding: 6px 8px;
+  opacity: 1;
+}
+
 /* ===== RESET Y BASE ===== */
 /* Leaflet.markercluster custom colors matching app palette */
 .marker-cluster-small {
@@ -88,6 +95,7 @@ body {
   flex-direction: column;
   overflow-x: hidden;
   overflow-y: scroll;
+  overscroll-behavior: contain;
   /* scrollbar-gutter: stable ; */
   margin: 0;
   font-family:
@@ -1598,11 +1606,23 @@ textarea {
 #chatModalSubPanels .sub-tab-panel {
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
 }
 #chatModalSubPanels .sub-tab-panel .list {
   padding-bottom: 40px;
   overflow-y: auto;
   min-height: 0;
+  overscroll-behavior: contain;
+}
+
+/* Main collaborator tab panels - prevent overscroll bounce */
+#colabPrivateWrapper .sub-tab-panel {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+#colabPrivateWrapper .sub-tab-panel .list {
+  overscroll-behavior: contain;
 }
 
 /* ============================================================
