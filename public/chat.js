@@ -254,7 +254,12 @@ class ChatVirtualList {
     if (this._stickRaf) cancelAnimationFrame(this._stickRaf);
     this._stickRaf = requestAnimationFrame(() => {
       if (this._isDestroyed) return;
-      this.container.scrollTop = this.container.scrollHeight;
+      // Only adjust if not already at bottom (within 1px threshold)
+      // to avoid fighting browser overscroll / micro-changes.
+      const maxScroll = this.container.scrollHeight - this.container.clientHeight;
+      if (this.container.scrollTop < maxScroll - 1) {
+        this.container.scrollTop = maxScroll;
+      }
       this._stickRaf = null;
     });
   }
@@ -472,7 +477,12 @@ class ChatVirtualList {
 
     // Keep bottom sticky if user was at bottom
     if (this.isAtBottom) {
-      this._stickToBottom();
+      // Only stick if we're not already at the bottom (within threshold)
+      // to avoid RAF loop fighting with scroll events.
+      const maxScroll = this.container.scrollHeight - this.container.clientHeight;
+      if (this.container.scrollTop < maxScroll - 1) {
+        this._stickToBottom();
+      }
     }
   }
 }
