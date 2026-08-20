@@ -1,3 +1,36 @@
+/* Form row styling for promotion modal */
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.form-row label {
+  font-size: 0.85rem;
+  color: #ccc;
+  font-weight: 500;
+}
+.form-row input,
+.form-row select,
+.form-row textarea {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #1a1d24;
+  color: #eaeaea;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+.form-row input:focus,
+.form-row select:focus,
+.form-row textarea:focus {
+  outline: none;
+  border-color: #4ea1ff;
+}
+.form-row input[required],
+.form-row select[required],
+.form-row textarea[required] {
+  border-left: 3px solid #fcd116;
+}
 /* ===== MODAL (shell + content) — extracted from style.css ===== */
 .modal {
   position: fixed;
