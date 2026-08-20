@@ -1,3 +1,13 @@
+/* ===== CHAT HIGHLIGHT STROBE ===== */
+@keyframes chat-highlight-strobe {
+  0%, 100% { outline: 2px solid #3fa34d; }
+  25%, 75% { outline: 2px solid transparent; }
+  50% { outline: 2px solid #3fa34d; }
+}
+.chat-highlight-strobe {
+  animation: chat-highlight-strobe 0.6s ease-in-out 3;
+}
+
 /* ===== RESET Y BASE ===== */
 /* Leaflet.markercluster custom colors matching app palette */
 .marker-cluster-small {

@@ -308,10 +308,10 @@ class ChatVirtualList {
 
     const node = this.nodes.get(this.events[index].getId());
     if (node) {
-      node.style.outline = "2px solid #3fa34d";
+      node.classList.add("chat-highlight-strobe");
       setTimeout(() => {
-        node.style.outline = "";
-      }, 1500);
+        node.classList.remove("chat-highlight-strobe");
+      }, 1800);
     }
   }
 
