@@ -118,6 +118,8 @@ class ChatVirtualList {
 
   setEvents(events) {
     if (this._isDestroyed) return;
+    const loading = document.getElementById("chatLoading");
+    if (loading) loading.remove();
     this.events = this._groupEvents(events);
     this._render(true);
     this.scrollToBottom();
@@ -569,6 +571,8 @@ function matrixSdk() {
 async function startMatrixChat() {
   if (matrixStarted) return;
   matrixStarted = true;
+  const container = document.getElementById("chatListContainer");
+  if (container) container.innerHTML = `<div style="padding:20px;color:#999;text-align:center;font-size:0.85rem;">Conectando al chat…</div>`;
   const sdk = matrixSdk();
   if (!sdk) {
     renderChatError("Matrix SDK no cargó. Recarga la página.");
