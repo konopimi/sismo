@@ -1000,10 +1000,11 @@ function createMessageNode(item) {
     const firstContent = item.items[0].getContent();
     if (firstContent.info && firstContent.info.w && firstContent.info.h) {
       gridEl.style.aspectRatio = `${firstContent.info.w} / ${firstContent.info.h}`;
-      gridEl.style.minHeight = "80px";
+      const w = firstContent.info.w, h = firstContent.info.h;
+      gridEl.style.height = `${Math.round(281 * h / w)}px`;
     } else {
       gridEl.style.aspectRatio = "4 / 3";
-      gridEl.style.minHeight = "120px";
+      gridEl.style.height = "210px";
     }
 
     const group = { sender, ts: item.getTs(), gridEl, items };
@@ -1117,10 +1118,13 @@ function createMessageNode(item) {
     gridEl.className = "chat-media-grid";
     if (content.info && content.info.w && content.info.h) {
       gridEl.style.aspectRatio = `${content.info.w} / ${content.info.h}`;
-      gridEl.style.minHeight = "80px";
+      // Set explicit height so bubble doesn't grow when image loads.
+      // max-width:75% of ~375px viewport ≈ 281px; height = width / ratio.
+      const w = content.info.w, h = content.info.h;
+      gridEl.style.height = `${Math.round(281 * h / w)}px`;
     } else {
       gridEl.style.aspectRatio = "4 / 3";
-      gridEl.style.minHeight = "120px";
+      gridEl.style.height = "210px"; // 281 * 3/4 ≈ 210
     }
     const group = {
       sender,
