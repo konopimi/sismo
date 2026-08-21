@@ -181,6 +181,7 @@ function showLoginForm() {
   if (privateWrapper) privateWrapper.style.display = "none";
   if (colabLoginPrompt) colabLoginPrompt.style.display = "block";
   window.currentUser = null;
+  updateColabSubTabsVisibility();
   // Hide the collaborators count badge now that we're logged out.
   if (typeof updateTabCounts === "function") updateTabCounts();
 }
@@ -194,6 +195,7 @@ function showChat() {
 }
   if (privateWrapper) privateWrapper.style.display = "flex";
   if (colabLoginPrompt) colabLoginPrompt.style.display = "none";
+  updateColabSubTabsVisibility();
   if (!colabData.length) loadListColab();
   if (typeof loadListDonaciones === "function" && !donacionesData.length) loadListDonaciones();
   if (typeof loadListNecesidades === "function" && !necesidadesData.length) loadListNecesidades();
@@ -721,6 +723,15 @@ const tabSismosBtn = document.getElementById("tabSismosBtn");
 const tabSismos = document.getElementById("tabSismos");
 let currentTabType = "person"; // track active tab for map cleanup
 window.currentTabType = currentTabType;
+// Show the collaborator sub-tab bar (moved into the bottom driver) only
+// when logged in AND the Voluntad tab is active.
+function updateColabSubTabsVisibility() {
+  const bar = document.getElementById("colabSubTabs");
+  if (!bar) return;
+  const loggedIn = !!window.currentUser;
+  const onColabTab = currentTabType === "colaborador";
+  bar.style.display = loggedIn && onColabTab ? "flex" : "none";
+}
 function switchTab(activeBtn, activePanel, tabType) {
   // If leaving the map tab, hide the map container
   if (currentTabType === "map" && tabType !== "map") {
@@ -728,6 +739,7 @@ function switchTab(activeBtn, activePanel, tabType) {
   }
   currentTabType = tabType;
   window.currentTabType = currentTabType;
+  updateColabSubTabsVisibility();
   // Desactivar todos los botones
   [
     tabPersonasBtn,

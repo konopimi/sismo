@@ -1579,7 +1579,7 @@ textarea {
   border-bottom: 1px solid rgba(var(--surface), 0.62);
   /* background: rgba(var(--surface), 0.23); */
   flex-shrink: 0;
-  height: 100%;
+  height: auto;
   border-radius: 10px;
 }
 

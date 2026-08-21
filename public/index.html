@@ -160,27 +160,6 @@
     <!-- Contenido privado (con sesión) -->
     <div id="colabPrivateWrapper" style="display:none;flex-direction:column;flex:1;min-height:0;">
       <div id="connContainer"></div>
-      <!-- Sub-tabs -->
-      <div class="sub-tabs"
-        style="position:sticky;top:calc(var(--top-bar-height) + 5px);z-index:9999;backdrop-filter:blur(10px);">
-        <button class="sub-tab-btn active" data-subtab="chat" style="margin-right:auto;">💬<span
-            class="tab-label">Chat</span></button>
-        <button class="crear-btn sub-action" data-action-for="donaciones" onclick="openCrearModal('donacion')">🎁
-          DONAR</button>
-        <button class="crear-btn sub-action" data-action-for="necesidades" onclick="openCrearModal('necesidad')">🆘
-          REPORTAR</button>
-        <button class="crear-btn sub-action" data-action-for="logistica" onclick="openCrearModal('logistica')">🚚
-          CREAR</button>
-        <button class="crear-btn sub-action" data-action-for="voluntarios" onclick="openCrearModal('colaborador')">🤝
-          COLABORAR</button>
-        <button class="sub-tab-btn" data-subtab="backlog" style="margin-right:10px;">🤖<span
-            class="tab-label">Triage</span></button>
-        <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="tab-label">Donaciones</span></button>
-        <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="tab-label">Necesidades</span></button>
-        <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="tab-label">Logística</span></button>
-        <button class="sub-tab-btn" data-subtab="voluntarios">🤝<span class="tab-label">Voluntarios</span></button>
-      </div>
-
       <!-- Panel Chat: lista de conversaciones -->
       <div class="sub-tab-panel active" data-subtab-panel="chat">
         <div id="chatListContainer"
@@ -758,6 +737,26 @@
     <div class="driver-inner">
       <div id="searchBar" class="search-row">
         <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
+      </div>
+      <!-- Sub-tabs de colaboradores (entre búsqueda y menú principal) -->
+      <div id="colabSubTabs" class="sub-tabs"
+        style="display:none;height:auto;border-bottom:none;border-top:1px solid rgba(var(--surface),0.62);">
+        <button class="sub-tab-btn active" data-subtab="chat" style="margin-right:auto;">💬<span
+            class="tab-label">Chat</span></button>
+        <button class="crear-btn sub-action" data-action-for="donaciones" onclick="openCrearModal('donacion')">🎁
+          DONAR</button>
+        <button class="crear-btn sub-action" data-action-for="necesidades" onclick="openCrearModal('necesidad')">🆘
+          REPORTAR</button>
+        <button class="crear-btn sub-action" data-action-for="logistica" onclick="openCrearModal('logistica')">🚚
+          CREAR</button>
+        <button class="crear-btn sub-action" data-action-for="voluntarios" onclick="openCrearModal('colaborador')">🤝
+          COLABORAR</button>
+        <button class="sub-tab-btn" data-subtab="backlog" style="margin-right:10px;">🤖<span
+            class="tab-label">Triage</span></button>
+        <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="tab-label">Donaciones</span></button>
+        <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="tab-label">Necesidades</span></button>
+        <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="tab-label">Logística</span></button>
+        <button class="sub-tab-btn" data-subtab="voluntarios">🤝<span class="tab-label">Voluntarios</span></button>
       </div>
       <div class="tabs">
         <button id="crear" style="
