@@ -745,6 +745,14 @@ function updateColabSubTabsVisibility() {
   const loggedIn = !!window.currentUser;
   const onColabTab = currentTabType === "colaborador";
   bar.style.display = loggedIn && onColabTab ? "flex" : "none";
+  // The sub-tabs NUEVO button now lives outside #colabSubTabs (direct child
+  // of #driver), so it must be hidden/shown in lockstep with the bar. Look it
+  // up by id here (not the module const) to avoid a temporal-dead-zone error
+  // when this runs during initAuth, before the const is initialized.
+  const subBtn = document.getElementById("subCrearBtn");
+  if (subBtn) {
+    subBtn.style.display = loggedIn && onColabTab ? "" : "none";
+  }
 }
 // Hide the driver's NUEVO button on tabs that have no creation form
 // (colaboradores, mapa, sismos, wiki).
