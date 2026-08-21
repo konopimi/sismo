@@ -2993,13 +2993,10 @@ function setActiveSubTab(target) {
     if (!colabData.length) loadListColab();
     else renderColab();
   } else if (target === "backlog") {
-    if (!backlogData.length) {
-      // Await the fetch (shared in-flight promise) then render, so the list
-      // is never left blank when the load completes after the tab switch.
-      loadListBacklog().then(() => renderBacklog());
-    } else {
-      renderBacklog();
-    }
+    // loadListBacklog renders internally on completion (same as the other
+    // sub-tabs). Only re-render here when data is already cached.
+    if (!backlogData.length) loadListBacklog();
+    else renderBacklog();
   }
 }
 subTabBtns.forEach((btn) => {
