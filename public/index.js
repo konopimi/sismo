@@ -2960,8 +2960,13 @@ function setActiveSubTab(target) {
     if (!colabData.length) loadListColab();
     else renderColab();
   } else if (target === "backlog") {
-    if (!backlogData.length) loadListBacklog();
-    else renderBacklog();
+    if (!backlogData.length) {
+      // Await the fetch (shared in-flight promise) then render, so the list
+      // is never left blank when the load completes after the tab switch.
+      loadListBacklog().then(() => renderBacklog());
+    } else {
+      renderBacklog();
+    }
   }
 }
 subTabBtns.forEach((btn) => {
@@ -3279,24 +3284,28 @@ const BACKLOG_INTENT_EMOJI = {
   request_supplies: "📦", report_issue: "⚠️", share_info: "ℹ️",
   find_supplier: "🔍", volunteer_recruitment: "🤝", request_item: "📦", mental_health: "🧠", fraud_warning: "🚫",
 };
-let _backlogLoading = false;
+let _backlogPromise = null;
 async function loadListBacklog() {
-  if (!getAuthToken()) { backlogData = []; renderBacklog(); return; }
-  // Guard against duplicate concurrent fetches (e.g. rapid sub-tab toggling).
-  if (_backlogLoading) return;
-  _backlogLoading = true;
-  try {
-    const res = await fetch(`${API_BASE}/backlog`, {
-      headers: { Authorization: `Bearer ${getAuthToken()}` },
-    });
-    if (res.status === 401) { clearAuthToken(); showLoginForm(); return; }
-    backlogData = await res.json();
-    renderBacklog();
-  } catch {
-    listElBacklog.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
-  } finally {
-    _backlogLoading = false;
-  }
+  if (!getAuthToken()) { backlogData = []; renderBacklog(); return backlogData; }
+  // Reuse the in-flight fetch so concurrent callers (driver sub-tab + chat
+  // modal) all await the same request instead of racing or double-fetching.
+  if (_backlogPromise) return _backlogPromise;
+  _backlogPromise = (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/backlog`, {
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
+      });
+      if (res.status === 401) { clearAuthToken(); showLoginForm(); return backlogData; }
+      backlogData = await res.json();
+      renderBacklog();
+    } catch {
+      listElBacklog.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
+    } finally {
+      _backlogPromise = null;
+    }
+    return backlogData;
+  })();
+  return _backlogPromise;
 }
 function backlogCardHtml(item) {
   const date = new Date(item.created_at).toLocaleString("es-CO", {

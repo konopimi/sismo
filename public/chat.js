@@ -1576,13 +1576,28 @@ function setChatModalSubTab(target) {
         colabCardHtml,
         "Todavía nadie se ha unido como colaborador.",
       );
-    else if (target === "backlog")
-      renderModalList(
-        "chatModalListBacklog",
-        backlogData,
-        backlogCardHtml,
-        "Aún no hay mensajes para revisar.",
-      );
+    else if (target === "backlog") {
+      // If backlog hasn't been fetched yet, load it (shared in-flight
+      // promise) and render the modal list once it resolves — otherwise the
+      // modal would show the empty state forever until the driver loads it.
+      if (!backlogData.length) {
+        loadListBacklog().then(() =>
+          renderModalList(
+            "chatModalListBacklog",
+            backlogData,
+            backlogCardHtml,
+            "Aún no hay mensajes para revisar.",
+          ),
+        );
+      } else {
+        renderModalList(
+          "chatModalListBacklog",
+          backlogData,
+          backlogCardHtml,
+          "Aún no hay mensajes para revisar.",
+        );
+      }
+    }
   }
 }
 
