@@ -428,6 +428,18 @@ h1 {
   filter: brightness(1.1);
 }
 
+/* NUEVO buttons float above the driver instead of sitting inline with the
+   tab buttons. #driver is position:sticky, so it is the containing block for
+   these absolutely-positioned buttons. bottom:100% = the driver's top edge;
+   +5px lifts the button just above it. */
+#crear,
+#subCrearBtn {
+  position: absolute;
+  right: 10px;
+  bottom: calc(100% + 5px);
+  z-index: 1001;
+}
+
 /* ===== FILTER ROW (inside .tool-bar) ===== */
 .filter-row {
   display: flex;
@@ -782,6 +794,7 @@ button {
     rgba(60, 60, 60, 0.8) 0px 3px 0px;
   /* outside, below */
   transition: background 0.15s;
+  transform: translateY(-3px);
 }
 
 input,
@@ -796,12 +809,22 @@ textarea {
 }
 
 .tab-btn {
+  opacity: 0.8;
   position: relative;
 }
 
-.tab-btn.active {
+.tab-btn.active,
+.sub-tab-btn.active {
+  opacity: 1;
   background: rgba(0, 128, 128, 0.62);
   color: white;
+
+  box-shadow:
+    rgba(0, 0, 0, 0.4) 0px 2px 4px,
+    rgba(0, 0, 0, 0.3) 0px 7px 13px -3px,
+    rgba(60, 60, 60, 0.8) 0px 0px 0px;
+
+  transform: translateY(0px);
 }
 
 /* live count badge on category tabs */
@@ -1580,22 +1603,23 @@ textarea {
   /* background: rgba(var(--surface), 0.23); */
   flex-shrink: 0;
   height: auto;
-  border-radius: 10px;
 }
 
-.sub-tab-btn {}
+.sub-tab-btn {
+  opacity: 0.8;
+}
 
 .sub-tab-btn:hover {
   background: rgba(255, 255, 255, 0.06);
   color: #ccc;
 }
 
-.sub-tab-btn.active {
-  background: rgba(0, 128, 128, 0.62);
-  color: white;
-  /* background: rgba(69, 214, 214, 0.15); */
-  /* color: #45d6d6; */
-}
+/* .sub-tab-btn.active { */
+/* background: rgba(0, 128, 128, 0.62); */
+/* color: white; */
+/* background: rgba(69, 214, 214, 0.15); */
+/* color: #45d6d6; */
+/* } */
 
 /* Botones de acción (DONAR/REPORTAR/CREAR/COLABORAR) dentro de la barra de sub-tabs */
 .sub-tabs .crear-btn {
