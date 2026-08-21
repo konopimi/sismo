@@ -134,7 +134,7 @@
     <div id="chatAuth">
       <div id="loginForm"
         style="
-          margin:auto;margin-top:20px;max-width:600px;display:flex;flex-direction:column;gap:10px;padding:20px;background:rgba(var(--surface),0.38);border-radius:10px;">
+          margin:auto;margin-top:20px;max-width:600px;display:none;flex-direction:column;gap:10px;padding:20px;background:rgba(var(--surface),0.38);border-radius:10px;">
         <b style="color:#ccc;">💬 Chat de colaboradores</b>
         <input type="text" id="loginIdentifier" placeholder="Email o usuario" />
         <input type="password" id="loginPassword" placeholder="Contraseña" />
@@ -173,11 +173,12 @@
           CREAR</button>
         <button class="crear-btn sub-action" data-action-for="voluntarios" onclick="openCrearModal('colaborador')">🤝
           COLABORAR</button>
+        <button class="sub-tab-btn" data-subtab="backlog" style="margin-right:10px;">🤖<span
+            class="tab-label">Triage</span></button>
         <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="tab-label">Donaciones</span></button>
         <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="tab-label">Necesidades</span></button>
         <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="tab-label">Logística</span></button>
         <button class="sub-tab-btn" data-subtab="voluntarios">🤝<span class="tab-label">Voluntarios</span></button>
-        <button class="sub-tab-btn" data-subtab="backlog">🧠<span class="tab-label">Triage</span></button>
       </div>
 
       <!-- Panel Chat: lista de conversaciones -->
@@ -880,11 +881,12 @@
           style="flex:0 0 auto;height:auto;border-top:1px solid rgba(120,120,120,0.3);border-bottom:none;">
           <button class="sub-tab-btn active" data-subtab="chat" style="margin-right: auto;">💬<span
               class="tab-label">Chat</span></button>
+          <button class="sub-tab-btn" data-subtab="backlog" style="margin-right:10px;">🤖<span
+              class="tab-label">Triage</span></button>
           <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="tab-label">Donaciones</span></button>
           <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="tab-label">Necesidades</span></button>
           <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="tab-label">Logística</span></button>
           <button class="sub-tab-btn" data-subtab="voluntarios">🤝<span class="tab-label">Voluntarios</span></button>
-          <button class="sub-tab-btn" data-subtab="backlog">🧠<span class="tab-label">Triage</span></button>
         </div>
       </div>
     </div>
@@ -923,7 +925,8 @@
           <!-- Media (image/video) is injected here, kept separate from the
                OCR overlay so it isn't wiped out by innerHTML updates. -->
           <div id="lightboxMedia"
-            style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;position:relative;"></div>
+            style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;position:relative;">
+          </div>
           <div id="lightboxOcr" style="display:none;width:100%;max-width:800px;margin:0 auto;padding:0 12px 12px;">
           </div>
           <!-- OCR Overlay (semi-transparent, full screen over the image) -->
