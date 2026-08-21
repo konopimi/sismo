@@ -2769,7 +2769,7 @@ async function loadListColab() {
     refreshCityFilter("colaborador", colabData);
     renderColab();
     updateTabCounts();
-    if (colabListWrapper) colabListWrapper.style.display = "block";
+    if (colabListWrapper) colabListWrapper.style.display = "flex";
     if (colabLoginPrompt) colabLoginPrompt.style.display = "none";
   } catch {
     listElColab.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
