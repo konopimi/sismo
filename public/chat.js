@@ -787,27 +787,6 @@ function renderChatError(msg) {
 }
 
 let chatModalShell = null;
-// When a detail modal is opened from inside the chat modal, remember to
-// restore the chat modal once the detail modal closes (the chat modal is
-// closed first so the detail modal isn't hidden behind it).
-let reopenChatAfterDetail = false;
-
-// Open a detail modal from the chat modal. The chat modal is closed first
-// (both are .modal with the same z-index), so we wrap detailModal.close to
-// bring the chat modal back when the detail modal is dismissed.
-function openDetailFromChat(openFn) {
-  reopenChatAfterDetail = true;
-  const origClose = detailModal.close.bind(detailModal);
-  detailModal.close = function () {
-    origClose();
-    if (reopenChatAfterDetail && chatModalShell) {
-      reopenChatAfterDetail = false;
-      chatModalShell.open();
-    }
-  };
-  openFn();
-}
-
 async function openChatModal() {
   if (!matrixDirectory) {
     matrixDirectory = await loadMatrixDirectory();
@@ -1632,18 +1611,11 @@ function wireChatModalSubTabs() {
       const type = card.dataset.type;
       if (!id) return;
 
-      // Close the chat modal first so the detail modal isn't hidden behind
-      // it (both are .modal with the same z-index; the chat modal is later
-      // in the DOM and would otherwise paint on top).
-      if (chatModalShell && chatModalShell.isOpen()) chatModalShell.close();
-
       if (type === "backlog") {
         const item = (backlogData || []).find(
           (b) => String(b.id) === String(id),
         );
-        if (item && typeof openBacklogModal === "function") {
-          openDetailFromChat(() => openBacklogModal(item));
-        }
+        if (item && typeof openBacklogModal === "function") openBacklogModal(item);
         return;
       }
 
@@ -1657,7 +1629,7 @@ function wireChatModalSubTabs() {
       if (!arr) return;
       const item = arr.find((x) => String(x.id) === String(id));
       if (item && typeof openModalForItem === "function") {
-        openDetailFromChat(() => openModalForItem(item, type));
+        openModalForItem(item, type);
       }
     });
   }

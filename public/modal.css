@@ -51,6 +51,14 @@
   animation: modalFade 0.2s ease-out;
 }
 
+/* The detail modal must paint above the chat modal (both are .modal at
+   z-index:10000; the chat modal is later in the DOM and would otherwise
+   win the stacking order). Raising it lets it open on top without closing
+   the chat modal underneath. */
+#modal {
+  z-index: 10001;
+}
+
 .modal-header {
   position: sticky;
   top: 0px;
