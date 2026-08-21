@@ -554,7 +554,7 @@ function updateReplyBar() {
     preview.innerHTML = `<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;"><strong style="color:${replyColor};">${escapeHtml(name)}</strong> ${escapeHtml(previewText)}</div>`;
     preview.style.cursor = "pointer";
     preview.onclick = () => window.scrollToChatEvent(replyingTo.eventId);
-    bar.style.visibility = "visible";
+    bar.style.display = "flex";
     if (name.includes("-") && name.length === 36) {
       loadMatrixDirectory().then((dir) => {
         matrixDirectory = dir;
@@ -566,7 +566,7 @@ function updateReplyBar() {
       });
     }
   } else {
-    bar.style.visibility = "hidden";
+    bar.style.display = "none";
     preview.innerHTML = "";
   }
 }
@@ -1487,7 +1487,7 @@ function setChatModalSubTab(target) {
   // and the div falls back to display:block, breaking the row.
   if (inputBar) inputBar.style.display = isChat ? "flex" : "none";
   // Only show reply bar if we're actually replying to something.
-  if (replyBar) replyBar.style.visibility = (isChat && replyingTo) ? "visible" : "hidden";
+  if (replyBar) replyBar.style.display = (isChat && replyingTo) ? "flex" : "none";
   panels.style.display = isChat ? "none" : "flex";
 
   // Lazy-load the target list into the modal's own container.
