@@ -1267,8 +1267,11 @@ function renderMediaGrid(group) {
   const cols = visible.length === 1 ? 1 : visible.length === 2 ? 2 : 3;
   group.gridEl.dataset.count = String(visible.length);
   group.gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-  // Reserve space before images load using aspect-ratio on the grid.
-  // This prevents the bubble from growing when images finish loading.
+  // Give the grid a definite width so aspect-ratio computes height
+  // immediately (before images load), preventing bubble size change.
+  // max-width:75% of ~375px viewport ≈ 281px.
+  group.gridEl.style.width = "281px";
+  group.gridEl.style.maxWidth = "100%";
   if (visible.length === 1) {
     // Single image: preserve its natural aspect ratio.
     const refItem = items[0];
