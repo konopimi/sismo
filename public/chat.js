@@ -1596,6 +1596,42 @@ function wireChatModalSubTabs() {
   btns.forEach((btn) =>
     btn.addEventListener("click", () => setChatModalSubTab(btn.dataset.subtab)),
   );
+
+  // Wire item clicks in the modal lists so they behave identically to the
+  // main collaborator tab. Cards carry data-id + data-type; resolve the
+  // item from the shared data arrays and open the same detail modal.
+  const panels = document.getElementById("chatModalSubPanels");
+  if (panels) {
+    panels.addEventListener("click", (e) => {
+      if (e.target.closest("button")) return;
+      const card = e.target.closest(".card");
+      if (!card) return;
+      const id = card.dataset.id;
+      const type = card.dataset.type;
+      if (!id) return;
+
+      if (type === "backlog") {
+        const item = (backlogData || []).find(
+          (b) => String(b.id) === String(id),
+        );
+        if (item && typeof openBacklogModal === "function") openBacklogModal(item);
+        return;
+      }
+
+      const dataMap = {
+        colaborador: colabData,
+        donacion: donacionesData,
+        necesidad: necesidadesData,
+        logistica: logisticaData,
+      };
+      const arr = dataMap[type];
+      if (!arr) return;
+      const item = arr.find((x) => String(x.id) === String(id));
+      if (item && typeof openModalForItem === "function") {
+        openModalForItem(item, type);
+      }
+    });
+  }
 }
 
 // Render a data list into a modal container using the shared card renderers

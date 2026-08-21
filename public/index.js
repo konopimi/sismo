@@ -3283,7 +3283,7 @@ function backlogCardHtml(item) {
     ? `<details class="backlog-raw"><summary>🔍 raw JSON</summary><pre>${escapeHtml(item.raw_json)}</pre></details>`
     : "";
   return `
-    <div class="card backlog" data-id="${item.id}">
+    <div class="card backlog" data-id="${item.id}" data-type="backlog">
       <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
         <span class="name">${emoji} ${escapeHtml(item.intent)}</span>
         <span class="status-tag backlog-${escapeHtml(item.status || "pending")}">${BACKLOG_STATUS_LABEL[item.status] || item.status}</span>
