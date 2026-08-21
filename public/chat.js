@@ -1313,22 +1313,22 @@ function openLightbox(items, index) {
 }
 
 function updateLightboxStage() {
-  const stage = document.getElementById("lightboxStage");
+  const media = document.getElementById("lightboxMedia");
   const counter = document.getElementById("lightboxCounter");
   const prevBtn = document.getElementById("lightboxPrev");
   const nextBtn = document.getElementById("lightboxNext");
   const ocrToggleBtn = document.getElementById("lightboxOcrToggle");
   const ocrOverlay = document.getElementById("lightboxOcrOverlay");
-  if (!stage) return;
+  if (!media) return;
 
   const item = _lightboxItems[_lightboxIndex];
   const src = item.fullSrc || item.src;
 
   const emoji = item.msgtype === "m.video" ? "🎬" : "📷";
   if (item.msgtype === "m.video") {
-    stage.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><video src="${escapeHtml(src)}" controls autoplay style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;flex:0 1 auto;min-height:0;"></video>`;
+    media.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><video src="${escapeHtml(src)}" controls autoplay style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;flex:0 1 auto;min-height:0;"></video>`;
   } else {
-    stage.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "")}" style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;flex:0 1 auto;min-height:0;"/>`;
+    media.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "")}" style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;flex:0 1 auto;min-height:0;"/>`;
   }
 
   // OCR / extracted-text panel below the media (images only)
