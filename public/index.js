@@ -2935,16 +2935,32 @@ async function removeColab(id) {
 // ================================================================
 const subTabBtns = document.querySelectorAll(".sub-tab-btn");
 const subTabPanels = document.querySelectorAll(".sub-tab-panel");
-const subActionBtns = document.querySelectorAll(".sub-action");
+// Single NUEVO button in the sub-tabs bar: its label + handler change on
+// the fly based on the active sub-tab, and it hides (visibility) on sub-tabs
+// that have no creation form (chat, backlog/triage).
+const SUB_CREAR_META = {
+  donaciones: { type: "donacion", emoji: "🎁" },
+  necesidades: { type: "necesidad", emoji: "🆘" },
+  logistica: { type: "logistica", emoji: "🚚" },
+  voluntarios: { type: "colaborador", emoji: "🤝" },
+};
+const subCrearBtn = document.getElementById("subCrearBtn");
+function updateSubCrearBtn(target) {
+  if (!subCrearBtn) return;
+  const meta = SUB_CREAR_META[target];
+  // visibility:hidden keeps the button's space so the bar doesn't shift.
+  subCrearBtn.style.visibility = meta ? "" : "hidden";
+  if (!meta) return;
+  subCrearBtn.innerHTML = `${meta.emoji}\n          NUEVO`;
+  subCrearBtn.onclick = () => openCrearModal(meta.type);
+}
 function setActiveSubTab(target) {
   subTabBtns.forEach((b) => b.classList.toggle("active", b.dataset.subtab === target));
   subTabPanels.forEach((p) => {
     p.classList.toggle("active", p.dataset.subtabPanel === target);
   });
-  // Mostrar solo el botón de acción de la sub-tab activa.
-  subActionBtns.forEach((a) => {
-    a.style.display = a.dataset.actionFor === target ? "" : "none";
-  });
+  // Single NUEVO button: update its content + handler for the active sub-tab.
+  updateSubCrearBtn(target);
   // Load (if empty) and always re-render the target data sub-tab so the
   // list is fresh and never left blank after a fetch race.
   if (target === "donaciones") {
