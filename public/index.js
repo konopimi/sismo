@@ -2810,15 +2810,18 @@ function updateTabCounts() {
   set("tabPetsBtn", petsData.length);
   set("tabEdificiosBtn", buildingsData.length);
   set("tabAnunciosBtn", anunciosData.length);
-  // Collaborators count is only shown to logged-in users.
-  const colabBadge = document.querySelector("#tabColabBtn .n");
-  if (colabBadge) {
-    if (window.currentUser) {
-      colabBadge.textContent = colabData.length;
-      colabBadge.style.display = "";
-    } else {
-      colabBadge.style.display = "none";
-    }
+  // Sub-tab counts (both the driver bar and the chat modal bar). The
+  // colaboradores tab button itself no longer shows a count.
+  const subCounts = {
+    donaciones: donacionesData.length,
+    necesidades: necesidadesData.length,
+    logistica: logisticaData.length,
+    voluntarios: colabData.length,
+  };
+  for (const [subtab, n] of Object.entries(subCounts)) {
+    document
+      .querySelectorAll(`.sub-tab-btn[data-subtab="${subtab}"] .n`)
+      .forEach((badge) => (badge.textContent = n));
   }
 }
 const COLAB_PLACEHOLDER =
@@ -3015,6 +3018,7 @@ async function loadListDonaciones() {
     if (res.status === 401) { clearAuthToken(); showLoginForm(); return; }
     donacionesData = await res.json();
     renderDonaciones();
+    updateTabCounts();
   } catch {
     listElDonaciones.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
   }
@@ -3111,6 +3115,7 @@ async function loadListNecesidades() {
     if (res.status === 401) { clearAuthToken(); showLoginForm(); return; }
     necesidadesData = await res.json();
     renderNecesidades();
+    updateTabCounts();
   } catch {
     listElNecesidades.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
   }
@@ -3208,6 +3213,7 @@ async function loadListLogistica() {
     if (res.status === 401) { clearAuthToken(); showLoginForm(); return; }
     logisticaData = await res.json();
     renderLogistica();
+    updateTabCounts();
   } catch {
     listElLogistica.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
   }
