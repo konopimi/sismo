@@ -786,11 +786,12 @@ function renderChatError(msg) {
   container.innerHTML = `<div style="padding:20px;color:#f66;">${escapeHtml(msg)}</div>`;
 }
 
+let chatModalShell = null;
 async function openChatModal() {
   if (!matrixDirectory) {
     matrixDirectory = await loadMatrixDirectory();
   }
-  const modal = Modal({
+  chatModalShell = Modal({
     id: "chatModal",
     onClose: cleanupChatVirtualizer,
     onOpen: () => {
@@ -809,7 +810,7 @@ async function openChatModal() {
       if (typeof setChatModalSubTab === "function") setChatModalSubTab("chat");
     },
   });
-  if (modal) modal.open();
+  if (chatModalShell) chatModalShell.open();
 }
 
 function bindChatEvents() {
@@ -1609,6 +1610,11 @@ function wireChatModalSubTabs() {
       const id = card.dataset.id;
       const type = card.dataset.type;
       if (!id) return;
+
+      // Close the chat modal first so the detail modal isn't hidden behind
+      // it (both are .modal with the same z-index; the chat modal is later
+      // in the DOM and would otherwise paint on top).
+      if (chatModalShell && chatModalShell.isOpen()) chatModalShell.close();
 
       if (type === "backlog") {
         const item = (backlogData || []).find(
