@@ -1632,6 +1632,12 @@ textarea {
 }
 
 /* Main collaborator tab panels - prevent overscroll bounce */
+#tabColab.active {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 #colabPrivateWrapper .sub-tab-panel {
   overflow-y: auto;
   overflow-x: hidden;
@@ -1639,6 +1645,8 @@ textarea {
 }
 
 #colabPrivateWrapper .sub-tab-panel .list {
+  overflow-y: auto;
+  min-height: 0;
   overscroll-behavior: contain;
 }
 
