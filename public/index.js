@@ -3442,6 +3442,11 @@ async function setBacklogStatus(id, status) {
   if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error"); return; }
   loadListBacklog();
 }
+// "Promover" a backlog item = mark it accepted (promoted into a real item).
+// Defined as a top-level function so the inline onclick handlers resolve it.
+function openPromoteModal(id) {
+  setBacklogStatus(id, "accepted");
+}
 // Deep link: #anuncio/ abre directamente ese anuncio en su modal.
 function handleAnuncioDeepLink() {
   const match = location.hash.match(/^#anuncio\/(.+)$/);
