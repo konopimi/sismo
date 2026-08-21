@@ -1,9 +1,21 @@
 /* ===== CHAT HIGHLIGHT STROBE ===== */
 @keyframes chat-highlight-strobe {
-  0%, 100% { outline: 2px solid #3fa34d; }
-  25%, 75% { outline: 2px solid transparent; }
-  50% { outline: 2px solid #3fa34d; }
+
+  0%,
+  100% {
+    outline: 2px solid #3fa34d;
+  }
+
+  25%,
+  75% {
+    outline: 2px solid transparent;
+  }
+
+  50% {
+    outline: 2px solid #3fa34d;
+  }
 }
+
 .chat-highlight-strobe {
   animation: chat-highlight-strobe 0.6s ease-in-out 3;
 }
@@ -1611,6 +1623,7 @@ textarea {
   overflow-x: hidden;
   overscroll-behavior: contain;
 }
+
 #chatModalSubPanels .sub-tab-panel .list {
   padding-bottom: 40px;
   overflow-y: auto;
@@ -1624,6 +1637,7 @@ textarea {
   overflow-x: hidden;
   overscroll-behavior: contain;
 }
+
 #colabPrivateWrapper .sub-tab-panel .list {
   overscroll-behavior: contain;
 }
@@ -1747,16 +1761,16 @@ textarea {
   background: #12151c;
 }
 
-/* Single-image groups shouldn't be forced square — let it breathe like
-   a normal photo message. */
+/* Single-image groups: item fills the grid (grid aspect-ratio is the
+   source of truth), so the bubble size is fixed before the image loads. */
 .chat-media-grid[data-count="1"] .chat-media-item {
   aspect-ratio: auto;
-  max-height: 320px;
+  height: 100%;
 }
 
 .chat-media-grid[data-count="1"] .chat-media-item img,
 .chat-media-grid[data-count="1"] .chat-media-item video {
-  object-fit: contain !important;
+  object-fit: cover !important;
 }
 
 .chat-media-more {
@@ -1777,18 +1791,22 @@ textarea {
   padding: 0;
   overflow: hidden;
 }
+
 #mediaLightbox .modal-content {
   height: 100dvh;
   max-height: 100dvh;
   overflow: hidden;
 }
+
 #mediaLightbox [data-modal-body] {
   min-height: 0;
 }
+
 #lightboxStage {
   overflow: hidden;
   min-height: 0;
 }
+
 #lightboxStage img,
 #lightboxStage video {
   max-width: 100%;
@@ -1833,7 +1851,15 @@ textarea {
   color: #e53935;
   animation: pulse-rec 1s ease-in-out infinite;
 }
+
 @keyframes pulse-rec {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
