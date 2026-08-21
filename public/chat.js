@@ -999,11 +999,6 @@ function createMessageNode(item) {
     const gridEl = document.createElement("div");
     gridEl.className = "chat-media-grid";
     const firstContent = item.items[0].getContent();
-    if (firstContent.info && firstContent.info.w && firstContent.info.h) {
-      gridEl.style.aspectRatio = `${firstContent.info.w} / ${firstContent.info.h}`;
-    } else {
-      gridEl.style.aspectRatio = "4 / 3";
-    }
 
     const group = { sender, ts: item.getTs(), gridEl, items };
     renderMediaGrid(group);
@@ -1114,17 +1109,6 @@ function createMessageNode(item) {
       : fullSrc;
     const gridEl = document.createElement("div");
     gridEl.className = "chat-media-grid";
-    if (content.info && content.info.w && content.info.h) {
-      gridEl.style.aspectRatio = `${content.info.w} / ${content.info.h}`;
-      const w = content.info.w, h = content.info.h;
-      const cols = 1; // single image
-      const cellWidth = 281 / cols;
-      const cellHeight = cellWidth * h / w;
-      gridEl.style.height = `${Math.round(cellHeight)}px`;
-    } else {
-      gridEl.style.aspectRatio = "4 / 3";
-      gridEl.style.height = "210px"; // 281 * 3/4 ≈ 210
-    }
     const group = {
       sender,
       ts: item.getTs(),
@@ -1283,14 +1267,19 @@ function renderMediaGrid(group) {
   const cols = visible.length === 1 ? 1 : visible.length === 2 ? 2 : 3;
   group.gridEl.dataset.count = String(visible.length);
   group.gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-  // Set explicit height so bubble doesn't grow when images load.
-  // max-width:75% of ~375px viewport ≈ 281px; height = cellWidth / ratio.
-  const refItem = items[0];
-  const refW = refItem.info?.w || 1;
-  const refH = refItem.info?.h || 1;
-  const cellWidth = 281 / cols;
-  const cellHeight = cellWidth * refH / refW;
-  group.gridEl.style.height = `${Math.round(cellHeight)}px`;
+  // Reserve space before images load using aspect-ratio on the grid.
+  // This prevents the bubble from growing when images finish loading.
+  if (visible.length === 1) {
+    // Single image: preserve its natural aspect ratio.
+    const refItem = items[0];
+    const refW = refItem.info?.w || 4;
+    const refH = refItem.info?.h || 3;
+    group.gridEl.style.aspectRatio = `${refW} / ${refH}`;
+  } else {
+    // Multi-image: square cells. Grid aspect = cols / rows.
+    const rows = Math.ceil(visible.length / cols);
+    group.gridEl.style.aspectRatio = `${cols} / ${rows}`;
+  }
   group.gridEl.innerHTML = visible
     .map((item, i) =>
       mediaThumbHtml(item, i, i === visible.length - 1, extraCount),
