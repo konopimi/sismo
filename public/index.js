@@ -738,7 +738,8 @@ function updateCrearBtnVisibility() {
   const btn = document.getElementById("crear");
   if (!btn) return;
   const hidden = ["colaborador", "map", "sismos", "wiki"].includes(currentTabType);
-  btn.style.display = hidden ? "none" : "";
+  // visibility:hidden keeps the button's space so the tab row doesn't shift.
+  btn.style.visibility = hidden ? "hidden" : "";
 }
 function switchTab(activeBtn, activePanel, tabType) {
   // If leaving the map tab, hide the map container
