@@ -2945,12 +2945,24 @@ function setActiveSubTab(target) {
   subActionBtns.forEach((a) => {
     a.style.display = a.dataset.actionFor === target ? "" : "none";
   });
-  // Render the target list if it's a data sub-tab and empty.
-  if (target === "donaciones" && !donacionesData.length) loadListDonaciones();
-  else if (target === "necesidades" && !necesidadesData.length) loadListNecesidades();
-  else if (target === "logistica" && !logisticaData.length) loadListLogistica();
-  else if (target === "voluntarios" && !colabData.length) loadListColab();
-  else if (target === "backlog" && !backlogData.length) loadListBacklog();
+  // Load (if empty) and always re-render the target data sub-tab so the
+  // list is fresh and never left blank after a fetch race.
+  if (target === "donaciones") {
+    if (!donacionesData.length) loadListDonaciones();
+    else renderDonaciones();
+  } else if (target === "necesidades") {
+    if (!necesidadesData.length) loadListNecesidades();
+    else renderNecesidades();
+  } else if (target === "logistica") {
+    if (!logisticaData.length) loadListLogistica();
+    else renderLogistica();
+  } else if (target === "voluntarios") {
+    if (!colabData.length) loadListColab();
+    else renderColab();
+  } else if (target === "backlog") {
+    if (!backlogData.length) loadListBacklog();
+    else renderBacklog();
+  }
 }
 subTabBtns.forEach((btn) => {
   btn.addEventListener("click", () => setActiveSubTab(btn.dataset.subtab));
@@ -3267,8 +3279,12 @@ const BACKLOG_INTENT_EMOJI = {
   request_supplies: "📦", report_issue: "⚠️", share_info: "ℹ️",
   find_supplier: "🔍", volunteer_recruitment: "🤝", request_item: "📦", mental_health: "🧠", fraud_warning: "🚫",
 };
+let _backlogLoading = false;
 async function loadListBacklog() {
   if (!getAuthToken()) { backlogData = []; renderBacklog(); return; }
+  // Guard against duplicate concurrent fetches (e.g. rapid sub-tab toggling).
+  if (_backlogLoading) return;
+  _backlogLoading = true;
   try {
     const res = await fetch(`${API_BASE}/backlog`, {
       headers: { Authorization: `Bearer ${getAuthToken()}` },
@@ -3278,6 +3294,8 @@ async function loadListBacklog() {
     renderBacklog();
   } catch {
     listElBacklog.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
+  } finally {
+    _backlogLoading = false;
   }
 }
 function backlogCardHtml(item) {
