@@ -1333,6 +1333,11 @@ function updateLightboxStage() {
 
   // OCR / extracted-text panel below the media (images only)
   const ocrContainer = document.getElementById("lightboxOcr");
+  // Clear any stale OCR from the previous image immediately, so it can't
+  // leak into the overlay while the new image's OCR is still loading.
+  _lightboxOcrData = null;
+  const overlayText = document.getElementById("lightboxOcrText");
+  if (overlayText) overlayText.textContent = "";
   if (ocrContainer) {
     if (item.msgtype === "m.image" && item.eventId) {
       ocrContainer.innerHTML = `<div style="text-align:center;color:#666;font-size:0.8rem;">Cargando texto extraído…</div>`;
@@ -1359,17 +1364,22 @@ function updateLightboxStage() {
   if (nextBtn) nextBtn.disabled = _lightboxIndex === _lightboxItems.length - 1;
 }
 
+let _ocrRequestToken = 0;
 async function fetchOcrText(eventId, container) {
+  const token = ++_ocrRequestToken;
   try {
     const res = await authFetch(
       `${API_BASE}/backlog/by-event/${encodeURIComponent(eventId)}`,
     );
+    // Ignore stale responses if the user navigated to another image.
+    if (token !== _ocrRequestToken) return;
     if (!res.ok) {
       container.innerHTML = "";
       _lightboxOcrData = null;
       return;
     }
     const data = await res.json();
+    if (token !== _ocrRequestToken) return;
     if (!data.raw_text) {
       container.innerHTML = "";
       _lightboxOcrData = null;
@@ -1389,6 +1399,7 @@ async function fetchOcrText(eventId, container) {
     const overlayText = document.getElementById("lightboxOcrText");
     if (overlayText) overlayText.textContent = data.raw_text;
   } catch (e) {
+    if (token !== _ocrRequestToken) return;
     console.error("OCR fetch failed:", e);
     container.innerHTML = "";
     _lightboxOcrData = null;
