@@ -1367,27 +1367,28 @@ function updateLightboxStage() {
 let _ocrRequestToken = 0;
 async function fetchOcrText(eventId, container) {
   const token = ++_ocrRequestToken;
-  try {
-    const res = await authFetch(
-      `${API_BASE}/backlog/by-event/${encodeURIComponent(eventId)}`,
-    );
-    // Ignore stale responses if the user navigated to another image.
-    if (token !== _ocrRequestToken) return;
-    if (!res.ok) {
-      container.innerHTML = "";
-      _lightboxOcrData = null;
-      return;
-    }
-    const data = await res.json();
-    if (token !== _ocrRequestToken) return;
-    if (!data.raw_text) {
-      container.innerHTML = "";
-      _lightboxOcrData = null;
-      return;
-    }
-    // Cache the OCR text so the overlay can render it on toggle.
-    _lightboxOcrData = { raw_text: data.raw_text, intent: data.intent || null };
-    container.innerHTML = `
+  // Poll for OCR text: the bot may still be processing the image when the
+  // lightbox first opens, so retry a few times before giving up.
+  const MAX_ATTEMPTS = 6;
+  const RETRY_DELAY_MS = 2000;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    if (token !== _ocrRequestToken) return; // navigated away
+    try {
+      const res = await authFetch(
+        `${API_BASE}/backlog/by-event/${encodeURIComponent(eventId)}`,
+      );
+      if (token !== _ocrRequestToken) return;
+      if (!res.ok) {
+        container.innerHTML = "";
+        _lightboxOcrData = null;
+        return;
+      }
+      const data = await res.json();
+      if (token !== _ocrRequestToken) return;
+      if (data.raw_text) {
+        // Found OCR text — render it and stop polling.
+        _lightboxOcrData = { raw_text: data.raw_text, intent: data.intent || null };
+        container.innerHTML = `
             <div style="padding:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:0.9rem;color:#ccc;max-height:25vh;overflow-y:auto;text-align:left;">
                 <div style="font-size:0.75rem;color:#45d6d6;margin-bottom:8px;font-weight:bold;">
                     🧠 Texto extraído
@@ -1395,15 +1396,25 @@ async function fetchOcrText(eventId, container) {
                 </div>
                 <pre style="white-space:pre-wrap;word-break:break-word;margin:0;font-family:inherit;line-height:1.5;">${escapeHtml(data.raw_text)}</pre>
             </div>`;
-    // Populate the overlay text so the toggle can show it over the image.
-    const overlayText = document.getElementById("lightboxOcrText");
-    if (overlayText) overlayText.textContent = data.raw_text;
-  } catch (e) {
-    if (token !== _ocrRequestToken) return;
-    console.error("OCR fetch failed:", e);
-    container.innerHTML = "";
-    _lightboxOcrData = null;
+        const overlayText = document.getElementById("lightboxOcrText");
+        if (overlayText) overlayText.textContent = data.raw_text;
+        return;
+      }
+      // No OCR yet — wait and retry.
+      if (attempt < MAX_ATTEMPTS - 1) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      }
+    } catch (e) {
+      if (token !== _ocrRequestToken) return;
+      console.error("OCR fetch failed:", e);
+      container.innerHTML = "";
+      _lightboxOcrData = null;
+      return;
+    }
   }
+  // Exhausted retries — no OCR available.
+  container.innerHTML = "";
+  _lightboxOcrData = null;
 }
 
 // Wire lightbox nav buttons once
