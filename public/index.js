@@ -475,24 +475,38 @@ function renderVirtualList(containerEl, items, cardHtmlFn) {
     sentinel.remove();
     return;
   }
+  const loadMore = () => {
+    if (!sentinel.isConnected) return;
+    const next = Math.min(rendered + VIRTUAL_BATCH_SIZE, items.length);
+    sentinel.insertAdjacentHTML(
+      "beforebegin",
+      items.slice(rendered, next).map(cardHtmlFn).join(""),
+    );
+    rendered = next;
+    if (rendered >= items.length) {
+      observer.disconnect();
+      sentinel.remove();
+    }
+  };
   const observer = new IntersectionObserver(
     (entries) => {
       if (!entries[0].isIntersecting) return;
-      const next = Math.min(rendered + VIRTUAL_BATCH_SIZE, items.length);
-      sentinel.insertAdjacentHTML(
-        "beforebegin",
-        items.slice(rendered, next).map(cardHtmlFn).join(""),
-      );
-      rendered = next;
-      if (rendered >= items.length) {
-        observer.disconnect();
-        sentinel.remove();
-      }
+      loadMore();
     },
     { rootMargin: "600px" },
   );
   observer.observe(sentinel);
   virtualObservers.set(containerEl, observer);
+  // Fallback: if the sentinel is already in view but the observer's initial
+  // callback was missed (e.g. the container was just made visible and layout
+  // hadn't settled), force a manual check after the next frame so the list
+  // never appears empty on first render.
+  requestAnimationFrame(() => {
+    if (!sentinel.isConnected) return;
+    const rect = sentinel.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    if (rect.top < vh + 600) loadMore();
+  });
 }
 async function loadExtraLocations(itemId, type) {
   const container = document.getElementById("modalExtraLocationsContainer");
@@ -3358,7 +3372,7 @@ function backlogCardHtml(item) {
         </div>
       </div>
       <div style="padding:6px;display:flex;gap:6px;justify-content:flex-end;">
-        <button class="btn-small" onclick="openPromoteModal('${item.id}')">✅ Aceptar y promover</button>
+        <button class="btn-small" onclick="openPromoteModal('${item.id}')">✅ Promover</button>
         <button class="btn-small btn-delete" onclick="setBacklogStatus('${item.id}','rejected')">✕ Rechazar</button>
       </div>
     </div>
@@ -3399,7 +3413,7 @@ function openBacklogModal(item) {
     ${rawJson}
   `;
   modalActions.innerHTML = `
-    <button class="btn-small" onclick="openPromoteModal('${item.id}'); closeModal();">✅ Aceptar y promover</button>
+    <button class="btn-small" onclick="openPromoteModal('${item.id}'); closeModal();">✅ Promover</button>
     <button class="btn-small btn-delete" onclick="setBacklogStatus('${item.id}','rejected'); closeModal();">✕ Rechazar</button>
   `;
   document.getElementById("commentsContainer").style.display = "none";
