@@ -596,7 +596,38 @@ async function startMatrixChat() {
     if (window.Olm && typeof window.Olm.init === "function")
       await window.Olm.init();
 
+    // Reuse a cached access token to skip the slow login + crypto init
+    // round-trips on page refresh. The token is validated lazily by the
+    // first sync; if it's expired we fall back to a fresh login.
+    const cachedToken = localStorage.getItem("sismo_matrix_access_token");
+    const cachedUserId = localStorage.getItem("sismo_matrix_user_id");
     const storedDeviceId = localStorage.getItem("sismo_matrix_device_id");
+
+    if (cachedToken && cachedUserId && storedDeviceId) {
+      matrixClient = sdk.createClient({
+        baseUrl: base_url,
+        accessToken: cachedToken,
+        userId: cachedUserId,
+        deviceId: storedDeviceId,
+      });
+      try {
+        await matrixClient.initCrypto();
+        matrixClient.setGlobalErrorOnUnknownDevices(false);
+        await matrixClient.startClient({ initialSyncLimit: 20 });
+        // Token is valid — skip login.
+        matrixRoom = await joinOrCreateRoom();
+        matrixDirectory = await loadMatrixDirectory();
+        renderChatUI();
+        bindChatEvents();
+        return;
+      } catch (e) {
+        // Cached token invalid/expired — fall through to fresh login.
+        console.warn("Cached Matrix token invalid, re-logging in:", e.message);
+        localStorage.removeItem("sismo_matrix_access_token");
+        localStorage.removeItem("sismo_matrix_user_id");
+      }
+    }
+
     const tmpClient = sdk.createClient({ baseUrl: base_url });
     const loginResp = await tmpClient.login("m.login.password", {
       identifier: {
@@ -607,6 +638,8 @@ async function startMatrixChat() {
       ...(storedDeviceId ? { device_id: storedDeviceId } : {}),
     });
     localStorage.setItem("sismo_matrix_device_id", loginResp.device_id);
+    localStorage.setItem("sismo_matrix_access_token", loginResp.access_token);
+    localStorage.setItem("sismo_matrix_user_id", loginResp.user_id);
 
     matrixClient = sdk.createClient({
       baseUrl: base_url,
