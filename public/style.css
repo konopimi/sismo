@@ -1650,6 +1650,20 @@ textarea {
   overscroll-behavior: contain;
 }
 
+/* The voluntarios panel wraps its list in #colabListWrapper; make it
+   fill the panel and constrain height so the inner list can scroll. */
+#colabListWrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+#colabListWrapper .list {
+  flex: 1;
+  min-height: 0;
+}
+
 /* ============================================================
    Status tags por tipo (donaciones / necesidades / logística)
    ============================================================ */
