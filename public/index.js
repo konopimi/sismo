@@ -732,6 +732,14 @@ function updateColabSubTabsVisibility() {
   const onColabTab = currentTabType === "colaborador";
   bar.style.display = loggedIn && onColabTab ? "flex" : "none";
 }
+// Hide the driver's NUEVO button on tabs that have no creation form
+// (colaboradores, mapa, sismos, wiki).
+function updateCrearBtnVisibility() {
+  const btn = document.getElementById("crear");
+  if (!btn) return;
+  const hidden = ["colaborador", "map", "sismos", "wiki"].includes(currentTabType);
+  btn.style.display = hidden ? "none" : "";
+}
 function switchTab(activeBtn, activePanel, tabType) {
   // If leaving the map tab, hide the map container
   if (currentTabType === "map" && tabType !== "map") {
@@ -740,6 +748,7 @@ function switchTab(activeBtn, activePanel, tabType) {
   currentTabType = tabType;
   window.currentTabType = currentTabType;
   updateColabSubTabsVisibility();
+  updateCrearBtnVisibility();
   // Desactivar todos los botones
   [
     tabPersonasBtn,
