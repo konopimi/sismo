@@ -601,8 +601,22 @@ async function processGroup(userId, groupEvents) {
     } catch (e) {
       console.error("[bot] ⚠️ NIM failed, saving with Rasa raw:", e.message);
     }
-  } else if (intent.confidence > 0.9 && entities.length >= 2) {
-    console.log("[bot] ⚡ Fast path");
+  } else if (intent.confidence > 0.9) {
+    const SIMPLE_INTENTS = new Set(['gratitude', 'status_update', 'request_confirmation']);
+    if (SIMPLE_INTENTS.has(intent.name)) {
+      console.log("[bot] ⚡ Fast path");
+    } else {
+      console.log("[bot] 🐢 Slow path: NIM structuring");
+      try {
+        const structured = await structureWithNIM(combinedText);
+        if (structured.intent !== "unknown") finalIntent = structured.intent;
+        finalEntities = nimEntitiesToFlat(structured);
+        enrichedData = structured;
+        console.log(`[bot] ✅ NIM: ${finalIntent}`);
+      } catch (e) {
+        console.error("[bot] ⚠️ NIM failed, using Rasa raw:", e.message);
+      }
+    }
   } else {
     console.log("[bot] 🐢 Slow path: NIM structuring");
     try {
