@@ -3466,9 +3466,25 @@ function openBacklogModal(item) {
     <span>🕒 ${date}</span>
     <span>👤 ${escapeHtml(item.creator_name || item.creator_matrix_id || "—")}</span>
   `;
-  const entities = Array.isArray(item.extracted_data) && item.extracted_data.length
-    ? item.extracted_data.map((e) => `<span class="meta">${escapeHtml(e.entity || "")}: ${escapeHtml(e.value || "")}</span>`).join("")
-    : `<span class="meta">sin entidades</span>`;
+  // Prefer NIM's grouped items[] (enriched_data) over flat Rasa entities.
+  let entities;
+  let enriched = null;
+  if (item.enriched_data) {
+    try {
+      enriched = typeof item.enriched_data === "string" ? JSON.parse(item.enriched_data) : item.enriched_data;
+    } catch { enriched = null; }
+  }
+  if (enriched && Array.isArray(enriched.items) && enriched.items.length) {
+    entities = enriched.items.map((it) => {
+      const name = it.item || it.name || it.tipo || it.type || "?";
+      const qty = it.quantity != null ? ` × ${it.quantity}` : "";
+      return `<span class="meta">📦 ${escapeHtml(name)}${escapeHtml(String(qty))}</span>`;
+    }).join("");
+  } else {
+    entities = Array.isArray(item.extracted_data) && item.extracted_data.length
+      ? item.extracted_data.map((e) => `<span class="meta">${escapeHtml(e.entity || "")}: ${escapeHtml(e.value || "")}</span>`).join("")
+      : `<span class="meta">sin entidades</span>`;
+  }
   const rawJson = item.raw_json
     ? `<details class="backlog-raw"><summary>🔍 raw JSON</summary><pre>${escapeHtml(item.raw_json)}</pre></details>`
     : "";
