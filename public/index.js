@@ -3436,9 +3436,26 @@ function backlogCardHtml(item) {
     day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
   });
   const emoji = BACKLOG_INTENT_EMOJI[item.intent] || "🧠";
-  const entities = Array.isArray(item.extracted_data) && item.extracted_data.length
-    ? item.extracted_data.map((e) => `${escapeHtml(e.entity || "")}: ${escapeHtml(e.value || "")}`).join(" · ")
-    : "sin entidades";
+  // Prefer NIM's grouped items[] (enriched_data) over flat Rasa entities.
+  let entities;
+  let enriched = null;
+  if (item.enriched_data) {
+    try {
+      enriched = typeof item.enriched_data === "string" ? JSON.parse(item.enriched_data) : item.enriched_data;
+    } catch { enriched = null; }
+  }
+  if (enriched && Array.isArray(enriched.items) && enriched.items.length) {
+    entities = enriched.items.map((it) => {
+      const name = it.item || it.name || it.tipo || it.type || "?";
+      const qty = it.quantity != null ? ` × ${it.quantity}` : "";
+      const loc = it.location ? ` → 📍 ${escapeHtml(it.location)}` : "";
+      return `<span class="meta">📦 ${escapeHtml(name)}${escapeHtml(String(qty))}${loc}</span>`;
+    }).join("");
+  } else {
+    entities = Array.isArray(item.extracted_data) && item.extracted_data.length
+      ? `<span class="meta">${item.extracted_data.map((e) => `${escapeHtml(e.entity || "")}: ${escapeHtml(e.value || "")}`).join(" · ")}</span>`
+      : `<span class="meta">sin entidades</span>`;
+  }
   const rawText = item.raw_text ? `<span class="meta">💬 ${escapeHtml(item.raw_text)}</span>` : "";
   const rawJson = item.raw_json
     ? `<details class="backlog-raw"><summary>🔍 raw JSON</summary><pre>${escapeHtml(item.raw_json)}</pre></details>`
@@ -3453,7 +3470,7 @@ function backlogCardHtml(item) {
         <div class="card-inner">
           <div class="info">
             ${rawText}
-            <span class="meta">${entities}</span>
+            ${entities}
             <span class="meta">🕒 ${date} · 👤 ${escapeHtml(item.creator_name || item.creator_matrix_id || "—")}</span>
             ${rawJson}
           </div>
