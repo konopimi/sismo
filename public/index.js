@@ -2214,6 +2214,12 @@ form.addEventListener("submit", async (e) => {
   gpsBtn.classList.remove("has-location");
   gpsBtn.title = "Usar mi ubicación";
   document.getElementById("locationDisplay").textContent = "";
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   loadList();
   closeCrearModal();
 });
@@ -2354,6 +2360,12 @@ formP.addEventListener("submit", async (e) => {
   gpsBtnP.classList.remove("has-location");
   gpsBtnP.title = "Usar mi ubicación";
   document.getElementById("locationDisplayP").textContent = "";
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   loadListP();
   closeCrearModal();
 });
@@ -2543,6 +2555,12 @@ formB.addEventListener("submit", async (e) => {
   gpsBtnB.classList.remove("has-location");
   gpsBtnB.title = "Usar mi ubicación";
   document.getElementById("locationDisplayB").textContent = "";
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   loadListB();
   closeCrearModal();
 });
@@ -2735,6 +2753,12 @@ formA.addEventListener("submit", async (e) => {
   }
   photoInputA.value = "";
   fileLabelA.textContent = "Sube una o más fotos";
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   loadListA();
   closeCrearModal();
 });
@@ -2947,6 +2971,12 @@ formColab.addEventListener("submit", async (e) => {
   const passEl = document.getElementById("passwordInputColab");
   if (emailEl) emailEl.value = "";
   if (passEl) passEl.value = "";
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   loadListColab();
 });
 async function removeColab(id) {
@@ -3102,6 +3132,12 @@ formDonacion.addEventListener("submit", async (e) => {
     body: JSON.stringify(body),
   });
   if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error"); return; }
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   e.target.reset();
   closeCrearModal();
   loadListDonaciones();
@@ -3202,6 +3238,12 @@ formNecesidad.addEventListener("submit", async (e) => {
     body: JSON.stringify(body),
   });
   if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error"); return; }
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   e.target.reset();
   closeCrearModal();
   loadListNecesidades();
@@ -3299,6 +3341,12 @@ formLogistica.addEventListener("submit", async (e) => {
     body: JSON.stringify(body),
   });
   if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error"); return; }
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   e.target.reset();
   closeCrearModal();
   loadListLogistica();
@@ -3442,10 +3490,114 @@ async function setBacklogStatus(id, status) {
   if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error"); return; }
   loadListBacklog();
 }
-// "Promover" a backlog item = mark it accepted (promoted into a real item).
-// Defined as a top-level function so the inline onclick handlers resolve it.
+// "Promover" a backlog item = open the creation modal pre-filled with
+// the backlog item's data, so the user can edit before creating the real item.
+// On successful creation, the backlog item is marked accepted.
 function openPromoteModal(id) {
-  setBacklogStatus(id, "accepted");
+  const item = backlogData.find((b) => String(b.id) === String(id));
+  if (!item) return;
+  const type = intentToCrearType(item.intent);
+  if (!type) {
+    alert("Este tipo de mensaje no se puede promover directamente.");
+    return;
+  }
+  // Open the creation modal for the target type.
+  openCrearModal(type);
+  // Pre-fill the form with the backlog item's data.
+  prefillCrearForm(type, item);
+  // Override the form's submit handler to also mark the backlog as accepted.
+  // Special case: person form uses 'addForm', not 'addFormPerson'.
+  const formId = type === "person" ? "addForm" : "addForm" + capitalizeFirst(type);
+  const form = document.getElementById(formId);
+  if (form) {
+    form.dataset.promoteBacklogId = id;
+  }
+}
+
+// Map backlog intent -> creation form type.
+function intentToCrearType(intent) {
+  const map = {
+    donate_offer: "donacion",
+    food_available: "donacion",
+    find_supplier: "donacion",
+    report_need: "necesidad",
+    request_help: "necesidad",
+    report_emergency: "necesidad",
+    request_supplies: "necesidad",
+    request_item: "necesidad",
+    coordinate_delivery: "logistica",
+    offer_transport: "logistica",
+    volunteer_recruitment: "colaborador",
+  };
+  return map[intent] || null;
+}
+
+function capitalizeFirst(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// Pre-fill the creation form for the given type with backlog item data.
+function prefillCrearForm(type, item) {
+  const extracted = Array.isArray(item.extracted_data) ? item.extracted_data : [];
+  const rawText = item.raw_text || "";
+  // Helper to find an entity value by name.
+  const getEntity = (name) => {
+    const e = extracted.find((x) => (x.entity || "").toLowerCase() === name.toLowerCase());
+    return e ? e.value : "";
+  };
+  switch (type) {
+    case "donacion":
+      // donacionTypeInput, donacionQtyInput, donacionDescInput, donacionLocInput, donacionContactInput
+      setVal("donacionTypeInput", mapDonacionType(getEntity("item_type")));
+      setVal("donacionQtyInput", getEntity("quantity"));
+      setVal("donacionDescInput", rawText || getEntity("description"));
+      setVal("donacionLocInput", getEntity("location"));
+      setVal("donacionContactInput", getEntity("contact"));
+      break;
+    case "necesidad":
+      setVal("necesidadTypeInput", mapNecesidadType(getEntity("item_type")));
+      setVal("necesidadQtyInput", getEntity("quantity"));
+      setVal("necesidadDescInput", rawText || getEntity("description"));
+      setVal("necesidadUrgencyInput", mapUrgency(getEntity("urgency")));
+      setVal("necesidadPointInput", getEntity("location"));
+      setVal("necesidadContactInput", getEntity("contact"));
+      break;
+    case "logistica":
+      setVal("logisticaTypeInput", mapLogisticaType(getEntity("task_type")));
+      setVal("logisticaDescInput", rawText || getEntity("description"));
+      setVal("logisticaOriginInput", getEntity("origin"));
+      setVal("logisticaDestInput", getEntity("destination"));
+      setVal("logisticaContactInput", getEntity("contact"));
+      break;
+    case "colaborador":
+      setVal("nameInputColab", getEntity("name"));
+      setVal("skillInputColab", getEntity("skill"));
+      setVal("contactInputColab", getEntity("contact"));
+      setVal("cityInputColab", getEntity("city"));
+      break;
+  }
+}
+
+function mapDonacionType(v) {
+  const map = { comida: "comida", ropa: "ropa", insumos: "insumos", medicinas: "medicinas", transporte: "transporte" };
+  return map[v?.toLowerCase()] || "otro";
+}
+function mapNecesidadType(v) {
+  const map = { comida: "comida", ropa: "ropa", carpas: "carpas", medicinas: "medicinas", aseo: "aseo" };
+  return map[v?.toLowerCase()] || "otro";
+}
+function mapLogisticaType(v) {
+  const map = { entrega: "entrega", recogida: "recogida", transporte: "transporte", apoyo: "apoyo" };
+  return map[v?.toLowerCase()] || "apoyo";
+}
+function mapUrgency(v) {
+  const map = { alta: "alta", media: "media", baja: "baja" };
+  return map[v?.toLowerCase()] || "media";
+}
+
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el && val) el.value = val;
 }
 // Deep link: #anuncio/ abre directamente ese anuncio en su modal.
 function handleAnuncioDeepLink() {
