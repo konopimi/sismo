@@ -640,6 +640,9 @@ async function processGroup(userId, groupEvents) {
     console.log(`[bot] 🚩 Payment info detected in group from ${userId}`);
   }
 
+  const NEEDS_MODERATION = new Set(['fraud_warning', 'report_issue']);
+  const needsModeration = NEEDS_MODERATION.has(finalIntent);
+
   try {
     const res = await safeApiCall(`${ENV.API_BASE}/api/backlog`, {
       method: "POST",
@@ -657,6 +660,7 @@ async function processGroup(userId, groupEvents) {
         ),
         enriched_data: enrichedData ? JSON.stringify(enrichedData) : null,
         message_count: groupEvents.length,
+        needs_moderation: needsModeration,
       }),
     });
     if (res.status === 409)
