@@ -3133,16 +3133,10 @@ listElDonaciones.addEventListener("click", (e) => {
 });
 formDonacion.addEventListener("submit", async (e) => {
   e.preventDefault();
-  // Collect items from the editable list (for promotion) or use legacy fields.
+  // Collect items from the editable list (per-item name, quantity, type, location).
   const items = collectItemsFromList("donacionItemsList");
-  const body = {
-    item_type: document.getElementById("donacionTypeInput").value,
-    quantity: document.getElementById("donacionQtyInput").value.trim(),
-    description: document.getElementById("donacionDescInput").value.trim(),
-    location: document.getElementById("donacionLocInput").value.trim(),
-    contact: document.getElementById("donacionContactInput").value.trim(),
-    items: items.length > 0 ? items : undefined,
-  };
+  if (!items.length) { alert("Añade al menos un item."); return; }
+  const body = { items };
   const res = await fetch(`${API_BASE}/donaciones`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAuthToken()}` },
@@ -3253,17 +3247,10 @@ listElNecesidades.addEventListener("click", (e) => {
 });
 formNecesidad.addEventListener("submit", async (e) => {
   e.preventDefault();
-  // Collect items from the editable list (for promotion) or use legacy fields.
+  // Collect items from the editable list (per-item name, quantity, type, location).
   const items = collectItemsFromList("necesidadItemsList");
-  const body = {
-    item_type: document.getElementById("necesidadTypeInput").value,
-    quantity: document.getElementById("necesidadQtyInput").value.trim(),
-    description: document.getElementById("necesidadDescInput").value.trim(),
-    urgency: document.getElementById("necesidadUrgencyInput").value,
-    point_name: document.getElementById("necesidadPointInput").value.trim(),
-    contact: document.getElementById("necesidadContactInput").value.trim(),
-    items: items.length > 0 ? items : undefined,
-  };
+  if (!items.length) { alert("Añade al menos un item."); return; }
+  const body = { items };
   const res = await fetch(`${API_BASE}/necesidades`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAuthToken()}` },
@@ -3457,9 +3444,6 @@ function backlogCardHtml(item) {
       : `<span class="meta">sin entidades</span>`;
   }
   const rawText = item.raw_text ? `<span class="meta">💬 ${escapeHtml(item.raw_text)}</span>` : "";
-  const rawJson = item.raw_json
-    ? `<details class="backlog-raw"><summary>🔍 raw JSON</summary><pre>${escapeHtml(item.raw_json)}</pre></details>`
-    : "";
   return `
     <div class="card backlog" data-id="${item.id}" data-type="backlog">
       <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
@@ -3472,7 +3456,6 @@ function backlogCardHtml(item) {
             ${rawText}
             ${entities}
             <span class="meta">🕒 ${date} · 👤 ${escapeHtml(item.creator_name || item.creator_matrix_id || "—")}</span>
-            ${rawJson}
           </div>
         </div>
       </div>
@@ -3637,7 +3620,18 @@ function setupEditableItemsList(listId, countId, detectedId, addBtnId) {
         row.innerHTML = `
           <input type="text" class="item-name-input" placeholder="Item" />
           <input type="text" class="item-qty-input" placeholder="Cant." />
-          <input type="text" class="item-type-input" placeholder="Tipo" />
+          <select class="item-type-input">
+            <option value="">Tipo</option>
+            <option value="comida">🍽️ Comida</option>
+            <option value="bebida">🥤 Bebida</option>
+            <option value="ropa">👕 Ropa</option>
+            <option value="insumos">🧰 Insumos</option>
+            <option value="medicinas">💊 Medicinas</option>
+            <option value="refugio">⛺ Refugio</option>
+            <option value="transporte">🚗 Transporte</option>
+            <option value="aseo">🧼 Aseo</option>
+            <option value="otro">📦 Otro</option>
+          </select>
           <input type="text" class="item-loc-input" placeholder="Ubicación" />
           <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
         `;
@@ -3707,7 +3701,17 @@ function prefillCrearForm(type, item) {
     return e ? e.value : "";
   };
   // Build editable rows: prefer grouped items[], fall back to flat entities.
-  // Each row now carries per-item name, quantity, type, and location.
+  // Each row carries per-item name, quantity, type (selector), and location.
+  const typeOptions = (selected) => {
+    const opts = [
+      ["", "Tipo"], ["comida", "🍽️ Comida"], ["bebida", "🥤 Bebida"], ["ropa", "👕 Ropa"],
+      ["insumos", "🧰 Insumos"], ["medicinas", "💊 Medicinas"], ["refugio", "⛺ Refugio"],
+      ["transporte", "🚗 Transporte"], ["aseo", "🧼 Aseo"], ["otro", "📦 Otro"],
+    ];
+    return opts.map(([v, label]) =>
+      `<option value="${v}"${v === selected ? " selected" : ""}>${label}</option>`
+    ).join("");
+  };
   const buildRows = () => {
     if (enrichedItems) {
       return enrichedItems.map((it, i) => {
@@ -3718,7 +3722,7 @@ function prefillCrearForm(type, item) {
         return `<div class="item-row" data-idx="${i}">
           <input type="text" class="item-name-input" value="${escapeHtml(name)}" placeholder="Item" />
           <input type="text" class="item-qty-input" value="${escapeHtml(String(qty))}" placeholder="Cant." />
-          <input type="text" class="item-type-input" value="${escapeHtml(type)}" placeholder="Tipo" />
+          <select class="item-type-input">${typeOptions(type)}</select>
           <input type="text" class="item-loc-input" value="${escapeHtml(loc)}" placeholder="Ubicación" />
           <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
         </div>`;
@@ -3728,7 +3732,7 @@ function prefillCrearForm(type, item) {
       `<div class="item-row" data-idx="${i}">
         <input type="text" class="item-name-input" value="${escapeHtml(e.entity || "")}" placeholder="Item" />
         <input type="text" class="item-qty-input" value="${escapeHtml(e.value || "")}" placeholder="Cant." />
-        <input type="text" class="item-type-input" value="" placeholder="Tipo" />
+        <select class="item-type-input">${typeOptions("")}</select>
         <input type="text" class="item-loc-input" value="" placeholder="Ubicación" />
         <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
       </div>`
@@ -3737,16 +3741,9 @@ function prefillCrearForm(type, item) {
   const rowCount = enrichedItems ? enrichedItems.length : extracted.length;
   switch (type) {
     case "donacion":
-      // donacionTypeInput, donacionQtyInput, donacionDescInput, donacionLocInput, donacionContactInput
-      // Form-level type defaults to first item's type (per-item types live in the items list).
-      const firstDonType = enrichedItems?.[0]?.type || getEntity("item_type");
-      setVal("donacionTypeInput", mapDonacionType(firstDonType));
-      setVal("donacionQtyInput", getEntity("quantity"));
-      setVal("donacionDescInput", rawText || getEntity("description"));
-      setVal("donacionLocInput", getEntity("location"));
-      setVal("donacionContactInput", getEntity("contact"));
-      // Populate items detectados list with all extracted entities as editable rows.
-      // Populate items detectados list with all extracted entities as editable rows.
+      // Show the original message in a read-only textarea.
+      setVal("donacionOriginalText", rawText);
+      // Populate items detectados list with grouped items as editable rows.
       const donacionItemsList = document.getElementById("donacionItemsList");
       const donacionItemsCount = document.getElementById("donacionItemsCount");
       const donacionItemsDetected = document.getElementById("donacionItemsDetected");
@@ -3761,15 +3758,9 @@ function prefillCrearForm(type, item) {
       setupEditableItemsList("donacionItemsList", "donacionItemsCount", "donacionItemsDetected", "donacionAddItemBtn");
       break;
     case "necesidad":
-      // Form-level type defaults to first item's type (per-item types live in the items list).
-      const firstNecType = enrichedItems?.[0]?.type || getEntity("item_type");
-      setVal("necesidadTypeInput", mapNecesidadType(firstNecType));
-      setVal("necesidadQtyInput", getEntity("quantity"));
-      setVal("necesidadDescInput", rawText || getEntity("description"));
-      setVal("necesidadUrgencyInput", mapUrgency(getEntity("urgency")));
-      setVal("necesidadPointInput", getEntity("location"));
-      setVal("necesidadContactInput", getEntity("contact"));
-      // Populate items detectados list with all extracted entities as editable rows.
+      // Show the original message in a read-only textarea.
+      setVal("necesidadOriginalText", rawText);
+      // Populate items detectados list with grouped items as editable rows.
       const necesidadItemsList = document.getElementById("necesidadItemsList");
       const necesidadItemsCount = document.getElementById("necesidadItemsCount");
       const necesidadItemsDetected = document.getElementById("necesidadItemsDetected");

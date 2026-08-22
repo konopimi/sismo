@@ -657,6 +657,32 @@ h1 {
   background: #444;
 }
 
+/* Original text box (read-only message preview) */
+.original-text-box {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.original-text-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ccc;
+}
+.original-text-area {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #1a1d24;
+  color: #eaeaea;
+  font-size: 0.85rem;
+  resize: vertical;
+  white-space: pre-wrap;
+}
+
 /* Items detectados section (for backlog promotion) */
 .items-detected {
   width: 100%;
@@ -664,6 +690,12 @@ h1 {
   border: 1px solid #333;
   border-radius: 8px;
   background: #1a1d24;
+}
+.items-header {
+  padding: 8px 12px;
+  font-weight: 600;
+  color: #ccc;
+  border-bottom: 1px solid #2a2d36;
 }
 .items-detected summary {
   padding: 8px 12px;

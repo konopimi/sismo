@@ -583,60 +583,32 @@
         <!-- DONACIÓN -->
         <div class="crear-form-wrap" data-type="donacion">
           <form id="addFormDonacion">
-            <select id="donacionTypeInput" required>
-              <option value="">Tipo de donación</option>
-              <option value="comida">🍽️ Comida</option>
-              <option value="bebida">🥤 Bebida</option>
-              <option value="ropa">👕 Ropa</option>
-              <option value="insumos">🧰 Insumos</option>
-              <option value="medicinas">💊 Medicinas</option>
-              <option value="refugio">⛺ Refugio</option>
-              <option value="transporte">🚗 Transporte</option>
-              <option value="aseo">🧼 Aseo</option>
-              <option value="otro">📦 Otro</option>
-            </select>
-            <input type="text" id="donacionQtyInput" placeholder="Cantidad (ej: 200 almuerzos)" />
-            <textarea id="donacionDescInput" placeholder="Descripción" required></textarea>
-            <input type="text" id="donacionLocInput" placeholder="Punto de rescate / dirección" />
-            <input type="text" id="donacionContactInput" placeholder="Tu contacto (opcional)" />
+            <div class="original-text-box">
+              <span class="original-text-label">💬 Texto original</span>
+              <textarea id="donacionOriginalText" class="original-text-area" readonly></textarea>
+            </div>
             <!-- Items detectados (para promoción desde backlog) -->
-            <details id="donacionItemsDetected" class="items-detected" style="display:none;">
-              <summary>📋 Items detectados en el mensaje <span id="donacionItemsCount">(0)</span></summary>
+            <div id="donacionItemsDetected" class="items-detected" style="display:none;">
+              <div class="items-header">📋 Items detectados <span id="donacionItemsCount">(0)</span></div>
               <div id="donacionItemsList" class="items-list"></div>
               <button type="button" class="item-add-btn" id="donacionAddItemBtn">+ Añadir item</button>
-            </details>
+            </div>
             <button type="submit">🎁 Ofrecer</button>
           </form>
         </div>
         <!-- NECESIDAD -->
         <div class="crear-form-wrap" data-type="necesidad">
           <form id="addFormNecesidad">
-            <select id="necesidadTypeInput" required>
-              <option value="">Tipo de necesidad</option>
-              <option value="comida">🍽️ Comida</option>
-              <option value="bebida">🥤 Bebida</option>
-              <option value="ropa">👕 Ropa</option>
-              <option value="carpas">⛺ Carpas</option>
-              <option value="refugio">⛺ Refugio</option>
-              <option value="medicinas">💊 Medicinas</option>
-              <option value="aseo">🧼 Aseo</option>
-              <option value="otro">📦 Otro</option>
-            </select>
-            <input type="text" id="necesidadQtyInput" placeholder="Cantidad" />
-            <textarea id="necesidadDescInput" placeholder="¿Qué se necesita?" required></textarea>
-            <select id="necesidadUrgencyInput">
-              <option value="media">Urgencia media</option>
-              <option value="alta">⚠️ URGENTE</option>
-              <option value="baja">Baja</option>
-            </select>
-            <input type="text" id="necesidadPointInput" placeholder="Punto de rescate (ej: Cantabria)" />
-            <input type="text" id="necesidadContactInput" placeholder="Contacto en el punto (opcional)" />
+            <div class="original-text-box">
+              <span class="original-text-label">💬 Texto original</span>
+              <textarea id="necesidadOriginalText" class="original-text-area" readonly></textarea>
+            </div>
             <!-- Items detectados (para promoción desde backlog) -->
-            <details id="necesidadItemsDetected" class="items-detected" style="display:none;">
-              <summary>📋 Items detectados en el mensaje <span id="necesidadItemsCount">(0)</span></summary>
+            <div id="necesidadItemsDetected" class="items-detected" style="display:none;">
+              <div class="items-header">📋 Items detectados <span id="necesidadItemsCount">(0)</span></div>
               <div id="necesidadItemsList" class="items-list"></div>
               <button type="button" class="item-add-btn" id="necesidadAddItemBtn">+ Añadir item</button>
-            </details>
+            </div>
             <button type="submit">🆘 Reportar</button>
           </form>
         </div>
