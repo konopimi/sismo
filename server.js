@@ -307,7 +307,8 @@ db.exec(`
     message_count INTEGER DEFAULT 1,
     status TEXT DEFAULT 'pending',
     created_at TEXT NOT NULL,
-    audio_url TEXT
+    audio_url TEXT,
+    needs_moderation INTEGER DEFAULT 0
   )
 `);
 // ========== Media Text (Standalone OCR Storage) ==========
@@ -328,6 +329,7 @@ try { db.exec("ALTER TABLE backlog ADD COLUMN raw_json TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE backlog ADD COLUMN enriched_data TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE backlog ADD COLUMN message_count INTEGER DEFAULT 1"); } catch (e) {}
 try { db.exec("ALTER TABLE backlog ADD COLUMN audio_url TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE backlog ADD COLUMN needs_moderation INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE media_text ADD COLUMN audio_url TEXT"); } catch (e) {}
 // --- Migrations for existing columns (city and image) ---
 try {
@@ -1483,12 +1485,13 @@ app.get("/api/backlog", requireAuth, (req, res) => {
   res.json(rows.map(r => ({
     ...r,
     creator_name: resolveMatrixDisplayName(r.creator_matrix_id),
-    extracted_data: r.extracted_data ? JSON.parse(r.extracted_data) : []
+    extracted_data: r.extracted_data ? JSON.parse(r.extracted_data) : [],
+    needs_moderation: Boolean(r.needs_moderation)
   })));
 });
 
 app.post("/api/backlog", requireAuth, (req, res) => {
-  const { source_event_id, creator_matrix_id, intent, extracted_data, raw_text, raw_json, enriched_data, message_count } = req.body;
+  const { source_event_id, creator_matrix_id, intent, extracted_data, raw_text, raw_json, enriched_data, message_count, needs_moderation } = req.body;
 
   if (!source_event_id || !intent) {
     return res.status(400).json({ error: "source_event_id and intent are required" });
@@ -1500,11 +1503,12 @@ app.post("/api/backlog", requireAuth, (req, res) => {
   const rawJson = typeof raw_json === "string" ? raw_json : (raw_json ? JSON.stringify(raw_json) : null);
   const enrichedJson = typeof enriched_data === "string" ? enriched_data : (enriched_data ? JSON.stringify(enriched_data) : null);
   const msgCount = Number.isInteger(message_count) && message_count > 0 ? message_count : 1;
+  const needsMod = needs_moderation ? 1 : 0;
 
   try {
     db.prepare(
-      "INSERT INTO backlog (id, source_event_id, creator_matrix_id, intent, extracted_data, raw_text, raw_json, enriched_data, message_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    ).run(finalId, source_event_id, creator_matrix_id, intent, dataJson, raw_text || null, rawJson, enrichedJson, msgCount, createdAt);
+      "INSERT INTO backlog (id, source_event_id, creator_matrix_id, intent, extracted_data, raw_text, raw_json, enriched_data, message_count, created_at, needs_moderation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).run(finalId, source_event_id, creator_matrix_id, intent, dataJson, raw_text || null, rawJson, enrichedJson, msgCount, createdAt, needsMod);
 
     res.status(201).json({ id: finalId, status: "pending" });
   } catch (e) {
