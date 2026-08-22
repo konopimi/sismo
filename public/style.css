@@ -712,8 +712,10 @@ h1 {
 .item-row:last-child {
   border-bottom: none;
 }
-.item-key-input,
-.item-value-input {
+.item-name-input,
+.item-qty-input,
+.item-type-input,
+.item-loc-input {
   flex: 1;
   padding: 4px 8px;
   border-radius: 4px;
@@ -721,12 +723,19 @@ h1 {
   background: #1a1d24;
   color: #eaeaea;
   font-size: 0.85rem;
+  min-width: 0;
 }
-.item-key-input {
-  max-width: 120px;
+.item-name-input {
+  flex: 2;
 }
-.item-value-input {
-  min-width: 150px;
+.item-qty-input {
+  max-width: 70px;
+}
+.item-type-input {
+  max-width: 110px;
+}
+.item-loc-input {
+  flex: 1.5;
 }
 .item-remove-btn,
 .item-add-btn {

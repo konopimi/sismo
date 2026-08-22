@@ -3058,7 +3058,7 @@ const DONACION_STATUS_LABEL = {
   vencido: "Vencido",
 };
 const DONACION_EMOJI = {
-  comida: "🍽️", ropa: "👕", insumos: "🧰", medicinas: "💊", transporte: "🚗", otro: "📦",
+  comida: "🍽️", bebida: "🥤", ropa: "👕", insumos: "🧰", medicinas: "💊", refugio: "⛺", transporte: "🚗", aseo: "🧼", otro: "📦",
 };
 async function loadListDonaciones() {
   if (!getAuthToken()) { donacionesData = []; renderDonaciones(); return; }
@@ -3082,6 +3082,18 @@ function donacionCardHtml(item) {
   const metaParts = [];
   if (item.location) metaParts.push(`📍 ${escapeHtml(item.location)}`);
   metaParts.push(`🕒 ${date}`);
+  // Render items[] when present (multi-item), else legacy description.
+  let itemsHtml = "";
+  if (Array.isArray(item.items) && item.items.length) {
+    itemsHtml = item.items.map((it) => {
+      const itEmoji = DONACION_EMOJI[it.type] || "📦";
+      const qty = it.quantity ? ` × ${escapeHtml(String(it.quantity))}` : "";
+      const loc = it.location ? ` → 📍 ${escapeHtml(it.location)}` : "";
+      return `<span class="meta">${itEmoji} ${escapeHtml(it.name || it.type || "?")}${qty}${loc}</span>`;
+    }).join("");
+  } else {
+    itemsHtml = `<span class="meta">${escapeHtml(item.description)}</span>`;
+  }
   return `
     <div class="card donacion" data-id="${item.id}" data-type="donacion">
       <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
@@ -3091,7 +3103,7 @@ function donacionCardHtml(item) {
       <div class="card-main">
         <div class="card-inner">
           <div class="info">
-            <span class="meta">${escapeHtml(item.description)}</span>
+            ${itemsHtml}
             <span class="meta">${metaParts.join(" · ")}</span>
             ${commentBadgeHtml(item)}
           </div>
@@ -3164,7 +3176,7 @@ const listElNecesidades = document.getElementById("listNecesidades");
 const formNecesidad = document.getElementById("addFormNecesidad");
 const NECESIDAD_STATUS_LABEL = { abierta: "Abierta", en_proceso: "En proceso", cubierta: "Cubierta" };
 const NECESIDAD_EMOJI = {
-  comida: "🍽️", ropa: "👕", carpas: "⛺", medicinas: "💊", aseo: "🧼", otro: "📦",
+  comida: "🍽️", bebida: "🥤", ropa: "👕", carpas: "⛺", refugio: "⛺", medicinas: "💊", aseo: "🧼", otro: "📦",
 };
 async function loadListNecesidades() {
   if (!getAuthToken()) { necesidadesData = []; renderNecesidades(); return; }
@@ -3189,6 +3201,18 @@ function necesidadCardHtml(item) {
   if (item.point_name) metaParts.push(`📍 ${escapeHtml(item.point_name)}`);
   metaParts.push(`🕒 ${date}`);
   const urgent = item.urgency === "alta" ? `<span class="status-tag necesidad-urgente">⚠️ URGENTE</span>` : "";
+  // Render items[] when present (multi-item), else legacy description.
+  let itemsHtml = "";
+  if (Array.isArray(item.items) && item.items.length) {
+    itemsHtml = item.items.map((it) => {
+      const itEmoji = NECESIDAD_EMOJI[it.type] || "📦";
+      const qty = it.quantity ? ` × ${escapeHtml(String(it.quantity))}` : "";
+      const loc = it.location ? ` → 📍 ${escapeHtml(it.location)}` : "";
+      return `<span class="meta">${itEmoji} ${escapeHtml(it.name || it.type || "?")}${qty}${loc}</span>`;
+    }).join("");
+  } else {
+    itemsHtml = `<span class="meta">${escapeHtml(item.description)}</span>`;
+  }
   return `
     <div class="card necesidad" data-id="${item.id}" data-type="necesidad">
       <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
@@ -3199,7 +3223,7 @@ function necesidadCardHtml(item) {
       <div class="card-main">
         <div class="card-inner">
           <div class="info">
-            <span class="meta">${escapeHtml(item.description)}</span>
+            ${itemsHtml}
             <span class="meta">${metaParts.join(" · ")}</span>
             ${commentBadgeHtml(item)}
           </div>
@@ -3594,8 +3618,10 @@ function setupEditableItemsList(listId, countId, detectedId, addBtnId) {
         const row = document.createElement("div");
         row.className = "item-row";
         row.innerHTML = `
-          <input type="text" class="item-key-input" placeholder="Clave" />
-          <input type="text" class="item-value-input" placeholder="Valor" />
+          <input type="text" class="item-name-input" placeholder="Item" />
+          <input type="text" class="item-qty-input" placeholder="Cant." />
+          <input type="text" class="item-type-input" placeholder="Tipo" />
+          <input type="text" class="item-loc-input" placeholder="Ubicación" />
           <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
         `;
         list.appendChild(row);
@@ -3628,35 +3654,18 @@ function collectItemsFromList(listId) {
   if (!list) return [];
   const items = [];
   list.querySelectorAll(".item-row").forEach((row) => {
-    const keyInput = row.querySelector(".item-key-input");
-    const valueInput = row.querySelector(".item-value-input");
-    const key = keyInput?.value?.trim();
-    const value = valueInput?.value?.trim();
-    if (!key && !value) return; // Skip empty rows.
-    // Heuristic: map common keys to item properties.
-    const keyLower = key.toLowerCase();
-    let item = { name: "", type: "", quantity: "", unit: "", description: "", location: "", contact: "" };
-    if (keyLower.includes("nombre") || keyLower.includes("name") || keyLower.includes("item") || keyLower.includes("producto")) {
-      item.name = value;
-    } else if (keyLower.includes("tipo") || keyLower.includes("type") || keyLower.includes("categor")) {
-      item.type = value;
-    } else if (keyLower.includes("cantidad") || keyLower.includes("quantity") || keyLower.includes("qty")) {
-      item.quantity = value;
-    } else if (keyLower.includes("unidad") || keyLower.includes("unit")) {
-      item.unit = value;
-    } else if (keyLower.includes("descrip") || keyLower.includes("detalle")) {
-      item.description = value;
-    } else if (keyLower.includes("ubicac") || keyLower.includes("lugar") || keyLower.includes("location") || keyLower.includes("punto")) {
-      item.location = value;
-    } else if (keyLower.includes("contact") || keyLower.includes("tel") || keyLower.includes("cel") || keyLower.includes("fono")) {
-      item.contact = value;
-    } else {
-      // Default: treat key as name, value as quantity/description.
-      item.name = key;
-      item.quantity = value;
-    }
-    // Only add if has at least name or type.
-    if (item.name || item.type) items.push(item);
+    const nameInput = row.querySelector(".item-name-input");
+    const qtyInput = row.querySelector(".item-qty-input");
+    const typeInput = row.querySelector(".item-type-input");
+    const locInput = row.querySelector(".item-loc-input");
+    const name = nameInput?.value?.trim() || "";
+    const qty = qtyInput?.value?.trim() || "";
+    const type = typeInput?.value?.trim() || "";
+    const loc = locInput?.value?.trim() || "";
+    if (!name && !qty && !type && !loc) return; // Skip empty rows.
+    // Only add if has at least a name.
+    if (!name) return;
+    items.push({ name, quantity: qty, type, location: loc });
   });
   return items;
 }
@@ -3681,22 +3690,29 @@ function prefillCrearForm(type, item) {
     return e ? e.value : "";
   };
   // Build editable rows: prefer grouped items[], fall back to flat entities.
+  // Each row now carries per-item name, quantity, type, and location.
   const buildRows = () => {
     if (enrichedItems) {
       return enrichedItems.map((it, i) => {
         const name = it.item || it.name || it.tipo || it.type || "";
         const qty = it.quantity != null ? it.quantity : "";
+        const type = it.type || "";
+        const loc = it.location || "";
         return `<div class="item-row" data-idx="${i}">
-          <input type="text" class="item-key-input" value="${escapeHtml(name)}" placeholder="Clave" />
-          <input type="text" class="item-value-input" value="${escapeHtml(String(qty))}" placeholder="Valor" />
+          <input type="text" class="item-name-input" value="${escapeHtml(name)}" placeholder="Item" />
+          <input type="text" class="item-qty-input" value="${escapeHtml(String(qty))}" placeholder="Cant." />
+          <input type="text" class="item-type-input" value="${escapeHtml(type)}" placeholder="Tipo" />
+          <input type="text" class="item-loc-input" value="${escapeHtml(loc)}" placeholder="Ubicación" />
           <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
         </div>`;
       }).join("");
     }
     return extracted.map((e, i) =>
       `<div class="item-row" data-idx="${i}">
-        <input type="text" class="item-key-input" value="${escapeHtml(e.entity || "")}" placeholder="Clave" />
-        <input type="text" class="item-value-input" value="${escapeHtml(e.value || "")}" placeholder="Valor" />
+        <input type="text" class="item-name-input" value="${escapeHtml(e.entity || "")}" placeholder="Item" />
+        <input type="text" class="item-qty-input" value="${escapeHtml(e.value || "")}" placeholder="Cant." />
+        <input type="text" class="item-type-input" value="" placeholder="Tipo" />
+        <input type="text" class="item-loc-input" value="" placeholder="Ubicación" />
         <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
       </div>`
     ).join("");
@@ -3705,7 +3721,9 @@ function prefillCrearForm(type, item) {
   switch (type) {
     case "donacion":
       // donacionTypeInput, donacionQtyInput, donacionDescInput, donacionLocInput, donacionContactInput
-      setVal("donacionTypeInput", mapDonacionType(getEntity("item_type")));
+      // Form-level type defaults to first item's type (per-item types live in the items list).
+      const firstDonType = enrichedItems?.[0]?.type || getEntity("item_type");
+      setVal("donacionTypeInput", mapDonacionType(firstDonType));
       setVal("donacionQtyInput", getEntity("quantity"));
       setVal("donacionDescInput", rawText || getEntity("description"));
       setVal("donacionLocInput", getEntity("location"));
@@ -3726,7 +3744,9 @@ function prefillCrearForm(type, item) {
       setupEditableItemsList("donacionItemsList", "donacionItemsCount", "donacionItemsDetected", "donacionAddItemBtn");
       break;
     case "necesidad":
-      setVal("necesidadTypeInput", mapNecesidadType(getEntity("item_type")));
+      // Form-level type defaults to first item's type (per-item types live in the items list).
+      const firstNecType = enrichedItems?.[0]?.type || getEntity("item_type");
+      setVal("necesidadTypeInput", mapNecesidadType(firstNecType));
       setVal("necesidadQtyInput", getEntity("quantity"));
       setVal("necesidadDescInput", rawText || getEntity("description"));
       setVal("necesidadUrgencyInput", mapUrgency(getEntity("urgency")));
@@ -3789,11 +3809,11 @@ function prefillCrearForm(type, item) {
 }
 
 function mapDonacionType(v) {
-  const map = { comida: "comida", ropa: "ropa", insumos: "insumos", medicinas: "medicinas", transporte: "transporte" };
+  const map = { comida: "comida", bebida: "bebida", ropa: "ropa", insumos: "insumos", medicinas: "medicinas", refugio: "refugio", transporte: "transporte", aseo: "aseo" };
   return map[v?.toLowerCase()] || "otro";
 }
 function mapNecesidadType(v) {
-  const map = { comida: "comida", ropa: "ropa", carpas: "carpas", medicinas: "medicinas", aseo: "aseo" };
+  const map = { comida: "comida", bebida: "bebida", ropa: "ropa", carpas: "carpas", refugio: "refugio", medicinas: "medicinas", aseo: "aseo" };
   return map[v?.toLowerCase()] || "otro";
 }
 function mapLogisticaType(v) {

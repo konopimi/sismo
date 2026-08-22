@@ -446,7 +446,7 @@ Respond with ONLY a valid JSON object. Do not include markdown formatting (like 
 The JSON must strictly follow this schema:
 {
   "intent": "donate_offer" | "request_help" | "report_need" | "report_emergency" | "find_supplier" | "volunteer_recruitment" | "request_item" | "mental_health" | "fraud_warning" | "unknown",
-  "items": [{"name": "string", "quantity": number, "unit": "string"}],
+  "items": [{"name": "string", "quantity": number, "unit": "string", "type": "string", "location": "string"}],
   "location": "string",
   "urgency": "low" | "medium" | "high" | "critical",
   "contact": "string",
@@ -459,7 +459,9 @@ CRITICAL RULES — extract ONLY what is explicitly stated in the text:
 - If a location is not stated, set "location" to null (do NOT use the first word of the sentence).
 - If no items are mentioned, use [].
 - Use "unknown" for intent if unclear.
-- Extract quantities as numbers, not strings.`,
+- Extract quantities as numbers, not strings.
+- PER-ITEM LOCATION: when a message lists multiple items each with its own destination (e.g. "100 latas para Calima y 200 perros para La Flora"), put the location on EACH item's "location" field, not just the top-level "location".
+- PER-ITEM TYPE: infer each item's "type" from its name (e.g. "latas de atun" → "comida", "cobijas" → "ropa", "medicinas" → "medicinas"). Use one of: comida, bebida, ropa, insumos, medicinas, refugio, transporte, aseo, otro.`,
           },
           { role: "user", content: rawText },
         ],
@@ -512,6 +514,8 @@ function nimEntitiesToFlat(structured) {
     if (i.quantity != null)
       out.push({ entity: "quantity", value: String(i.quantity) });
     if (i.unit) out.push({ entity: "unit", value: i.unit });
+    if (i.type) out.push({ entity: "item_type", value: i.type });
+    if (i.location) out.push({ entity: "location", value: i.location });
   }
   if (
     structured.location &&
