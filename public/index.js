@@ -3121,12 +3121,15 @@ listElDonaciones.addEventListener("click", (e) => {
 });
 formDonacion.addEventListener("submit", async (e) => {
   e.preventDefault();
+  // Collect items from the editable list (for promotion) or use legacy fields.
+  const items = collectItemsFromList("donacionItemsList");
   const body = {
     item_type: document.getElementById("donacionTypeInput").value,
     quantity: document.getElementById("donacionQtyInput").value.trim(),
     description: document.getElementById("donacionDescInput").value.trim(),
     location: document.getElementById("donacionLocInput").value.trim(),
     contact: document.getElementById("donacionContactInput").value.trim(),
+    items: items.length > 0 ? items : undefined,
   };
   const res = await fetch(`${API_BASE}/donaciones`, {
     method: "POST",
@@ -3226,6 +3229,8 @@ listElNecesidades.addEventListener("click", (e) => {
 });
 formNecesidad.addEventListener("submit", async (e) => {
   e.preventDefault();
+  // Collect items from the editable list (for promotion) or use legacy fields.
+  const items = collectItemsFromList("necesidadItemsList");
   const body = {
     item_type: document.getElementById("necesidadTypeInput").value,
     quantity: document.getElementById("necesidadQtyInput").value.trim(),
@@ -3233,6 +3238,7 @@ formNecesidad.addEventListener("submit", async (e) => {
     urgency: document.getElementById("necesidadUrgencyInput").value,
     point_name: document.getElementById("necesidadPointInput").value.trim(),
     contact: document.getElementById("necesidadContactInput").value.trim(),
+    items: items.length > 0 ? items : undefined,
   };
   const res = await fetch(`${API_BASE}/necesidades`, {
     method: "POST",
@@ -3330,12 +3336,15 @@ listElLogistica.addEventListener("click", (e) => {
 });
 formLogistica.addEventListener("submit", async (e) => {
   e.preventDefault();
+  // Collect items from the editable list (for promotion) or use legacy fields.
+  const items = collectItemsFromList("logisticaItemsList");
   const body = {
     task_type: document.getElementById("logisticaTypeInput").value,
     description: document.getElementById("logisticaDescInput").value.trim(),
     origin: document.getElementById("logisticaOriginInput").value.trim(),
     destination: document.getElementById("logisticaDestInput").value.trim(),
     contact: document.getElementById("logisticaContactInput").value.trim(),
+    items: items.length > 0 ? items : undefined,
   };
   const res = await fetch(`${API_BASE}/logistica`, {
     method: "POST",
@@ -3583,6 +3592,49 @@ function setupEditableItemsList(listId, countId, detectedId, addBtnId) {
   // Initial count.
   updateItemsCount(list, count, detected);
 }
+
+// Collect items from the editable list for the given form type.
+// Returns an array of item objects with the schema:
+// { name, type, quantity, unit, description, location, contact }
+function collectItemsFromList(listId) {
+  const list = document.getElementById(listId);
+  if (!list) return [];
+  const items = [];
+  list.querySelectorAll(".item-row").forEach((row) => {
+    const keyInput = row.querySelector(".item-key-input");
+    const valueInput = row.querySelector(".item-value-input");
+    const key = keyInput?.value?.trim();
+    const value = valueInput?.value?.trim();
+    if (!key && !value) return; // Skip empty rows.
+    // Heuristic: map common keys to item properties.
+    const keyLower = key.toLowerCase();
+    let item = { name: "", type: "", quantity: "", unit: "", description: "", location: "", contact: "" };
+    if (keyLower.includes("nombre") || keyLower.includes("name") || keyLower.includes("item") || keyLower.includes("producto")) {
+      item.name = value;
+    } else if (keyLower.includes("tipo") || keyLower.includes("type") || keyLower.includes("categor")) {
+      item.type = value;
+    } else if (keyLower.includes("cantidad") || keyLower.includes("quantity") || keyLower.includes("qty")) {
+      item.quantity = value;
+    } else if (keyLower.includes("unidad") || keyLower.includes("unit")) {
+      item.unit = value;
+    } else if (keyLower.includes("descrip") || keyLower.includes("detalle")) {
+      item.description = value;
+    } else if (keyLower.includes("ubicac") || keyLower.includes("lugar") || keyLower.includes("location") || keyLower.includes("punto")) {
+      item.location = value;
+    } else if (keyLower.includes("contact") || keyLower.includes("tel") || keyLower.includes("cel") || keyLower.includes("fono")) {
+      item.contact = value;
+    } else {
+      // Default: treat key as name, value as quantity/description.
+      item.name = key;
+      item.quantity = value;
+    }
+    // Only add if has at least name or type.
+    if (item.name || item.type) items.push(item);
+  });
+  return items;
+}
+
+// Pre-fill the creation form for the given type with backlog item data.
 
 // Pre-fill the creation form for the given type with backlog item data.
 function prefillCrearForm(type, item) {

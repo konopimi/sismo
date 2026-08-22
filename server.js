@@ -1188,21 +1188,48 @@ app.get("/api/donaciones", requireAuth, (req, res) => {
       FROM donaciones d ORDER BY d.created_at DESC
     `)
     .all();
-  res.json(rows);
+  // Parse items JSON for each row.
+  const parsed = rows.map((r) => ({
+    ...r,
+    items: r.items ? JSON.parse(r.items) : null,
+  }));
+  res.json(parsed);
 });
 app.post("/api/donaciones", requireAuth, (req, res) => {
-  const { item_type, quantity, description, status, location, lat, lng, contact } = req.body || {};
-  if (!item_type || !item_type.trim()) return res.status(400).json({ error: "item_type is required" });
-  if (!description || !description.trim()) return res.status(400).json({ error: "description is required" });
+  const { items, item_type, quantity, description, status, location, lat, lng, contact } = req.body || {};
+  // Support both new items[] array and legacy flat fields.
+  // If items[] provided, use it; otherwise fall back to legacy single-item fields.
+  let itemsToStore = null;
+  if (Array.isArray(items) && items.length > 0) {
+    // Validate each item has at least name or type.
+    const validItems = items.filter((it) => it && (it.name || it.type));
+    if (validItems.length === 0) {
+      return res.status(400).json({ error: "At least one item with name or type is required" });
+    }
+    itemsToStore = JSON.stringify(validItems);
+  } else {
+    // Legacy single-item mode: require item_type and description.
+    if (!item_type || !item_type.trim()) return res.status(400).json({ error: "item_type is required" });
+    if (!description || !description.trim()) return res.status(400).json({ error: "description is required" });
+    itemsToStore = JSON.stringify([{
+      name: description.trim(),
+      type: item_type.trim(),
+      quantity: quantity && quantity.trim() ? quantity.trim() : null,
+      unit: null,
+      description: null,
+      location: location && location.trim() ? location.trim() : null,
+      contact: contact && contact.trim() ? contact.trim() : null,
+    }]);
+  }
   const finalId = crypto.randomUUID();
   const createdAt = new Date().toISOString();
   db.prepare(
-    "INSERT INTO donaciones (id, item_type, quantity, description, status, location, lat, lng, contact, donor_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO donaciones (id, item_type, quantity, description, status, location, lat, lng, contact, donor_id, created_at, items) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
   ).run(
     finalId,
-    item_type.trim(),
+    item_type && item_type.trim() ? item_type.trim() : (Array.isArray(items) && items[0]?.type) || null,
     quantity && quantity.trim() ? quantity.trim() : null,
-    description.trim(),
+    description && description.trim() ? description.trim() : (Array.isArray(items) ? items.map(i => i.name).filter(Boolean).join(", ") : null),
     status || "disponible",
     location && location.trim() ? location.trim() : null,
     lat ?? null,
@@ -1210,11 +1237,12 @@ app.post("/api/donaciones", requireAuth, (req, res) => {
     contact && contact.trim() ? contact.trim() : null,
     req.userId,
     createdAt,
+    itemsToStore,
   );
   res.status(201).json({ id: finalId, created_at: createdAt });
 });
 app.patch("/api/donaciones/:id", requireAuth, (req, res) => {
-  const { status, quantity, description, location } = req.body || {};
+  const { status, quantity, description, location, items } = req.body || {};
   const existing = db.prepare("SELECT id FROM donaciones WHERE id = ?").get(req.params.id);
   if (!existing) return res.status(404).json({ error: "not found" });
   const fields = [];
@@ -1223,6 +1251,14 @@ app.patch("/api/donaciones/:id", requireAuth, (req, res) => {
   if (quantity !== undefined) { fields.push("quantity = ?"); values.push(quantity); }
   if (description !== undefined) { fields.push("description = ?"); values.push(description); }
   if (location !== undefined) { fields.push("location = ?"); values.push(location); }
+  if (Array.isArray(items)) {
+    const validItems = items.filter((it) => it && (it.name || it.type));
+    if (validItems.length === 0) {
+      return res.status(400).json({ error: "At least one item with name or type is required" });
+    }
+    fields.push("items = ?");
+    values.push(JSON.stringify(validItems));
+  }
   if (fields.length === 0) return res.status(400).json({ error: "no fields to update" });
   values.push(req.params.id);
   db.prepare(`UPDATE donaciones SET ${fields.join(", ")} WHERE id = ?`).run(...values);
@@ -1244,21 +1280,45 @@ app.get("/api/necesidades", requireAuth, (req, res) => {
       FROM necesidades n ORDER BY n.created_at DESC
     `)
     .all();
-  res.json(rows);
+  // Parse items JSON for each row.
+  const parsed = rows.map((r) => ({
+    ...r,
+    items: r.items ? JSON.parse(r.items) : null,
+  }));
+  res.json(parsed);
 });
 app.post("/api/necesidades", requireAuth, (req, res) => {
-  const { item_type, quantity, description, urgency, status, point_name, location, lat, lng, contact } = req.body || {};
-  if (!item_type || !item_type.trim()) return res.status(400).json({ error: "item_type is required" });
-  if (!description || !description.trim()) return res.status(400).json({ error: "description is required" });
+  const { items, item_type, quantity, description, urgency, status, point_name, location, lat, lng, contact } = req.body || {};
+  // Support both new items[] array and legacy flat fields.
+  let itemsToStore = null;
+  if (Array.isArray(items) && items.length > 0) {
+    const validItems = items.filter((it) => it && (it.name || it.type));
+    if (validItems.length === 0) {
+      return res.status(400).json({ error: "At least one item with name or type is required" });
+    }
+    itemsToStore = JSON.stringify(validItems);
+  } else {
+    if (!item_type || !item_type.trim()) return res.status(400).json({ error: "item_type is required" });
+    if (!description || !description.trim()) return res.status(400).json({ error: "description is required" });
+    itemsToStore = JSON.stringify([{
+      name: description.trim(),
+      type: item_type.trim(),
+      quantity: quantity && quantity.trim() ? quantity.trim() : null,
+      unit: null,
+      description: null,
+      location: location && location.trim() ? location.trim() : null,
+      contact: contact && contact.trim() ? contact.trim() : null,
+    }]);
+  }
   const finalId = crypto.randomUUID();
   const createdAt = new Date().toISOString();
   db.prepare(
-    "INSERT INTO necesidades (id, item_type, quantity, description, urgency, status, point_name, location, lat, lng, contact, reporter_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO necesidades (id, item_type, quantity, description, urgency, status, point_name, location, lat, lng, contact, reporter_id, created_at, items) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
   ).run(
     finalId,
-    item_type.trim(),
+    item_type && item_type.trim() ? item_type.trim() : (Array.isArray(items) && items[0]?.type) || null,
     quantity && quantity.trim() ? quantity.trim() : null,
-    description.trim(),
+    description && description.trim() ? description.trim() : (Array.isArray(items) ? items.map(i => i.name).filter(Boolean).join(", ") : null),
     urgency || "media",
     status || "abierta",
     point_name && point_name.trim() ? point_name.trim() : null,
@@ -1268,11 +1328,12 @@ app.post("/api/necesidades", requireAuth, (req, res) => {
     contact && contact.trim() ? contact.trim() : null,
     req.userId,
     createdAt,
+    itemsToStore,
   );
   res.status(201).json({ id: finalId, created_at: createdAt });
 });
 app.patch("/api/necesidades/:id", requireAuth, (req, res) => {
-  const { status, urgency, quantity, description } = req.body || {};
+  const { status, urgency, quantity, description, items } = req.body || {};
   const existing = db.prepare("SELECT id FROM necesidades WHERE id = ?").get(req.params.id);
   if (!existing) return res.status(404).json({ error: "not found" });
   const fields = [];
@@ -1281,6 +1342,14 @@ app.patch("/api/necesidades/:id", requireAuth, (req, res) => {
   if (urgency !== undefined) { fields.push("urgency = ?"); values.push(urgency); }
   if (quantity !== undefined) { fields.push("quantity = ?"); values.push(quantity); }
   if (description !== undefined) { fields.push("description = ?"); values.push(description); }
+  if (Array.isArray(items)) {
+    const validItems = items.filter((it) => it && (it.name || it.type));
+    if (validItems.length === 0) {
+      return res.status(400).json({ error: "At least one item with name or type is required" });
+    }
+    fields.push("items = ?");
+    values.push(JSON.stringify(validItems));
+  }
   if (fields.length === 0) return res.status(400).json({ error: "no fields to update" });
   values.push(req.params.id);
   db.prepare(`UPDATE necesidades SET ${fields.join(", ")} WHERE id = ?`).run(...values);
