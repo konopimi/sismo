@@ -1532,6 +1532,11 @@ app.patch("/api/backlog/:id", requireAuth, (req, res) => {
 
   res.json({ ok: true });
 });
+app.delete("/api/backlog/:id", requireAuth, (req, res) => {
+  const result = db.prepare("DELETE FROM backlog WHERE id = ?").run(req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: "not found" });
+  res.json({ ok: true });
+});
 
 // Standalone OCR storage — independent of triage decisions.
 app.post("/api/media-text", requireAuth, (req, res) => {
