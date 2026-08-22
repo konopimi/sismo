@@ -657,6 +657,50 @@ h1 {
   background: #444;
 }
 
+/* Items detectados section (for backlog promotion) */
+.items-detected {
+  width: 100%;
+  margin-top: 8px;
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #1a1d24;
+}
+.items-detected summary {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #ccc;
+}
+.items-detected summary:hover {
+  color: #fff;
+}
+.items-list {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.item-row {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid #2a2d36;
+  font-size: 0.85rem;
+}
+.item-row:last-child {
+  border-bottom: none;
+}
+.item-key {
+  font-weight: 600;
+  color: #888;
+  min-width: 100px;
+}
+.item-value {
+  color: #eaeaea;
+  flex: 1;
+  word-break: break-word;
+}
+
 .crear form {
   display: flex;
   flex-wrap: wrap;
@@ -831,8 +875,8 @@ textarea {
 .tab-btn .n,
 .sub-tab-btn .n {
   position: absolute;
-  top: -10px;
-  right: 2px;
+  top: -8px;
+  right: -4px;
   min-width: 16px;
   height: 16px;
   font-family: ui-monospace, monospace;
@@ -849,7 +893,8 @@ textarea {
   box-shadow: 0 0 0 1px rgba(100, 100, 100, 0.8);
 }
 
-.tab-btn.active .n {
+.tab-btn.active .n,
+.sub-tab-btn.active .n {
   background: rgba(0, 128, 128, 0.38);
   /* color: blue; */
   box-shadow: 0 0 0 1px rgba(0, 160, 160, 0.8);
@@ -1598,6 +1643,7 @@ textarea {
   /* flex-direction: column; */
   gap: 4px;
   padding: 5px;
+  padding-top: 10px;
   overflow-x: auto;
   border-bottom: 1px solid rgba(var(--surface), 0.62);
   /* background: rgba(var(--surface), 0.23); */

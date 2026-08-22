@@ -571,6 +571,11 @@
               colaboradores</small>
             <input type="email" id="emailInputColab" placeholder="Email (opcional)" />
             <input type="password" id="passwordInputColab" placeholder="Contraseña (opcional, mín 6 chars)" />
+            <!-- Items detectados (para promoción desde backlog) -->
+            <details id="colaboradorItemsDetected" class="items-detected" style="display:none;">
+              <summary>📋 Items detectados en el mensaje <span id="colaboradorItemsCount">(0)</span></summary>
+              <div id="colaboradorItemsList" class="items-list"></div>
+            </details>
             <button type="submit">Unirme</button>
           </form>
         </div>
@@ -590,6 +595,11 @@
             <textarea id="donacionDescInput" placeholder="Descripción" required></textarea>
             <input type="text" id="donacionLocInput" placeholder="Punto de rescate / dirección" />
             <input type="text" id="donacionContactInput" placeholder="Tu contacto (opcional)" />
+            <!-- Items detectados (para promoción desde backlog) -->
+            <details id="donacionItemsDetected" class="items-detected" style="display:none;">
+              <summary>📋 Items detectados en el mensaje <span id="donacionItemsCount">(0)</span></summary>
+              <div id="donacionItemsList" class="items-list"></div>
+            </details>
             <button type="submit">🎁 Ofrecer</button>
           </form>
         </div>
@@ -614,6 +624,11 @@
             </select>
             <input type="text" id="necesidadPointInput" placeholder="Punto de rescate (ej: Cantabria)" />
             <input type="text" id="necesidadContactInput" placeholder="Contacto en el punto (opcional)" />
+            <!-- Items detectados (para promoción desde backlog) -->
+            <details id="necesidadItemsDetected" class="items-detected" style="display:none;">
+              <summary>📋 Items detectados en el mensaje <span id="necesidadItemsCount">(0)</span></summary>
+              <div id="necesidadItemsList" class="items-list"></div>
+            </details>
             <button type="submit">🆘 Reportar</button>
           </form>
         </div>
@@ -631,6 +646,11 @@
             <input type="text" id="logisticaOriginInput" placeholder="Origen" />
             <input type="text" id="logisticaDestInput" placeholder="Destino" />
             <input type="text" id="logisticaContactInput" placeholder="Contacto (opcional)" />
+            <!-- Items detectados (para promoción desde backlog) -->
+            <details id="logisticaItemsDetected" class="items-detected" style="display:none;">
+              <summary>📋 Items detectados en el mensaje <span id="logisticaItemsCount">(0)</span></summary>
+              <div id="logisticaItemsList" class="items-list"></div>
+            </details>
             <button type="submit">🚚 Crear tarea</button>
           </form>
         </div>

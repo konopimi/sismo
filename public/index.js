@@ -896,6 +896,8 @@ function openCrearModal(type) {
   crearFormWraps.forEach((w) => {
     w.classList.toggle("active", w.dataset.type === type);
   });
+  // Hide any items-detected sections from previous promotions.
+  document.querySelectorAll(".items-detected").forEach((el) => (el.style.display = "none"));
   crearModalShell.open();
 }
 function closeCrearModal() {
@@ -3553,6 +3555,19 @@ function prefillCrearForm(type, item) {
       setVal("donacionDescInput", rawText || getEntity("description"));
       setVal("donacionLocInput", getEntity("location"));
       setVal("donacionContactInput", getEntity("contact"));
+      // Populate items detectados list with all extracted entities.
+      const donacionItemsList = document.getElementById("donacionItemsList");
+      const donacionItemsCount = document.getElementById("donacionItemsCount");
+      const donacionItemsDetected = document.getElementById("donacionItemsDetected");
+      if (donacionItemsList && extracted.length) {
+        donacionItemsList.innerHTML = extracted.map((e) =>
+          `<div class="item-row"><span class="item-key">${escapeHtml(e.entity || "")}:</span><span class="item-value">${escapeHtml(e.value || "")}</span></div>`
+        ).join("");
+        donacionItemsCount.textContent = `(${extracted.length})`;
+        donacionItemsDetected.style.display = "block";
+      } else if (donacionItemsDetected) {
+        donacionItemsDetected.style.display = "none";
+      }
       break;
     case "necesidad":
       setVal("necesidadTypeInput", mapNecesidadType(getEntity("item_type")));
@@ -3561,6 +3576,19 @@ function prefillCrearForm(type, item) {
       setVal("necesidadUrgencyInput", mapUrgency(getEntity("urgency")));
       setVal("necesidadPointInput", getEntity("location"));
       setVal("necesidadContactInput", getEntity("contact"));
+      // Populate items detectados list with all extracted entities.
+      const necesidadItemsList = document.getElementById("necesidadItemsList");
+      const necesidadItemsCount = document.getElementById("necesidadItemsCount");
+      const necesidadItemsDetected = document.getElementById("necesidadItemsDetected");
+      if (necesidadItemsList && extracted.length) {
+        necesidadItemsList.innerHTML = extracted.map((e) =>
+          `<div class="item-row"><span class="item-key">${escapeHtml(e.entity || "")}:</span><span class="item-value">${escapeHtml(e.value || "")}</span></div>`
+        ).join("");
+        necesidadItemsCount.textContent = `(${extracted.length})`;
+        necesidadItemsDetected.style.display = "block";
+      } else if (necesidadItemsDetected) {
+        necesidadItemsDetected.style.display = "none";
+      }
       break;
     case "logistica":
       setVal("logisticaTypeInput", mapLogisticaType(getEntity("task_type")));
@@ -3568,12 +3596,38 @@ function prefillCrearForm(type, item) {
       setVal("logisticaOriginInput", getEntity("origin"));
       setVal("logisticaDestInput", getEntity("destination"));
       setVal("logisticaContactInput", getEntity("contact"));
+      // Populate items detectados list with all extracted entities.
+      const logisticaItemsList = document.getElementById("logisticaItemsList");
+      const logisticaItemsCount = document.getElementById("logisticaItemsCount");
+      const logisticaItemsDetected = document.getElementById("logisticaItemsDetected");
+      if (logisticaItemsList && extracted.length) {
+        logisticaItemsList.innerHTML = extracted.map((e) =>
+          `<div class="item-row"><span class="item-key">${escapeHtml(e.entity || "")}:</span><span class="item-value">${escapeHtml(e.value || "")}</span></div>`
+        ).join("");
+        logisticaItemsCount.textContent = `(${extracted.length})`;
+        logisticaItemsDetected.style.display = "block";
+      } else if (logisticaItemsDetected) {
+        logisticaItemsDetected.style.display = "none";
+      }
       break;
     case "colaborador":
       setVal("nameInputColab", getEntity("name"));
       setVal("skillInputColab", getEntity("skill"));
       setVal("contactInputColab", getEntity("contact"));
       setVal("cityInputColab", getEntity("city"));
+      // Populate items detectados list with all extracted entities.
+      const colaboradorItemsList = document.getElementById("colaboradorItemsList");
+      const colaboradorItemsCount = document.getElementById("colaboradorItemsCount");
+      const colaboradorItemsDetected = document.getElementById("colaboradorItemsDetected");
+      if (colaboradorItemsList && extracted.length) {
+        colaboradorItemsList.innerHTML = extracted.map((e) =>
+          `<div class="item-row"><span class="item-key">${escapeHtml(e.entity || "")}:</span><span class="item-value">${escapeHtml(e.value || "")}</span></div>`
+        ).join("");
+        colaboradorItemsCount.textContent = `(${extracted.length})`;
+        colaboradorItemsDetected.style.display = "block";
+      } else if (colaboradorItemsDetected) {
+        colaboradorItemsDetected.style.display = "none";
+      }
       break;
   }
 }
