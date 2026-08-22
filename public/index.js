@@ -3438,6 +3438,7 @@ function backlogCardHtml(item) {
       <div style="padding:6px;display:flex;gap:6px;justify-content:flex-end;">
         <button class="btn-small" onclick="openPromoteModal('${item.id}')">✅ Promover</button>
         <button class="btn-small btn-delete" onclick="setBacklogStatus('${item.id}','rejected')">✕ Rechazar</button>
+        <button class="btn-small btn-delete" onclick="deleteBacklog('${item.id}')" style="background:#c00;">🗑️ Eliminar</button>
       </div>
     </div>
   `;
@@ -3479,6 +3480,7 @@ function openBacklogModal(item) {
   modalActions.innerHTML = `
     <button class="btn-small" onclick="openPromoteModal('${item.id}'); closeModal();">✅ Promover</button>
     <button class="btn-small btn-delete" onclick="setBacklogStatus('${item.id}','rejected'); closeModal();">✕ Rechazar</button>
+    <button class="btn-small btn-delete" onclick="deleteBacklog('${item.id}'); closeModal();" style="background:#c00;">🗑️ Eliminar</button>
   `;
   document.getElementById("commentsContainer").style.display = "none";
   detailModal.open();
@@ -3499,6 +3501,15 @@ async function setBacklogStatus(id, status) {
     body: JSON.stringify({ status }),
   });
   if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error"); return; }
+  loadListBacklog();
+}
+async function deleteBacklog(id) {
+  if (!confirm('¿Eliminar este elemento del backlog permanentemente?')) return;
+  const res = await fetch(`${API_BASE}/backlog/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${getAuthToken()}` },
+  });
+  if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || 'Error al eliminar'); return; }
   loadListBacklog();
 }
 // "Promover" a backlog item = open the creation modal pre-filled with
