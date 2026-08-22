@@ -348,6 +348,13 @@ try {
 try {
   db.exec("ALTER TABLE pets ADD COLUMN image TEXT");
 } catch (e) { }
+// --- Migration: add items JSON column to donaciones and necesidades ---
+try {
+  db.exec("ALTER TABLE donaciones ADD COLUMN items TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE necesidades ADD COLUMN items TEXT");
+} catch (e) { }
 try {
   db.exec("ALTER TABLE disappeared ADD COLUMN photo_url TEXT");
 } catch (e) { }
