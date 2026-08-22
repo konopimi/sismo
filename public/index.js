@@ -3667,11 +3667,41 @@ function collectItemsFromList(listId) {
 function prefillCrearForm(type, item) {
   const extracted = Array.isArray(item.extracted_data) ? item.extracted_data : [];
   const rawText = item.raw_text || "";
+  // Parse NIM's grouped items[] from enriched_data (preferred over flat entities).
+  let enrichedItems = null;
+  if (item.enriched_data) {
+    try {
+      const enriched = typeof item.enriched_data === "string" ? JSON.parse(item.enriched_data) : item.enriched_data;
+      if (Array.isArray(enriched.items) && enriched.items.length) enrichedItems = enriched.items;
+    } catch { enrichedItems = null; }
+  }
   // Helper to find an entity value by name.
   const getEntity = (name) => {
     const e = extracted.find((x) => (x.entity || "").toLowerCase() === name.toLowerCase());
     return e ? e.value : "";
   };
+  // Build editable rows: prefer grouped items[], fall back to flat entities.
+  const buildRows = () => {
+    if (enrichedItems) {
+      return enrichedItems.map((it, i) => {
+        const name = it.item || it.name || it.tipo || it.type || "";
+        const qty = it.quantity != null ? it.quantity : "";
+        return `<div class="item-row" data-idx="${i}">
+          <input type="text" class="item-key-input" value="${escapeHtml(name)}" placeholder="Clave" />
+          <input type="text" class="item-value-input" value="${escapeHtml(String(qty))}" placeholder="Valor" />
+          <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
+        </div>`;
+      }).join("");
+    }
+    return extracted.map((e, i) =>
+      `<div class="item-row" data-idx="${i}">
+        <input type="text" class="item-key-input" value="${escapeHtml(e.entity || "")}" placeholder="Clave" />
+        <input type="text" class="item-value-input" value="${escapeHtml(e.value || "")}" placeholder="Valor" />
+        <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
+      </div>`
+    ).join("");
+  };
+  const rowCount = enrichedItems ? enrichedItems.length : extracted.length;
   switch (type) {
     case "donacion":
       // donacionTypeInput, donacionQtyInput, donacionDescInput, donacionLocInput, donacionContactInput
@@ -3685,15 +3715,9 @@ function prefillCrearForm(type, item) {
       const donacionItemsList = document.getElementById("donacionItemsList");
       const donacionItemsCount = document.getElementById("donacionItemsCount");
       const donacionItemsDetected = document.getElementById("donacionItemsDetected");
-      if (donacionItemsList && extracted.length) {
-        donacionItemsList.innerHTML = extracted.map((e, i) =>
-          `<div class="item-row" data-idx="${i}">
-            <input type="text" class="item-key-input" value="${escapeHtml(e.entity || "")}" placeholder="Clave" />
-            <input type="text" class="item-value-input" value="${escapeHtml(e.value || "")}" placeholder="Valor" />
-            <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
-          </div>`
-        ).join("");
-        donacionItemsCount.textContent = `(${extracted.length})`;
+      if (donacionItemsList && rowCount) {
+        donacionItemsList.innerHTML = buildRows();
+        donacionItemsCount.textContent = `(${rowCount})`;
         donacionItemsDetected.style.display = "block";
       } else if (donacionItemsDetected) {
         donacionItemsDetected.style.display = "none";
@@ -3712,15 +3736,9 @@ function prefillCrearForm(type, item) {
       const necesidadItemsList = document.getElementById("necesidadItemsList");
       const necesidadItemsCount = document.getElementById("necesidadItemsCount");
       const necesidadItemsDetected = document.getElementById("necesidadItemsDetected");
-      if (necesidadItemsList && extracted.length) {
-        necesidadItemsList.innerHTML = extracted.map((e, i) =>
-          `<div class="item-row" data-idx="${i}">
-            <input type="text" class="item-key-input" value="${escapeHtml(e.entity || "")}" placeholder="Clave" />
-            <input type="text" class="item-value-input" value="${escapeHtml(e.value || "")}" placeholder="Valor" />
-            <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
-          </div>`
-        ).join("");
-        necesidadItemsCount.textContent = `(${extracted.length})`;
+      if (necesidadItemsList && rowCount) {
+        necesidadItemsList.innerHTML = buildRows();
+        necesidadItemsCount.textContent = `(${rowCount})`;
         necesidadItemsDetected.style.display = "block";
       } else if (necesidadItemsDetected) {
         necesidadItemsDetected.style.display = "none";
@@ -3738,15 +3756,9 @@ function prefillCrearForm(type, item) {
       const logisticaItemsList = document.getElementById("logisticaItemsList");
       const logisticaItemsCount = document.getElementById("logisticaItemsCount");
       const logisticaItemsDetected = document.getElementById("logisticaItemsDetected");
-      if (logisticaItemsList && extracted.length) {
-        logisticaItemsList.innerHTML = extracted.map((e, i) =>
-          `<div class="item-row" data-idx="${i}">
-            <input type="text" class="item-key-input" value="${escapeHtml(e.entity || "")}" placeholder="Clave" />
-            <input type="text" class="item-value-input" value="${escapeHtml(e.value || "")}" placeholder="Valor" />
-            <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
-          </div>`
-        ).join("");
-        logisticaItemsCount.textContent = `(${extracted.length})`;
+      if (logisticaItemsList && rowCount) {
+        logisticaItemsList.innerHTML = buildRows();
+        logisticaItemsCount.textContent = `(${rowCount})`;
         logisticaItemsDetected.style.display = "block";
       } else if (logisticaItemsDetected) {
         logisticaItemsDetected.style.display = "none";
@@ -3763,15 +3775,9 @@ function prefillCrearForm(type, item) {
       const colaboradorItemsList = document.getElementById("colaboradorItemsList");
       const colaboradorItemsCount = document.getElementById("colaboradorItemsCount");
       const colaboradorItemsDetected = document.getElementById("colaboradorItemsDetected");
-      if (colaboradorItemsList && extracted.length) {
-        colaboradorItemsList.innerHTML = extracted.map((e, i) =>
-          `<div class="item-row" data-idx="${i}">
-            <input type="text" class="item-key-input" value="${escapeHtml(e.entity || "")}" placeholder="Clave" />
-            <input type="text" class="item-value-input" value="${escapeHtml(e.value || "")}" placeholder="Valor" />
-            <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
-          </div>`
-        ).join("");
-        colaboradorItemsCount.textContent = `(${extracted.length})`;
+      if (colaboradorItemsList && rowCount) {
+        colaboradorItemsList.innerHTML = buildRows();
+        colaboradorItemsCount.textContent = `(${rowCount})`;
         colaboradorItemsDetected.style.display = "block";
       } else if (colaboradorItemsDetected) {
         colaboradorItemsDetected.style.display = "none";
