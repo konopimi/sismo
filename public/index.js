@@ -3538,6 +3538,52 @@ function capitalizeFirst(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+// Set up editable items list with add/remove handlers and count updates.
+function setupEditableItemsList(listId, countId, detectedId, addBtnId) {
+  const list = document.getElementById(listId);
+  const count = document.getElementById(countId);
+  const detected = document.getElementById(detectedId);
+  const addBtn = addBtnId ? document.getElementById(addBtnId) : null;
+  if (!list) return;
+  // Remove existing handlers to avoid duplicates.
+  list.querySelectorAll(".item-remove-btn").forEach((btn) => {
+    btn.replaceWith(btn.cloneNode(true));
+  });
+  if (addBtn) {
+    addBtn.replaceWith(addBtn.cloneNode(true));
+    const newAddBtn = document.getElementById(addBtnId);
+    if (newAddBtn) {
+      newAddBtn.addEventListener("click", () => {
+        const idx = list.children.length;
+        const row = document.createElement("div");
+        row.className = "item-row";
+        row.innerHTML = `
+          <input type="text" class="item-key-input" placeholder="Clave" />
+          <input type="text" class="item-value-input" placeholder="Valor" />
+          <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
+        `;
+        list.appendChild(row);
+        row.querySelector(".item-remove-btn").addEventListener("click", () => row.remove());
+        updateItemsCount(list, count, detected);
+      });
+    }
+    // Attach remove handlers (delegated).
+    list.addEventListener("click", (e) => {
+      if (e.target.matches(".item-remove-btn")) {
+        e.target.closest(".item-row").remove();
+        updateItemsCount(list, count, detected);
+      }
+    });
+  }
+  function updateItemsCount(list, count, detected) {
+    const n = list.children.length;
+    if (count) count.textContent = `(${n})`;
+    if (detected) detected.style.display = n ? "block" : "none";
+  }
+  // Initial count.
+  updateItemsCount(list, count, detected);
+}
+
 // Pre-fill the creation form for the given type with backlog item data.
 function prefillCrearForm(type, item) {
   const extracted = Array.isArray(item.extracted_data) ? item.extracted_data : [];
@@ -3555,19 +3601,26 @@ function prefillCrearForm(type, item) {
       setVal("donacionDescInput", rawText || getEntity("description"));
       setVal("donacionLocInput", getEntity("location"));
       setVal("donacionContactInput", getEntity("contact"));
-      // Populate items detectados list with all extracted entities.
+      // Populate items detectados list with all extracted entities as editable rows.
+      // Populate items detectados list with all extracted entities as editable rows.
       const donacionItemsList = document.getElementById("donacionItemsList");
       const donacionItemsCount = document.getElementById("donacionItemsCount");
       const donacionItemsDetected = document.getElementById("donacionItemsDetected");
       if (donacionItemsList && extracted.length) {
-        donacionItemsList.innerHTML = extracted.map((e) =>
-          `<div class="item-row"><span class="item-key">${escapeHtml(e.entity || "")}:</span><span class="item-value">${escapeHtml(e.value || "")}</span></div>`
+        donacionItemsList.innerHTML = extracted.map((e, i) =>
+          `<div class="item-row" data-idx="${i}">
+            <input type="text" class="item-key-input" value="${escapeHtml(e.entity || "")}" placeholder="Clave" />
+            <input type="text" class="item-value-input" value="${escapeHtml(e.value || "")}" placeholder="Valor" />
+            <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
+          </div>`
         ).join("");
         donacionItemsCount.textContent = `(${extracted.length})`;
         donacionItemsDetected.style.display = "block";
       } else if (donacionItemsDetected) {
         donacionItemsDetected.style.display = "none";
       }
+      // Set up editable list with add/remove handlers.
+      setupEditableItemsList("donacionItemsList", "donacionItemsCount", "donacionItemsDetected", "donacionAddItemBtn");
       break;
     case "necesidad":
       setVal("necesidadTypeInput", mapNecesidadType(getEntity("item_type")));
@@ -3576,19 +3629,25 @@ function prefillCrearForm(type, item) {
       setVal("necesidadUrgencyInput", mapUrgency(getEntity("urgency")));
       setVal("necesidadPointInput", getEntity("location"));
       setVal("necesidadContactInput", getEntity("contact"));
-      // Populate items detectados list with all extracted entities.
+      // Populate items detectados list with all extracted entities as editable rows.
       const necesidadItemsList = document.getElementById("necesidadItemsList");
       const necesidadItemsCount = document.getElementById("necesidadItemsCount");
       const necesidadItemsDetected = document.getElementById("necesidadItemsDetected");
       if (necesidadItemsList && extracted.length) {
-        necesidadItemsList.innerHTML = extracted.map((e) =>
-          `<div class="item-row"><span class="item-key">${escapeHtml(e.entity || "")}:</span><span class="item-value">${escapeHtml(e.value || "")}</span></div>`
+        necesidadItemsList.innerHTML = extracted.map((e, i) =>
+          `<div class="item-row" data-idx="${i}">
+            <input type="text" class="item-key-input" value="${escapeHtml(e.entity || "")}" placeholder="Clave" />
+            <input type="text" class="item-value-input" value="${escapeHtml(e.value || "")}" placeholder="Valor" />
+            <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
+          </div>`
         ).join("");
         necesidadItemsCount.textContent = `(${extracted.length})`;
         necesidadItemsDetected.style.display = "block";
       } else if (necesidadItemsDetected) {
         necesidadItemsDetected.style.display = "none";
       }
+      // Set up editable list with add/remove handlers.
+      setupEditableItemsList("necesidadItemsList", "necesidadItemsCount", "necesidadItemsDetected", "necesidadAddItemBtn");
       break;
     case "logistica":
       setVal("logisticaTypeInput", mapLogisticaType(getEntity("task_type")));
@@ -3596,38 +3655,50 @@ function prefillCrearForm(type, item) {
       setVal("logisticaOriginInput", getEntity("origin"));
       setVal("logisticaDestInput", getEntity("destination"));
       setVal("logisticaContactInput", getEntity("contact"));
-      // Populate items detectados list with all extracted entities.
+      // Populate items detectados list with all extracted entities as editable rows.
       const logisticaItemsList = document.getElementById("logisticaItemsList");
       const logisticaItemsCount = document.getElementById("logisticaItemsCount");
       const logisticaItemsDetected = document.getElementById("logisticaItemsDetected");
       if (logisticaItemsList && extracted.length) {
-        logisticaItemsList.innerHTML = extracted.map((e) =>
-          `<div class="item-row"><span class="item-key">${escapeHtml(e.entity || "")}:</span><span class="item-value">${escapeHtml(e.value || "")}</span></div>`
+        logisticaItemsList.innerHTML = extracted.map((e, i) =>
+          `<div class="item-row" data-idx="${i}">
+            <input type="text" class="item-key-input" value="${escapeHtml(e.entity || "")}" placeholder="Clave" />
+            <input type="text" class="item-value-input" value="${escapeHtml(e.value || "")}" placeholder="Valor" />
+            <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
+          </div>`
         ).join("");
         logisticaItemsCount.textContent = `(${extracted.length})`;
         logisticaItemsDetected.style.display = "block";
       } else if (logisticaItemsDetected) {
         logisticaItemsDetected.style.display = "none";
       }
+      // Set up editable list with add/remove handlers.
+      setupEditableItemsList("logisticaItemsList", "logisticaItemsCount", "logisticaItemsDetected", "logisticaAddItemBtn");
       break;
     case "colaborador":
       setVal("nameInputColab", getEntity("name"));
       setVal("skillInputColab", getEntity("skill"));
       setVal("contactInputColab", getEntity("contact"));
       setVal("cityInputColab", getEntity("city"));
-      // Populate items detectados list with all extracted entities.
+      // Populate items detectados list with all extracted entities as editable rows.
       const colaboradorItemsList = document.getElementById("colaboradorItemsList");
       const colaboradorItemsCount = document.getElementById("colaboradorItemsCount");
       const colaboradorItemsDetected = document.getElementById("colaboradorItemsDetected");
       if (colaboradorItemsList && extracted.length) {
-        colaboradorItemsList.innerHTML = extracted.map((e) =>
-          `<div class="item-row"><span class="item-key">${escapeHtml(e.entity || "")}:</span><span class="item-value">${escapeHtml(e.value || "")}</span></div>`
+        colaboradorItemsList.innerHTML = extracted.map((e, i) =>
+          `<div class="item-row" data-idx="${i}">
+            <input type="text" class="item-key-input" value="${escapeHtml(e.entity || "")}" placeholder="Clave" />
+            <input type="text" class="item-value-input" value="${escapeHtml(e.value || "")}" placeholder="Valor" />
+            <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
+          </div>`
         ).join("");
         colaboradorItemsCount.textContent = `(${extracted.length})`;
         colaboradorItemsDetected.style.display = "block";
       } else if (colaboradorItemsDetected) {
         colaboradorItemsDetected.style.display = "none";
       }
+      // Set up editable list with add/remove handlers.
+      setupEditableItemsList("colaboradorItemsList", "colaboradorItemsCount", "colaboradorItemsDetected", "colaboradorAddItemBtn");
       break;
   }
 }
