@@ -3771,8 +3771,9 @@ function prefillCrearForm(type, item) {
     case "logistica":
       setVal("logisticaTypeInput", mapLogisticaType(getEntity("task_type")));
       setVal("logisticaDescInput", rawText || getEntity("description"));
-      setVal("logisticaOriginInput", getEntity("origin"));
-      setVal("logisticaDestInput", getEntity("destination"));
+      // NIM emits per-item "from"/"to"; use the first item's values for the form.
+      setVal("logisticaOriginInput", enrichedItems?.[0]?.from || getEntity("from") || getEntity("origin"));
+      setVal("logisticaDestInput", enrichedItems?.[0]?.to || getEntity("to") || getEntity("destination"));
       setVal("logisticaContactInput", getEntity("contact"));
       // Populate items detectados list with all extracted entities as editable rows.
       const logisticaItemsList = document.getElementById("logisticaItemsList");

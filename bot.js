@@ -458,12 +458,13 @@ CRITICAL RULES — extract ONLY what is explicitly stated in the text:
 - If no items are mentioned, use [].
 - Use "unknown" for intent if unclear.
 - INTENT AMBIGUITY: if the message mentions items but gives NO signal whether they are being OFFERED (donation) or REQUESTED (need) — no verb like "tengo"/"ofrezco"/"dono" vs "necesito"/"busco"/"requiero" — set intent to "ambiguous" (NOT donate_offer or report_need). Do NOT guess.
+- TRANSPORT/LOGISTICS: if the message is about MOVING or TRANSPORTING items (verbs like "transportar", "llevar", "mover", "trasladar", "recoger y llevar", "entregar"), set intent to "coordinate_delivery" (NOT request_item or donate_offer). The items being moved are still extracted into "items", but the intent is logistics.
 - Extract quantities as numbers, not strings.
 - PER-ITEM LOCATION: every item carries its own "from" and "to" fields. There is NO top-level location field.
 - "from" = where the item is COLLECTED FROM / the donor's location / pickup point.
 - "to" = where the item is DELIVERED TO / the destination / drop-off point.
 - "recoger en X llevar a Y" → from = X, to = Y.
-- "para X" / "llevar a X" / "entregar en X" → to = X (from = null).
+- "para X" / "llevar a X" / "entregar en X" / "transportar a X" / "a X" → to = X (from = null).
 - "de X" / "desde X" / "ubicados en X" (donor's location) → from = X (to = null).
 - If a location is ambiguous and you cannot tell if it is from or to, put it in "to" (the more common case for donations/needs).
 - GLOBAL LOCATION: if a single location applies to ALL items (e.g. "tengo 100 latas y 200 jugos para Calima"), COPY that location onto EACH item's "to" field.
