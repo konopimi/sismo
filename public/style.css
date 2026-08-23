@@ -657,6 +657,16 @@ h1 {
   background: #444;
 }
 
+/* Promote modal metadata line (intent, creator, date) */
+.promote-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 0.8rem;
+  color: #999;
+  margin-bottom: 8px;
+}
+
 /* Original text box (read-only message preview) */
 .original-text-box {
   width: 100%;
@@ -733,24 +743,27 @@ h1 {
   word-break: break-word;
 }
 
-/* Editable items list */
+/* Editable items list — each item is a card that wraps responsively */
 .item-row {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
   align-items: center;
-  padding: 4px 0;
-  border-bottom: 1px solid #2a2d36;
+  padding: 8px;
+  border: 1px solid #2a2d36;
+  border-radius: 8px;
+  background: #14161c;
+  margin-bottom: 6px;
 }
 .item-row:last-child {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 .item-name-input,
 .item-qty-input,
 .item-type-input,
 .item-from-input,
 .item-to-input {
-  flex: 1;
-  padding: 4px 8px;
+  padding: 6px 8px;
   border-radius: 4px;
   border: 1px solid #333;
   background: #1a1d24;
@@ -759,17 +772,21 @@ h1 {
   min-width: 0;
 }
 .item-name-input {
-  flex: 2;
+  flex: 1 1 100%;
 }
 .item-qty-input {
-  max-width: 70px;
+  flex: 0 1 70px;
 }
 .item-type-input {
-  max-width: 110px;
+  flex: 1 1 120px;
 }
 .item-from-input,
 .item-to-input {
-  flex: 1.2;
+  flex: 1 1 140px;
+}
+.item-remove-btn {
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 .item-remove-btn,
 .item-add-btn {

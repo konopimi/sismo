@@ -3481,63 +3481,19 @@ function renderBacklog() {
   }
   renderVirtualList(listElBacklog, searched, backlogCardHtml);
 }
-// Open a backlog item in the detail modal (same as other item types).
+// DEPRECATED: the separate backlog detail modal has been merged into the
+// promote modal. Kept as a thin redirect so any lingering callers still work.
 function openBacklogModal(item) {
-  const emoji = BACKLOG_INTENT_EMOJI[item.intent] || "🧠";
-  const date = new Date(item.created_at).toLocaleString("es-CO", {
-    day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
-  });
-  modalTitle.textContent = `${emoji} ${item.intent || "Mensaje"}`;
-  modalStatus.innerHTML = `<span class="status-tag backlog-${escapeHtml(item.status || "pending")}">${BACKLOG_STATUS_LABEL[item.status] || item.status}</span>`;
-  modalMeta.innerHTML = `
-    <span>🕒 ${date}</span>
-    <span>👤 ${escapeHtml(item.creator_name || item.creator_matrix_id || "—")}</span>
-  `;
-  // Prefer NIM's grouped items[] (enriched_data) over flat Rasa entities.
-  let entities;
-  let enriched = null;
-  if (item.enriched_data) {
-    try {
-      enriched = typeof item.enriched_data === "string" ? JSON.parse(item.enriched_data) : item.enriched_data;
-    } catch { enriched = null; }
-  }
-  if (enriched && Array.isArray(enriched.items) && enriched.items.length) {
-    entities = enriched.items.map((it) => {
-      const name = it.item || it.name || it.tipo || it.type || "?";
-      const qty = it.quantity != null ? ` × ${it.quantity}` : "";
-      const from = it.from ? ` 📥 ${escapeHtml(it.from)}` : "";
-      const to = it.to ? ` 📤 ${escapeHtml(it.to)}` : "";
-      return `<span class="meta">📦 ${escapeHtml(name)}${escapeHtml(String(qty))}${from}${to}</span>`;
-    }).join("");
-  } else {
-    entities = Array.isArray(item.extracted_data) && item.extracted_data.length
-      ? item.extracted_data.map((e) => `<span class="meta">${escapeHtml(e.entity || "")}: ${escapeHtml(e.value || "")}</span>`).join("")
-      : `<span class="meta">sin entidades</span>`;
-  }
-  const rawJson = item.raw_json
-    ? `<details class="backlog-raw"><summary>🔍 raw JSON</summary><pre>${escapeHtml(item.raw_json)}</pre></details>`
-    : "";
-  modalBody.innerHTML = `
-    <div style="white-space:pre-wrap;margin-bottom:12px;">${escapeHtml(item.raw_text || "")}</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;">${entities}</div>
-    ${rawJson}
-  `;
-  modalActions.innerHTML = `
-    <button class="btn-small" onclick="openPromoteModal('${item.id}'); closeModal();">✅ Promover</button>
-    <button class="btn-small btn-delete" onclick="setBacklogStatus('${item.id}','rejected'); closeModal();">✕ Rechazar</button>
-    <button class="btn-small btn-delete" onclick="deleteBacklog('${item.id}'); closeModal();" style="background:#c00;">🗑️ Eliminar</button>
-  `;
-  document.getElementById("commentsContainer").style.display = "none";
-  detailModal.open();
+  if (item && item.id) openPromoteModal(item.id);
 }
-// Click a backlog card to open its detail modal.
+// Click a backlog card to open the promote modal directly (detail modal deprecated).
 listElBacklog.addEventListener("click", (e) => {
   if (e.target.closest("button")) return;
   const card = e.target.closest(".card");
   if (!card) return;
   const id = card.dataset.id;
   const item = backlogData.find((b) => String(b.id) === String(id));
-  if (item) openBacklogModal(item);
+  if (item) openPromoteModal(id);
 });
 async function setBacklogStatus(id, status) {
   const res = await fetch(`${API_BASE}/backlog/${id}`, {
@@ -3752,7 +3708,13 @@ function prefillCrearForm(type, item) {
   const rowCount = enrichedItems ? enrichedItems.length : extracted.length;
   switch (type) {
     case "donacion":
-      // Show the original message in a read-only textarea.
+      // Show metadata (intent, creator, date) + original message.
+      const donMeta = document.getElementById("donacionPromoteMeta");
+      if (donMeta) {
+        const donDate = new Date(item.created_at).toLocaleString("es-CO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        donMeta.innerHTML = `<span>🧠 ${escapeHtml(item.intent || "")}</span> · <span>👤 ${escapeHtml(item.creator_name || item.creator_matrix_id || "—")}</span> · <span>🕒 ${donDate}</span>`;
+        donMeta.style.display = "block";
+      }
       setVal("donacionOriginalText", rawText);
       // Populate items detectados list with grouped items as editable rows.
       const donacionItemsList = document.getElementById("donacionItemsList");
@@ -3769,7 +3731,13 @@ function prefillCrearForm(type, item) {
       setupEditableItemsList("donacionItemsList", "donacionItemsCount", "donacionItemsDetected", "donacionAddItemBtn");
       break;
     case "necesidad":
-      // Show the original message in a read-only textarea.
+      // Show metadata (intent, creator, date) + original message.
+      const necMeta = document.getElementById("necesidadPromoteMeta");
+      if (necMeta) {
+        const necDate = new Date(item.created_at).toLocaleString("es-CO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        necMeta.innerHTML = `<span>🧠 ${escapeHtml(item.intent || "")}</span> · <span>👤 ${escapeHtml(item.creator_name || item.creator_matrix_id || "—")}</span> · <span>🕒 ${necDate}</span>`;
+        necMeta.style.display = "block";
+      }
       setVal("necesidadOriginalText", rawText);
       // Populate items detectados list with grouped items as editable rows.
       const necesidadItemsList = document.getElementById("necesidadItemsList");
