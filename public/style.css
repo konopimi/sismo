@@ -1122,7 +1122,7 @@ textarea {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 5px;
 }
 
 .card .name {

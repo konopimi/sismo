@@ -56,7 +56,7 @@ class ChatVirtualList {
         const id = entry.target.dataset.eventId;
         const newH = entry.target.offsetHeight;
         const oldH = this.heights.get(id) || this.DEFAULT_HEIGHT;
-        if (oldH !== newH) {
+        if (Math.abs(newH - oldH) >= 2) {
           this.heights.set(id, newH);
           changed = true;
           if (!this.isAtBottom) {
@@ -104,6 +104,8 @@ class ChatVirtualList {
   }
   setEvents(events) {
     if (this._isDestroyed) return;
+    const loading = document.getElementById("chatLoading");
+    if (loading) loading.remove();
     this.events = this._groupEvents(events);
     this._render(true);
     this.scrollToBottom();
@@ -222,7 +224,12 @@ class ChatVirtualList {
     if (this._stickRaf) cancelAnimationFrame(this._stickRaf);
     this._stickRaf = requestAnimationFrame(() => {
       if (this._isDestroyed) return;
-      this.container.scrollTop = this.container.scrollHeight;
+      // Only adjust if not already at bottom (within 1px threshold)
+      // to avoid fighting browser overscroll / micro-changes.
+      const maxScroll = this.container.scrollHeight - this.container.clientHeight;
+      if (this.container.scrollTop < maxScroll - 1) {
+        this.container.scrollTop = maxScroll;
+      }
       this._stickRaf = null;
     });
   }
@@ -260,13 +267,20 @@ class ChatVirtualList {
       top += this.heights.get(this.events[i].getId()) || this.DEFAULT_HEIGHT;
     }
     this.container.scrollTop = top;
-    const node = this.nodes.get(this.events[index].getId());
-    if (node) {
-      node.style.outline = "2px solid #3fa34d";
+    const eventId = this.events[index].getId();
+    const strobeNode = () => {
+      const node = this.nodes.get(eventId);
+      if (!node) {
+        // Node not rendered yet (virtualization) — retry next frame
+        requestAnimationFrame(strobeNode);
+        return;
+      }
+      node.classList.add("chat-highlight-strobe");
       setTimeout(() => {
-        node.style.outline = "";
-      }, 1500);
-    }
+        node.classList.remove("chat-highlight-strobe");
+      }, 1800);
+    };
+    requestAnimationFrame(strobeNode);
   }
   _onScroll() {
     if (this._isDestroyed) return;
@@ -412,7 +426,12 @@ class ChatVirtualList {
     this.wrapper.replaceChildren(fragment);
     // Keep bottom sticky if user was at bottom
     if (this.isAtBottom) {
-      this._stickToBottom();
+      // Only stick if we're not already at the bottom (within threshold)
+      // to avoid RAF loop fighting with scroll events.
+      const maxScroll = this.container.scrollHeight - this.container.clientHeight;
+      if (this.container.scrollTop < maxScroll - 1) {
+        this._stickToBottom();
+      }
     }
   }
 }
@@ -469,7 +488,9 @@ function updateReplyBar() {
     else if (replyingTo.msgtype === "m.audio") previewText = "🎤 Audio";
     previewText =
       previewText.length > 50 ? previewText.slice(0, 50) + "…" : previewText;
-    preview.innerHTML = `<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong style="color:${replyColor};">${escapeHtml(name)}</strong> ${escapeHtml(previewText)}</div>`;
+    preview.innerHTML = `<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;"><strong style="color:${replyColor};">${escapeHtml(name)}</strong> ${escapeHtml(previewText)}</div>`;
+    preview.style.cursor = "pointer";
+    preview.onclick = () => window.scrollToChatEvent(replyingTo.eventId);
     bar.style.display = "flex";
     if (name.includes("-") && name.length === 36) {
       loadMatrixDirectory().then((dir) => {
@@ -492,6 +513,8 @@ function matrixSdk() {
 async function startMatrixChat() {
   if (matrixStarted) return;
   matrixStarted = true;
+  const container = document.getElementById("chatListContainer");
+  if (container) container.innerHTML = `<div style="padding:20px;color:#999;text-align:center;font-size:0.85rem;">Conectando al chat…</div>`;
   const sdk = matrixSdk();
   if (!sdk) {
     renderChatError("Matrix SDK no cargó. Recarga la página.");
@@ -507,7 +530,36 @@ async function startMatrixChat() {
     const { base_url, user_id, password } = await res.json();
     if (window.Olm && typeof window.Olm.init === "function")
       await window.Olm.init();
+    // Reuse a cached access token to skip the slow login + crypto init
+    // round-trips on page refresh. The token is validated lazily by the
+    // first sync; if it's expired we fall back to a fresh login.
+    const cachedToken = localStorage.getItem("sismo_matrix_access_token");
+    const cachedUserId = localStorage.getItem("sismo_matrix_user_id");
     const storedDeviceId = localStorage.getItem("sismo_matrix_device_id");
+    if (cachedToken && cachedUserId && storedDeviceId) {
+      matrixClient = sdk.createClient({
+        baseUrl: base_url,
+        accessToken: cachedToken,
+        userId: cachedUserId,
+        deviceId: storedDeviceId,
+      });
+      try {
+        await matrixClient.initCrypto();
+        matrixClient.setGlobalErrorOnUnknownDevices(false);
+        await matrixClient.startClient({ initialSyncLimit: 20 });
+        // Token is valid — skip login.
+        matrixRoom = await joinOrCreateRoom();
+        matrixDirectory = await loadMatrixDirectory();
+        renderChatUI();
+        bindChatEvents();
+        return;
+      } catch (e) {
+        // Cached token invalid/expired — fall through to fresh login.
+        console.warn("Cached Matrix token invalid, re-logging in:", e.message);
+        localStorage.removeItem("sismo_matrix_access_token");
+        localStorage.removeItem("sismo_matrix_user_id");
+      }
+    }
     const tmpClient = sdk.createClient({ baseUrl: base_url });
     const loginResp = await tmpClient.login("m.login.password", {
       identifier: {
@@ -518,6 +570,8 @@ async function startMatrixChat() {
       ...(storedDeviceId ? { device_id: storedDeviceId } : {}),
     });
     localStorage.setItem("sismo_matrix_device_id", loginResp.device_id);
+    localStorage.setItem("sismo_matrix_access_token", loginResp.access_token);
+    localStorage.setItem("sismo_matrix_user_id", loginResp.user_id);
     matrixClient = sdk.createClient({
       baseUrl: base_url,
       accessToken: loginResp.access_token,
@@ -655,11 +709,12 @@ function renderChatError(msg) {
   if (!container) return;
   container.innerHTML = `<div style="padding:20px;color:#f66;">${escapeHtml(msg)}</div>`;
 }
+let chatModalShell = null;
 async function openChatModal() {
   if (!matrixDirectory) {
     matrixDirectory = await loadMatrixDirectory();
   }
-  const modal = Modal({
+  chatModalShell = Modal({
     id: "chatModal",
     onClose: cleanupChatVirtualizer,
     onOpen: () => {
@@ -678,7 +733,7 @@ async function openChatModal() {
       if (typeof setChatModalSubTab === "function") setChatModalSubTab("chat");
     },
   });
-  if (modal) modal.open();
+  if (chatModalShell) chatModalShell.open();
 }
 function bindChatEvents() {
   const input = document.getElementById("chatInput");
@@ -874,18 +929,12 @@ function createMessageNode(item) {
         fullSrc,
         body: c.body,
         eventId: ev.getId(),
+        info: c.info,
       };
     });
     const gridEl = document.createElement("div");
     gridEl.className = "chat-media-grid";
     const firstContent = item.items[0].getContent();
-    if (firstContent.info && firstContent.info.w && firstContent.info.h) {
-      gridEl.style.aspectRatio = `${firstContent.info.w} / ${firstContent.info.h}`;
-      gridEl.style.minHeight = "80px";
-    } else {
-      gridEl.style.aspectRatio = "4 / 3";
-      gridEl.style.minHeight = "120px";
-    }
     const group = { sender, ts: item.getTs(), gridEl, items };
     renderMediaGrid(group);
     let replyHtml = "";
@@ -985,13 +1034,6 @@ function createMessageNode(item) {
       : fullSrc;
     const gridEl = document.createElement("div");
     gridEl.className = "chat-media-grid";
-    if (content.info && content.info.w && content.info.h) {
-      gridEl.style.aspectRatio = `${content.info.w} / ${content.info.h}`;
-      gridEl.style.minHeight = "80px";
-    } else {
-      gridEl.style.aspectRatio = "4 / 3";
-      gridEl.style.minHeight = "120px";
-    }
     const group = {
       sender,
       ts: item.getTs(),
@@ -1003,6 +1045,7 @@ function createMessageNode(item) {
           fullSrc,
           body: content.body,
           eventId: item.getId(),
+          info: content.info,
         },
       ],
     };
@@ -1143,6 +1186,22 @@ function renderMediaGrid(group) {
   const cols = visible.length === 1 ? 1 : visible.length === 2 ? 2 : 3;
   group.gridEl.dataset.count = String(visible.length);
   group.gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  // Give the grid a definite width so aspect-ratio computes height
+  // immediately (before images load), preventing bubble size change.
+  // max-width:75% of ~375px viewport ≈ 281px.
+  group.gridEl.style.width = "281px";
+  group.gridEl.style.maxWidth = "100%";
+  if (visible.length === 1) {
+    // Single image: preserve its natural aspect ratio.
+    const refItem = items[0];
+    const refW = refItem.info?.w || 4;
+    const refH = refItem.info?.h || 3;
+    group.gridEl.style.aspectRatio = `${refW} / ${refH}`;
+  } else {
+    // Multi-image: square cells. Grid aspect = cols / rows.
+    const rows = Math.ceil(visible.length / cols);
+    group.gridEl.style.aspectRatio = `${cols} / ${rows}`;
+  }
   group.gridEl.innerHTML = visible
     .map((item, i) =>
       mediaThumbHtml(item, i, i === visible.length - 1, extraCount),
@@ -1169,23 +1228,28 @@ function openLightbox(items, index) {
   if (modal) modal.open();
 }
 function updateLightboxStage() {
-  const stage = document.getElementById("lightboxStage");
+  const media = document.getElementById("lightboxMedia");
   const counter = document.getElementById("lightboxCounter");
   const prevBtn = document.getElementById("lightboxPrev");
   const nextBtn = document.getElementById("lightboxNext");
   const ocrToggleBtn = document.getElementById("lightboxOcrToggle");
   const ocrOverlay = document.getElementById("lightboxOcrOverlay");
-  if (!stage) return;
+  if (!media) return;
   const item = _lightboxItems[_lightboxIndex];
   const src = item.fullSrc || item.src;
   const emoji = item.msgtype === "m.video" ? "🎬" : "📷";
   if (item.msgtype === "m.video") {
-    stage.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><video src="${escapeHtml(src)}" controls autoplay style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;flex:0 1 auto;min-height:0;"></video>`;
+    media.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><video src="${escapeHtml(src)}" controls autoplay style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;flex:0 1 auto;min-height:0;"></video>`;
   } else {
-    stage.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "")}" style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;flex:0 1 auto;min-height:0;"/>`;
+    media.innerHTML = `<span style="position:absolute;top:8px;left:8px;font-size:1.5em;z-index:1;">${emoji}</span><img src="${escapeHtml(src)}" alt="${escapeHtml(item.body || "")}" style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;flex:0 1 auto;min-height:0;"/>`;
   }
   // OCR / extracted-text panel below the media (images only)
   const ocrContainer = document.getElementById("lightboxOcr");
+  // Clear any stale OCR from the previous image immediately, so it can't
+  // leak into the overlay while the new image's OCR is still loading.
+  _lightboxOcrData = null;
+  const overlayText = document.getElementById("lightboxOcrText");
+  if (overlayText) overlayText.textContent = "";
   if (ocrContainer) {
     if (item.msgtype === "m.image" && item.eventId) {
       ocrContainer.innerHTML = `<div style="text-align:center;color:#666;font-size:0.8rem;">Cargando texto extraído…</div>`;
@@ -1209,25 +1273,31 @@ function updateLightboxStage() {
   if (prevBtn) prevBtn.disabled = _lightboxIndex === 0;
   if (nextBtn) nextBtn.disabled = _lightboxIndex === _lightboxItems.length - 1;
 }
+let _ocrRequestToken = 0;
 async function fetchOcrText(eventId, container) {
-  try {
-    const res = await authFetch(
-      `${API_BASE}/backlog/by-event/${encodeURIComponent(eventId)}`,
-    );
-    if (!res.ok) {
-      container.innerHTML = "";
-      _lightboxOcrData = null;
-      return;
-    }
-    const data = await res.json();
-    if (!data.raw_text) {
-      container.innerHTML = "";
-      _lightboxOcrData = null;
-      return;
-    }
-    // Cache the OCR text so the overlay can render it on toggle.
-    _lightboxOcrData = { raw_text: data.raw_text, intent: data.intent || null };
-    container.innerHTML = `
+  const token = ++_ocrRequestToken;
+  // Poll for OCR text: the bot may still be processing the image when the
+  // lightbox first opens, so retry a few times before giving up.
+  const MAX_ATTEMPTS = 6;
+  const RETRY_DELAY_MS = 2000;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    if (token !== _ocrRequestToken) return; // navigated away
+    try {
+      const res = await authFetch(
+        `${API_BASE}/backlog/by-event/${encodeURIComponent(eventId)}`,
+      );
+      if (token !== _ocrRequestToken) return;
+      if (!res.ok) {
+        container.innerHTML = "";
+        _lightboxOcrData = null;
+        return;
+      }
+      const data = await res.json();
+      if (token !== _ocrRequestToken) return;
+      if (data.raw_text) {
+        // Found OCR text — render it and stop polling.
+        _lightboxOcrData = { raw_text: data.raw_text, intent: data.intent || null };
+        container.innerHTML = `
             <div style="padding:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:0.9rem;color:#ccc;max-height:25vh;overflow-y:auto;text-align:left;">
                 <div style="font-size:0.75rem;color:#45d6d6;margin-bottom:8px;font-weight:bold;">
                     🧠 Texto extraído
@@ -1235,14 +1305,25 @@ async function fetchOcrText(eventId, container) {
                 </div>
                 <pre style="white-space:pre-wrap;word-break:break-word;margin:0;font-family:inherit;line-height:1.5;">${escapeHtml(data.raw_text)}</pre>
             </div>`;
-    // Populate the overlay text so the toggle can show it over the image.
-    const overlayText = document.getElementById("lightboxOcrText");
-    if (overlayText) overlayText.textContent = data.raw_text;
-  } catch (e) {
-    console.error("OCR fetch failed:", e);
-    container.innerHTML = "";
-    _lightboxOcrData = null;
+        const overlayText = document.getElementById("lightboxOcrText");
+        if (overlayText) overlayText.textContent = data.raw_text;
+        return;
+      }
+      // No OCR yet — wait and retry.
+      if (attempt < MAX_ATTEMPTS - 1) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      }
+    } catch (e) {
+      if (token !== _ocrRequestToken) return;
+      console.error("OCR fetch failed:", e);
+      container.innerHTML = "";
+      _lightboxOcrData = null;
+      return;
+    }
   }
+  // Exhausted retries — no OCR available.
+  container.innerHTML = "";
+  _lightboxOcrData = null;
 }
 // Wire lightbox nav buttons once
 let _lightboxWired = false;
@@ -1329,7 +1410,8 @@ function setChatModalSubTab(target) {
   // when toggling visibility — an empty string removes the inline style
   // and the div falls back to display:block, breaking the row.
   if (inputBar) inputBar.style.display = isChat ? "flex" : "none";
-  if (replyBar) replyBar.style.display = isChat ? "flex" : "none";
+  // Only show reply bar if we're actually replying to something.
+  if (replyBar) replyBar.style.display = (isChat && replyingTo) ? "flex" : "none";
   panels.style.display = isChat ? "none" : "flex";
   // Lazy-load the target list into the modal's own container.
   if (!isChat) {
@@ -1361,13 +1443,28 @@ function setChatModalSubTab(target) {
         colabCardHtml,
         "Todavía nadie se ha unido como colaborador.",
       );
-    else if (target === "backlog")
-      renderModalList(
-        "chatModalListBacklog",
-        backlogData,
-        backlogCardHtml,
-        "Aún no hay mensajes para revisar.",
-      );
+    else if (target === "backlog") {
+      // If backlog hasn't been fetched yet, load it (shared in-flight
+      // promise) and render the modal list once it resolves — otherwise the
+      // modal would show the empty state forever until the driver loads it.
+      if (!backlogData.length) {
+        loadListBacklog().then(() =>
+          renderModalList(
+            "chatModalListBacklog",
+            backlogData,
+            backlogCardHtml,
+            "Aún no hay mensajes para revisar.",
+          ),
+        );
+      } else {
+        renderModalList(
+          "chatModalListBacklog",
+          backlogData,
+          backlogCardHtml,
+          "Aún no hay mensajes para revisar.",
+        );
+      }
+    }
   }
 }
 function wireChatModalSubTabs() {
@@ -1379,6 +1476,39 @@ function wireChatModalSubTabs() {
   btns.forEach((btn) =>
     btn.addEventListener("click", () => setChatModalSubTab(btn.dataset.subtab)),
   );
+  // Wire item clicks in the modal lists so they behave identically to the
+  // main collaborator tab. Cards carry data-id + data-type; resolve the
+  // item from the shared data arrays and open the same detail modal.
+  const panels = document.getElementById("chatModalSubPanels");
+  if (panels) {
+    panels.addEventListener("click", (e) => {
+      if (e.target.closest("button")) return;
+      const card = e.target.closest(".card");
+      if (!card) return;
+      const id = card.dataset.id;
+      const type = card.dataset.type;
+      if (!id) return;
+      if (type === "backlog") {
+        const item = (backlogData || []).find(
+          (b) => String(b.id) === String(id),
+        );
+        if (item && typeof openBacklogModal === "function") openBacklogModal(item);
+        return;
+      }
+      const dataMap = {
+        colaborador: colabData,
+        donacion: donacionesData,
+        necesidad: necesidadesData,
+        logistica: logisticaData,
+      };
+      const arr = dataMap[type];
+      if (!arr) return;
+      const item = arr.find((x) => String(x.id) === String(id));
+      if (item && typeof openModalForItem === "function") {
+        openModalForItem(item, type);
+      }
+    });
+  }
 }
 // Render a data list into a modal container using the shared card renderers
 // (defined in index.js). Falls back to a plain message if renderers are missing.
@@ -1588,6 +1718,7 @@ function showLoginForm() {
   if (privateWrapper) privateWrapper.style.display = "none";
   if (colabLoginPrompt) colabLoginPrompt.style.display = "block";
   window.currentUser = null;
+  updateColabSubTabsVisibility();
   // Hide the collaborators count badge now that we're logged out.
   if (typeof updateTabCounts === "function") updateTabCounts();
 }
@@ -1601,6 +1732,7 @@ function showChat() {
 }
   if (privateWrapper) privateWrapper.style.display = "flex";
   if (colabLoginPrompt) colabLoginPrompt.style.display = "none";
+  updateColabSubTabsVisibility();
   if (!colabData.length) loadListColab();
   if (typeof loadListDonaciones === "function" && !donacionesData.length) loadListDonaciones();
   if (typeof loadListNecesidades === "function" && !necesidadesData.length) loadListNecesidades();
@@ -1879,24 +2011,38 @@ function renderVirtualList(containerEl, items, cardHtmlFn) {
     sentinel.remove();
     return;
   }
+  const loadMore = () => {
+    if (!sentinel.isConnected) return;
+    const next = Math.min(rendered + VIRTUAL_BATCH_SIZE, items.length);
+    sentinel.insertAdjacentHTML(
+      "beforebegin",
+      items.slice(rendered, next).map(cardHtmlFn).join(""),
+    );
+    rendered = next;
+    if (rendered >= items.length) {
+      observer.disconnect();
+      sentinel.remove();
+    }
+  };
   const observer = new IntersectionObserver(
     (entries) => {
       if (!entries[0].isIntersecting) return;
-      const next = Math.min(rendered + VIRTUAL_BATCH_SIZE, items.length);
-      sentinel.insertAdjacentHTML(
-        "beforebegin",
-        items.slice(rendered, next).map(cardHtmlFn).join(""),
-      );
-      rendered = next;
-      if (rendered >= items.length) {
-        observer.disconnect();
-        sentinel.remove();
-      }
+      loadMore();
     },
     { rootMargin: "600px" },
   );
   observer.observe(sentinel);
   virtualObservers.set(containerEl, observer);
+  // Fallback: if the sentinel is already in view but the observer's initial
+  // callback was missed (e.g. the container was just made visible and layout
+  // hadn't settled), force a manual check after the next frame so the list
+  // never appears empty on first render.
+  requestAnimationFrame(() => {
+    if (!sentinel.isConnected) return;
+    const rect = sentinel.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    if (rect.top < vh + 600) loadMore();
+  });
 }
 async function loadExtraLocations(itemId, type) {
   const container = document.getElementById("modalExtraLocationsContainer");
@@ -2127,6 +2273,32 @@ const tabSismosBtn = document.getElementById("tabSismosBtn");
 const tabSismos = document.getElementById("tabSismos");
 let currentTabType = "person"; // track active tab for map cleanup
 window.currentTabType = currentTabType;
+// Show the collaborator sub-tab bar (moved into the bottom driver) only
+// when logged in AND the Voluntad tab is active.
+function updateColabSubTabsVisibility() {
+  const bar = document.getElementById("colabSubTabs");
+  if (!bar) return;
+  const loggedIn = !!window.currentUser;
+  const onColabTab = currentTabType === "colaborador";
+  bar.style.display = loggedIn && onColabTab ? "flex" : "none";
+  // The sub-tabs NUEVO button now lives outside #colabSubTabs (direct child
+  // of #driver), so it must be hidden/shown in lockstep with the bar. Look it
+  // up by id here (not the module const) to avoid a temporal-dead-zone error
+  // when this runs during initAuth, before the const is initialized.
+  const subBtn = document.getElementById("subCrearBtn");
+  if (subBtn) {
+    subBtn.style.display = loggedIn && onColabTab ? "" : "none";
+  }
+}
+// Hide the driver's NUEVO button on tabs that have no creation form
+// (colaboradores, mapa, sismos, wiki).
+function updateCrearBtnVisibility() {
+  const btn = document.getElementById("crear");
+  if (!btn) return;
+  const hidden = ["colaborador", "map", "sismos", "wiki"].includes(currentTabType);
+  // visibility:hidden keeps the button's space so the tab row doesn't shift.
+  btn.style.visibility = hidden ? "hidden" : "";
+}
 function switchTab(activeBtn, activePanel, tabType) {
   // If leaving the map tab, hide the map container
   if (currentTabType === "map" && tabType !== "map") {
@@ -2134,6 +2306,8 @@ function switchTab(activeBtn, activePanel, tabType) {
   }
   currentTabType = tabType;
   window.currentTabType = currentTabType;
+  updateColabSubTabsVisibility();
+  updateCrearBtnVisibility();
   // Desactivar todos los botones
   [
     tabPersonasBtn,
@@ -2258,6 +2432,8 @@ function openCrearModal(type) {
   crearFormWraps.forEach((w) => {
     w.classList.toggle("active", w.dataset.type === type);
   });
+  // Hide any items-detected sections from previous promotions.
+  document.querySelectorAll(".items-detected").forEach((el) => (el.style.display = "none"));
   crearModalShell.open();
 }
 function closeCrearModal() {
@@ -3576,6 +3752,12 @@ form.addEventListener("submit", async (e) => {
   gpsBtn.classList.remove("has-location");
   gpsBtn.title = "Usar mi ubicación";
   document.getElementById("locationDisplay").textContent = "";
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   loadList();
   closeCrearModal();
 });
@@ -3716,6 +3898,12 @@ formP.addEventListener("submit", async (e) => {
   gpsBtnP.classList.remove("has-location");
   gpsBtnP.title = "Usar mi ubicación";
   document.getElementById("locationDisplayP").textContent = "";
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   loadListP();
   closeCrearModal();
 });
@@ -3905,6 +4093,12 @@ formB.addEventListener("submit", async (e) => {
   gpsBtnB.classList.remove("has-location");
   gpsBtnB.title = "Usar mi ubicación";
   document.getElementById("locationDisplayB").textContent = "";
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   loadListB();
   closeCrearModal();
 });
@@ -4097,6 +4291,12 @@ formA.addEventListener("submit", async (e) => {
   }
   photoInputA.value = "";
   fileLabelA.textContent = "Sube una o más fotos";
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   loadListA();
   closeCrearModal();
 });
@@ -4175,7 +4375,7 @@ async function loadListColab() {
     refreshCityFilter("colaborador", colabData);
     renderColab();
     updateTabCounts();
-    if (colabListWrapper) colabListWrapper.style.display = "block";
+    if (colabListWrapper) colabListWrapper.style.display = "flex";
     if (colabLoginPrompt) colabLoginPrompt.style.display = "none";
   } catch {
     listElColab.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
@@ -4194,15 +4394,18 @@ function updateTabCounts() {
   set("tabPetsBtn", petsData.length);
   set("tabEdificiosBtn", buildingsData.length);
   set("tabAnunciosBtn", anunciosData.length);
-  // Collaborators count is only shown to logged-in users.
-  const colabBadge = document.querySelector("#tabColabBtn .n");
-  if (colabBadge) {
-    if (window.currentUser) {
-      colabBadge.textContent = colabData.length;
-      colabBadge.style.display = "";
-    } else {
-      colabBadge.style.display = "none";
-    }
+  // Sub-tab counts (both the driver bar and the chat modal bar). The
+  // colaboradores tab button itself no longer shows a count.
+  const subCounts = {
+    donaciones: donacionesData.length,
+    necesidades: necesidadesData.length,
+    logistica: logisticaData.length,
+    voluntarios: colabData.length,
+  };
+  for (const [subtab, n] of Object.entries(subCounts)) {
+    document
+      .querySelectorAll(`.sub-tab-btn[data-subtab="${subtab}"] .n`)
+      .forEach((badge) => (badge.textContent = n));
   }
 }
 const COLAB_PLACEHOLDER =
@@ -4306,6 +4509,12 @@ formColab.addEventListener("submit", async (e) => {
   const passEl = document.getElementById("passwordInputColab");
   if (emailEl) emailEl.value = "";
   if (passEl) passEl.value = "";
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   loadListColab();
 });
 async function removeColab(id) {
@@ -4319,22 +4528,52 @@ async function removeColab(id) {
 // ================================================================
 const subTabBtns = document.querySelectorAll(".sub-tab-btn");
 const subTabPanels = document.querySelectorAll(".sub-tab-panel");
-const subActionBtns = document.querySelectorAll(".sub-action");
+// Single NUEVO button in the sub-tabs bar: its label + handler change on
+// the fly based on the active sub-tab, and it hides (visibility) on sub-tabs
+// that have no creation form (chat, backlog/triage).
+const SUB_CREAR_META = {
+  donaciones: { type: "donacion", emoji: "🎁" },
+  necesidades: { type: "necesidad", emoji: "🆘" },
+  logistica: { type: "logistica", emoji: "🚚" },
+  voluntarios: { type: "colaborador", emoji: "🤝" },
+};
+const subCrearBtn = document.getElementById("subCrearBtn");
+function updateSubCrearBtn(target) {
+  if (!subCrearBtn) return;
+  const meta = SUB_CREAR_META[target];
+  // visibility:hidden keeps the button's space so the bar doesn't shift.
+  subCrearBtn.style.visibility = meta ? "" : "hidden";
+  if (!meta) return;
+  subCrearBtn.innerHTML = `${meta.emoji}\n          NUEVO`;
+  subCrearBtn.onclick = () => openCrearModal(meta.type);
+}
 function setActiveSubTab(target) {
   subTabBtns.forEach((b) => b.classList.toggle("active", b.dataset.subtab === target));
   subTabPanels.forEach((p) => {
     p.classList.toggle("active", p.dataset.subtabPanel === target);
   });
-  // Mostrar solo el botón de acción de la sub-tab activa.
-  subActionBtns.forEach((a) => {
-    a.style.display = a.dataset.actionFor === target ? "" : "none";
-  });
-  // Render the target list if it's a data sub-tab and empty.
-  if (target === "donaciones" && !donacionesData.length) loadListDonaciones();
-  else if (target === "necesidades" && !necesidadesData.length) loadListNecesidades();
-  else if (target === "logistica" && !logisticaData.length) loadListLogistica();
-  else if (target === "voluntarios" && !colabData.length) loadListColab();
-  else if (target === "backlog" && !backlogData.length) loadListBacklog();
+  // Single NUEVO button: update its content + handler for the active sub-tab.
+  updateSubCrearBtn(target);
+  // Load (if empty) and always re-render the target data sub-tab so the
+  // list is fresh and never left blank after a fetch race.
+  if (target === "donaciones") {
+    if (!donacionesData.length) loadListDonaciones();
+    else renderDonaciones();
+  } else if (target === "necesidades") {
+    if (!necesidadesData.length) loadListNecesidades();
+    else renderNecesidades();
+  } else if (target === "logistica") {
+    if (!logisticaData.length) loadListLogistica();
+    else renderLogistica();
+  } else if (target === "voluntarios") {
+    if (!colabData.length) loadListColab();
+    else renderColab();
+  } else if (target === "backlog") {
+    // loadListBacklog renders internally on completion (same as the other
+    // sub-tabs). Only re-render here when data is already cached.
+    if (!backlogData.length) loadListBacklog();
+    else renderBacklog();
+  }
 }
 subTabBtns.forEach((btn) => {
   btn.addEventListener("click", () => setActiveSubTab(btn.dataset.subtab));
@@ -4365,6 +4604,7 @@ async function loadListDonaciones() {
     if (res.status === 401) { clearAuthToken(); showLoginForm(); return; }
     donacionesData = await res.json();
     renderDonaciones();
+    updateTabCounts();
   } catch {
     listElDonaciones.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
   }
@@ -4416,12 +4656,15 @@ listElDonaciones.addEventListener("click", (e) => {
 });
 formDonacion.addEventListener("submit", async (e) => {
   e.preventDefault();
+  // Collect items from the editable list (for promotion) or use legacy fields.
+  const items = collectItemsFromList("donacionItemsList");
   const body = {
     item_type: document.getElementById("donacionTypeInput").value,
     quantity: document.getElementById("donacionQtyInput").value.trim(),
     description: document.getElementById("donacionDescInput").value.trim(),
     location: document.getElementById("donacionLocInput").value.trim(),
     contact: document.getElementById("donacionContactInput").value.trim(),
+    items: items.length > 0 ? items : undefined,
   };
   const res = await fetch(`${API_BASE}/donaciones`, {
     method: "POST",
@@ -4429,6 +4672,12 @@ formDonacion.addEventListener("submit", async (e) => {
     body: JSON.stringify(body),
   });
   if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error"); return; }
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   e.target.reset();
   closeCrearModal();
   loadListDonaciones();
@@ -4460,6 +4709,7 @@ async function loadListNecesidades() {
     if (res.status === 401) { clearAuthToken(); showLoginForm(); return; }
     necesidadesData = await res.json();
     renderNecesidades();
+    updateTabCounts();
   } catch {
     listElNecesidades.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
   }
@@ -4513,6 +4763,8 @@ listElNecesidades.addEventListener("click", (e) => {
 });
 formNecesidad.addEventListener("submit", async (e) => {
   e.preventDefault();
+  // Collect items from the editable list (for promotion) or use legacy fields.
+  const items = collectItemsFromList("necesidadItemsList");
   const body = {
     item_type: document.getElementById("necesidadTypeInput").value,
     quantity: document.getElementById("necesidadQtyInput").value.trim(),
@@ -4520,6 +4772,7 @@ formNecesidad.addEventListener("submit", async (e) => {
     urgency: document.getElementById("necesidadUrgencyInput").value,
     point_name: document.getElementById("necesidadPointInput").value.trim(),
     contact: document.getElementById("necesidadContactInput").value.trim(),
+    items: items.length > 0 ? items : undefined,
   };
   const res = await fetch(`${API_BASE}/necesidades`, {
     method: "POST",
@@ -4527,6 +4780,12 @@ formNecesidad.addEventListener("submit", async (e) => {
     body: JSON.stringify(body),
   });
   if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error"); return; }
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   e.target.reset();
   closeCrearModal();
   loadListNecesidades();
@@ -4556,6 +4815,7 @@ async function loadListLogistica() {
     if (res.status === 401) { clearAuthToken(); showLoginForm(); return; }
     logisticaData = await res.json();
     renderLogistica();
+    updateTabCounts();
   } catch {
     listElLogistica.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
   }
@@ -4609,12 +4869,15 @@ listElLogistica.addEventListener("click", (e) => {
 });
 formLogistica.addEventListener("submit", async (e) => {
   e.preventDefault();
+  // Collect items from the editable list (for promotion) or use legacy fields.
+  const items = collectItemsFromList("logisticaItemsList");
   const body = {
     task_type: document.getElementById("logisticaTypeInput").value,
     description: document.getElementById("logisticaDescInput").value.trim(),
     origin: document.getElementById("logisticaOriginInput").value.trim(),
     destination: document.getElementById("logisticaDestInput").value.trim(),
     contact: document.getElementById("logisticaContactInput").value.trim(),
+    items: items.length > 0 ? items : undefined,
   };
   const res = await fetch(`${API_BASE}/logistica`, {
     method: "POST",
@@ -4622,6 +4885,12 @@ formLogistica.addEventListener("submit", async (e) => {
     body: JSON.stringify(body),
   });
   if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error"); return; }
+  // If this was a promotion from backlog, mark the backlog item accepted.
+  const promoteId = e.target.dataset.promoteBacklogId;
+  if (promoteId) {
+    await setBacklogStatus(promoteId, "accepted");
+    delete e.target.dataset.promoteBacklogId;
+  }
   e.target.reset();
   closeCrearModal();
   loadListLogistica();
@@ -4645,20 +4914,30 @@ const BACKLOG_INTENT_EMOJI = {
   request_help: "🙋", status_update: "🔄", report_emergency: "🚨", ask_about_point: "📍",
   offer_transport: "🚗", request_confirmation: "✅", gratitude: "🙏", welcome_member: "👋",
   request_supplies: "📦", report_issue: "⚠️", share_info: "ℹ️",
-  find_supplier: "🔍", volunteer_recruitment: "🤝", request_item: "📦", mental_health: "🧠",
+  find_supplier: "🔍", volunteer_recruitment: "🤝", request_item: "📦", mental_health: "🧠", fraud_warning: "🚫",
 };
+let _backlogPromise = null;
 async function loadListBacklog() {
-  if (!getAuthToken()) { backlogData = []; renderBacklog(); return; }
-  try {
-    const res = await fetch(`${API_BASE}/backlog`, {
-      headers: { Authorization: `Bearer ${getAuthToken()}` },
-    });
-    if (res.status === 401) { clearAuthToken(); showLoginForm(); return; }
-    backlogData = await res.json();
-    renderBacklog();
-  } catch {
-    listElBacklog.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
-  }
+  if (!getAuthToken()) { backlogData = []; renderBacklog(); return backlogData; }
+  // Reuse the in-flight fetch so concurrent callers (driver sub-tab + chat
+  // modal) all await the same request instead of racing or double-fetching.
+  if (_backlogPromise) return _backlogPromise;
+  _backlogPromise = (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/backlog`, {
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
+      });
+      if (res.status === 401) { clearAuthToken(); showLoginForm(); return backlogData; }
+      backlogData = await res.json();
+      renderBacklog();
+    } catch {
+      listElBacklog.innerHTML = `<div class="empty">No se pudo conectar al servidor.</div>`;
+    } finally {
+      _backlogPromise = null;
+    }
+    return backlogData;
+  })();
+  return _backlogPromise;
 }
 function backlogCardHtml(item) {
   const date = new Date(item.created_at).toLocaleString("es-CO", {
@@ -4673,7 +4952,7 @@ function backlogCardHtml(item) {
     ? `<details class="backlog-raw"><summary>🔍 raw JSON</summary><pre>${escapeHtml(item.raw_json)}</pre></details>`
     : "";
   return `
-    <div class="card backlog" data-id="${item.id}">
+    <div class="card backlog" data-id="${item.id}" data-type="backlog">
       <div style="padding:5px;background:rgba(var(--surface),0.38);border-bottom:2px solid rgba(var(--surface),0.62);">
         <span class="name">${emoji} ${escapeHtml(item.intent)}</span>
         <span class="status-tag backlog-${escapeHtml(item.status || "pending")}">${BACKLOG_STATUS_LABEL[item.status] || item.status}</span>
@@ -4689,7 +4968,7 @@ function backlogCardHtml(item) {
         </div>
       </div>
       <div style="padding:6px;display:flex;gap:6px;justify-content:flex-end;">
-        <button class="btn-small" onclick="setBacklogStatus('${item.id}','accepted')">✅ Aceptar</button>
+        <button class="btn-small" onclick="openPromoteModal('${item.id}')">✅ Promover</button>
         <button class="btn-small btn-delete" onclick="setBacklogStatus('${item.id}','rejected')">✕ Rechazar</button>
       </div>
     </div>
@@ -4730,7 +5009,7 @@ function openBacklogModal(item) {
     ${rawJson}
   `;
   modalActions.innerHTML = `
-    <button class="btn-small" onclick="setBacklogStatus('${item.id}','accepted'); closeModal();">✅ Aceptar</button>
+    <button class="btn-small" onclick="openPromoteModal('${item.id}'); closeModal();">✅ Promover</button>
     <button class="btn-small btn-delete" onclick="setBacklogStatus('${item.id}','rejected'); closeModal();">✕ Rechazar</button>
   `;
   document.getElementById("commentsContainer").style.display = "none";
@@ -4753,6 +5032,273 @@ async function setBacklogStatus(id, status) {
   });
   if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error"); return; }
   loadListBacklog();
+}
+// "Promover" a backlog item = open the creation modal pre-filled with
+// the backlog item's data, so the user can edit before creating the real item.
+// On successful creation, the backlog item is marked accepted.
+function openPromoteModal(id) {
+  const item = backlogData.find((b) => String(b.id) === String(id));
+  if (!item) return;
+  const type = intentToCrearType(item.intent);
+  if (!type) {
+    alert("Este tipo de mensaje no se puede promover directamente.");
+    return;
+  }
+  // Open the creation modal for the target type.
+  openCrearModal(type);
+  // Pre-fill the form with the backlog item's data.
+  prefillCrearForm(type, item);
+  // Override the form's submit handler to also mark the backlog as accepted.
+  // Special case: person form uses 'addForm', not 'addFormPerson'.
+  const formId = type === "person" ? "addForm" : "addForm" + capitalizeFirst(type);
+  const form = document.getElementById(formId);
+  if (form) {
+    form.dataset.promoteBacklogId = id;
+  }
+}
+// Map backlog intent -> creation form type.
+function intentToCrearType(intent) {
+  const map = {
+    donate_offer: "donacion",
+    food_available: "donacion",
+    find_supplier: "donacion",
+    report_need: "necesidad",
+    request_help: "necesidad",
+    report_emergency: "necesidad",
+    request_supplies: "necesidad",
+    request_item: "necesidad",
+    coordinate_delivery: "logistica",
+    offer_transport: "logistica",
+    volunteer_recruitment: "colaborador",
+  };
+  return map[intent] || null;
+}
+function capitalizeFirst(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+// Set up editable items list with add/remove handlers and count updates.
+function setupEditableItemsList(listId, countId, detectedId, addBtnId) {
+  const list = document.getElementById(listId);
+  const count = document.getElementById(countId);
+  const detected = document.getElementById(detectedId);
+  const addBtn = addBtnId ? document.getElementById(addBtnId) : null;
+  if (!list) return;
+  // Remove existing handlers to avoid duplicates.
+  list.querySelectorAll(".item-remove-btn").forEach((btn) => {
+    btn.replaceWith(btn.cloneNode(true));
+  });
+  if (addBtn) {
+    addBtn.replaceWith(addBtn.cloneNode(true));
+    const newAddBtn = document.getElementById(addBtnId);
+    if (newAddBtn) {
+      newAddBtn.addEventListener("click", () => {
+        const idx = list.children.length;
+        const row = document.createElement("div");
+        row.className = "item-row";
+        row.innerHTML = `
+          <input type="text" class="item-key-input" placeholder="Clave" />
+          <input type="text" class="item-value-input" placeholder="Valor" />
+          <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
+        `;
+        list.appendChild(row);
+        row.querySelector(".item-remove-btn").addEventListener("click", () => row.remove());
+        updateItemsCount(list, count, detected);
+      });
+    }
+    // Attach remove handlers (delegated).
+    list.addEventListener("click", (e) => {
+      if (e.target.matches(".item-remove-btn")) {
+        e.target.closest(".item-row").remove();
+        updateItemsCount(list, count, detected);
+      }
+    });
+  }
+  function updateItemsCount(list, count, detected) {
+    const n = list.children.length;
+    if (count) count.textContent = `(${n})`;
+    if (detected) detected.style.display = n ? "block" : "none";
+  }
+  // Initial count.
+  updateItemsCount(list, count, detected);
+}
+// Collect items from the editable list for the given form type.
+// Returns an array of item objects with the schema:
+// { name, type, quantity, unit, description, location, contact }
+function collectItemsFromList(listId) {
+  const list = document.getElementById(listId);
+  if (!list) return [];
+  const items = [];
+  list.querySelectorAll(".item-row").forEach((row) => {
+    const keyInput = row.querySelector(".item-key-input");
+    const valueInput = row.querySelector(".item-value-input");
+    const key = keyInput?.value?.trim();
+    const value = valueInput?.value?.trim();
+    if (!key && !value) return; // Skip empty rows.
+    // Heuristic: map common keys to item properties.
+    const keyLower = key.toLowerCase();
+    let item = { name: "", type: "", quantity: "", unit: "", description: "", location: "", contact: "" };
+    if (keyLower.includes("nombre") || keyLower.includes("name") || keyLower.includes("item") || keyLower.includes("producto")) {
+      item.name = value;
+    } else if (keyLower.includes("tipo") || keyLower.includes("type") || keyLower.includes("categor")) {
+      item.type = value;
+    } else if (keyLower.includes("cantidad") || keyLower.includes("quantity") || keyLower.includes("qty")) {
+      item.quantity = value;
+    } else if (keyLower.includes("unidad") || keyLower.includes("unit")) {
+      item.unit = value;
+    } else if (keyLower.includes("descrip") || keyLower.includes("detalle")) {
+      item.description = value;
+    } else if (keyLower.includes("ubicac") || keyLower.includes("lugar") || keyLower.includes("location") || keyLower.includes("punto")) {
+      item.location = value;
+    } else if (keyLower.includes("contact") || keyLower.includes("tel") || keyLower.includes("cel") || keyLower.includes("fono")) {
+      item.contact = value;
+    } else {
+      // Default: treat key as name, value as quantity/description.
+      item.name = key;
+      item.quantity = value;
+    }
+    // Only add if has at least name or type.
+    if (item.name || item.type) items.push(item);
+  });
+  return items;
+}
+// Pre-fill the creation form for the given type with backlog item data.
+// Pre-fill the creation form for the given type with backlog item data.
+function prefillCrearForm(type, item) {
+  const extracted = Array.isArray(item.extracted_data) ? item.extracted_data : [];
+  const rawText = item.raw_text || "";
+  // Helper to find an entity value by name.
+  const getEntity = (name) => {
+    const e = extracted.find((x) => (x.entity || "").toLowerCase() === name.toLowerCase());
+    return e ? e.value : "";
+  };
+  switch (type) {
+    case "donacion":
+      // donacionTypeInput, donacionQtyInput, donacionDescInput, donacionLocInput, donacionContactInput
+      setVal("donacionTypeInput", mapDonacionType(getEntity("item_type")));
+      setVal("donacionQtyInput", getEntity("quantity"));
+      setVal("donacionDescInput", rawText || getEntity("description"));
+      setVal("donacionLocInput", getEntity("location"));
+      setVal("donacionContactInput", getEntity("contact"));
+      // Populate items detectados list with all extracted entities as editable rows.
+      // Populate items detectados list with all extracted entities as editable rows.
+      const donacionItemsList = document.getElementById("donacionItemsList");
+      const donacionItemsCount = document.getElementById("donacionItemsCount");
+      const donacionItemsDetected = document.getElementById("donacionItemsDetected");
+      if (donacionItemsList && extracted.length) {
+        donacionItemsList.innerHTML = extracted.map((e, i) =>
+          `<div class="item-row" data-idx="${i}">
+            <input type="text" class="item-key-input" value="${escapeHtml(e.entity || "")}" placeholder="Clave" />
+            <input type="text" class="item-value-input" value="${escapeHtml(e.value || "")}" placeholder="Valor" />
+            <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
+          </div>`
+        ).join("");
+        donacionItemsCount.textContent = `(${extracted.length})`;
+        donacionItemsDetected.style.display = "block";
+      } else if (donacionItemsDetected) {
+        donacionItemsDetected.style.display = "none";
+      }
+      // Set up editable list with add/remove handlers.
+      setupEditableItemsList("donacionItemsList", "donacionItemsCount", "donacionItemsDetected", "donacionAddItemBtn");
+      break;
+    case "necesidad":
+      setVal("necesidadTypeInput", mapNecesidadType(getEntity("item_type")));
+      setVal("necesidadQtyInput", getEntity("quantity"));
+      setVal("necesidadDescInput", rawText || getEntity("description"));
+      setVal("necesidadUrgencyInput", mapUrgency(getEntity("urgency")));
+      setVal("necesidadPointInput", getEntity("location"));
+      setVal("necesidadContactInput", getEntity("contact"));
+      // Populate items detectados list with all extracted entities as editable rows.
+      const necesidadItemsList = document.getElementById("necesidadItemsList");
+      const necesidadItemsCount = document.getElementById("necesidadItemsCount");
+      const necesidadItemsDetected = document.getElementById("necesidadItemsDetected");
+      if (necesidadItemsList && extracted.length) {
+        necesidadItemsList.innerHTML = extracted.map((e, i) =>
+          `<div class="item-row" data-idx="${i}">
+            <input type="text" class="item-key-input" value="${escapeHtml(e.entity || "")}" placeholder="Clave" />
+            <input type="text" class="item-value-input" value="${escapeHtml(e.value || "")}" placeholder="Valor" />
+            <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
+          </div>`
+        ).join("");
+        necesidadItemsCount.textContent = `(${extracted.length})`;
+        necesidadItemsDetected.style.display = "block";
+      } else if (necesidadItemsDetected) {
+        necesidadItemsDetected.style.display = "none";
+      }
+      // Set up editable list with add/remove handlers.
+      setupEditableItemsList("necesidadItemsList", "necesidadItemsCount", "necesidadItemsDetected", "necesidadAddItemBtn");
+      break;
+    case "logistica":
+      setVal("logisticaTypeInput", mapLogisticaType(getEntity("task_type")));
+      setVal("logisticaDescInput", rawText || getEntity("description"));
+      setVal("logisticaOriginInput", getEntity("origin"));
+      setVal("logisticaDestInput", getEntity("destination"));
+      setVal("logisticaContactInput", getEntity("contact"));
+      // Populate items detectados list with all extracted entities as editable rows.
+      const logisticaItemsList = document.getElementById("logisticaItemsList");
+      const logisticaItemsCount = document.getElementById("logisticaItemsCount");
+      const logisticaItemsDetected = document.getElementById("logisticaItemsDetected");
+      if (logisticaItemsList && extracted.length) {
+        logisticaItemsList.innerHTML = extracted.map((e, i) =>
+          `<div class="item-row" data-idx="${i}">
+            <input type="text" class="item-key-input" value="${escapeHtml(e.entity || "")}" placeholder="Clave" />
+            <input type="text" class="item-value-input" value="${escapeHtml(e.value || "")}" placeholder="Valor" />
+            <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
+          </div>`
+        ).join("");
+        logisticaItemsCount.textContent = `(${extracted.length})`;
+        logisticaItemsDetected.style.display = "block";
+      } else if (logisticaItemsDetected) {
+        logisticaItemsDetected.style.display = "none";
+      }
+      // Set up editable list with add/remove handlers.
+      setupEditableItemsList("logisticaItemsList", "logisticaItemsCount", "logisticaItemsDetected", "logisticaAddItemBtn");
+      break;
+    case "colaborador":
+      setVal("nameInputColab", getEntity("name"));
+      setVal("skillInputColab", getEntity("skill"));
+      setVal("contactInputColab", getEntity("contact"));
+      setVal("cityInputColab", getEntity("city"));
+      // Populate items detectados list with all extracted entities as editable rows.
+      const colaboradorItemsList = document.getElementById("colaboradorItemsList");
+      const colaboradorItemsCount = document.getElementById("colaboradorItemsCount");
+      const colaboradorItemsDetected = document.getElementById("colaboradorItemsDetected");
+      if (colaboradorItemsList && extracted.length) {
+        colaboradorItemsList.innerHTML = extracted.map((e, i) =>
+          `<div class="item-row" data-idx="${i}">
+            <input type="text" class="item-key-input" value="${escapeHtml(e.entity || "")}" placeholder="Clave" />
+            <input type="text" class="item-value-input" value="${escapeHtml(e.value || "")}" placeholder="Valor" />
+            <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
+          </div>`
+        ).join("");
+        colaboradorItemsCount.textContent = `(${extracted.length})`;
+        colaboradorItemsDetected.style.display = "block";
+      } else if (colaboradorItemsDetected) {
+        colaboradorItemsDetected.style.display = "none";
+      }
+      // Set up editable list with add/remove handlers.
+      setupEditableItemsList("colaboradorItemsList", "colaboradorItemsCount", "colaboradorItemsDetected", "colaboradorAddItemBtn");
+      break;
+  }
+}
+function mapDonacionType(v) {
+  const map = { comida: "comida", ropa: "ropa", insumos: "insumos", medicinas: "medicinas", transporte: "transporte" };
+  return map[v?.toLowerCase()] || "otro";
+}
+function mapNecesidadType(v) {
+  const map = { comida: "comida", ropa: "ropa", carpas: "carpas", medicinas: "medicinas", aseo: "aseo" };
+  return map[v?.toLowerCase()] || "otro";
+}
+function mapLogisticaType(v) {
+  const map = { entrega: "entrega", recogida: "recogida", transporte: "transporte", apoyo: "apoyo" };
+  return map[v?.toLowerCase()] || "apoyo";
+}
+function mapUrgency(v) {
+  const map = { alta: "alta", media: "media", baja: "baja" };
+  return map[v?.toLowerCase()] || "media";
+}
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el && val) el.value = val;
 }
 // Deep link: #anuncio/ abre directamente ese anuncio en su modal.
 function handleAnuncioDeepLink() {
@@ -5565,6 +6111,39 @@ textarea{min-height:92px; resize:vertical}
 npx browser-sync start --server --files "index.html, index.js, map.js, modal.js, virtue.js, style.css, modal.css"
  # npx browser-sync start --server public --files "public/**/*"
 //===== public/modal.css =====
+/* Form row styling for promotion modal */
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.form-row label {
+  font-size: 0.85rem;
+  color: #ccc;
+  font-weight: 500;
+}
+.form-row input,
+.form-row select,
+.form-row textarea {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #1a1d24;
+  color: #eaeaea;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+.form-row input:focus,
+.form-row select:focus,
+.form-row textarea:focus {
+  outline: none;
+  border-color: #4ea1ff;
+}
+.form-row input[required],
+.form-row select[required],
+.form-row textarea[required] {
+  border-left: 3px solid #fcd116;
+}
 /* ===== MODAL (shell + content) — extracted from style.css ===== */
 .modal {
   position: fixed;
@@ -5583,6 +6162,13 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
   z-index: 10000;
   padding: 5px;
   animation: modalFade 0.2s ease-out;
+}
+/* The detail modal must paint above the chat modal (both are .modal at
+   z-index:10000; the chat modal is later in the DOM and would otherwise
+   win the stacking order). Raising it lets it open on top without closing
+   the chat modal underneath. */
+#modal {
+  z-index: 10001;
 }
 .modal-header {
   position: sticky;
@@ -5889,7 +6475,7 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
     <div id="chatAuth">
       <div id="loginForm"
         style="
-          margin:auto;margin-top:20px;max-width:600px;display:flex;flex-direction:column;gap:10px;padding:20px;background:rgba(var(--surface),0.38);border-radius:10px;">
+          margin:auto;margin-top:20px;max-width:600px;display:none;flex-direction:column;gap:10px;padding:20px;background:rgba(var(--surface),0.38);border-radius:10px;">
         <b style="color:#ccc;">💬 Chat de colaboradores</b>
         <input type="text" id="loginIdentifier" placeholder="Email o usuario" />
         <input type="password" id="loginPassword" placeholder="Contraseña" />
@@ -5914,25 +6500,6 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
     <!-- Contenido privado (con sesión) -->
     <div id="colabPrivateWrapper" style="display:none;flex-direction:column;flex:1;min-height:0;">
       <div id="connContainer"></div>
-      <!-- Sub-tabs -->
-      <div class="sub-tabs"
-        style="position:sticky;top:calc(var(--top-bar-height) + 5px);z-index:9999;backdrop-filter:blur(10px);">
-        <button class="sub-tab-btn active" data-subtab="chat" style="margin-right:auto;">💬<span
-            class="tab-label">Chat</span></button>
-        <button class="crear-btn sub-action" data-action-for="donaciones" onclick="openCrearModal('donacion')">🎁
-          DONAR</button>
-        <button class="crear-btn sub-action" data-action-for="necesidades" onclick="openCrearModal('necesidad')">🆘
-          REPORTAR</button>
-        <button class="crear-btn sub-action" data-action-for="logistica" onclick="openCrearModal('logistica')">🚚
-          CREAR</button>
-        <button class="crear-btn sub-action" data-action-for="voluntarios" onclick="openCrearModal('colaborador')">🤝
-          COLABORAR</button>
-        <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="tab-label">Donaciones</span></button>
-        <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="tab-label">Necesidades</span></button>
-        <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="tab-label">Logística</span></button>
-        <button class="sub-tab-btn" data-subtab="voluntarios">🤝<span class="tab-label">Voluntarios</span></button>
-        <button class="sub-tab-btn" data-subtab="backlog">🧠<span class="tab-label">Triage</span></button>
-      </div>
       <!-- Panel Chat: lista de conversaciones -->
       <div class="sub-tab-panel active" data-subtab-panel="chat">
         <div id="chatListContainer"
@@ -5961,7 +6528,7 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
         <div id="listBacklog" class="list"></div>
       </div>
     </div>
-    <div id="colabLoginPrompt" style="padding:16px;text-align:center;color:#999;font-size:0.9rem;">
+    <div id="colabLoginPrompt" style="padding:16px;text-align:center;color:#999;font-size:0.9rem;display:none;">
       🔒 Inicia sesión para ver la zona de colaboradores
     </div>
   </div>
@@ -6336,6 +6903,12 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
               colaboradores</small>
             <input type="email" id="emailInputColab" placeholder="Email (opcional)" />
             <input type="password" id="passwordInputColab" placeholder="Contraseña (opcional, mín 6 chars)" />
+            <!-- Items detectados (para promoción desde backlog) -->
+            <details id="colaboradorItemsDetected" class="items-detected" style="display:none;">
+              <summary>📋 Items detectados en el mensaje <span id="colaboradorItemsCount">(0)</span></summary>
+              <div id="colaboradorItemsList" class="items-list"></div>
+              <button type="button" class="item-add-btn" id="colaboradorAddItemBtn">+ Añadir item</button>
+            </details>
             <button type="submit">Unirme</button>
           </form>
         </div>
@@ -6355,6 +6928,12 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
             <textarea id="donacionDescInput" placeholder="Descripción" required></textarea>
             <input type="text" id="donacionLocInput" placeholder="Punto de rescate / dirección" />
             <input type="text" id="donacionContactInput" placeholder="Tu contacto (opcional)" />
+            <!-- Items detectados (para promoción desde backlog) -->
+            <details id="donacionItemsDetected" class="items-detected" style="display:none;">
+              <summary>📋 Items detectados en el mensaje <span id="donacionItemsCount">(0)</span></summary>
+              <div id="donacionItemsList" class="items-list"></div>
+              <button type="button" class="item-add-btn" id="donacionAddItemBtn">+ Añadir item</button>
+            </details>
             <button type="submit">🎁 Ofrecer</button>
           </form>
         </div>
@@ -6379,6 +6958,12 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
             </select>
             <input type="text" id="necesidadPointInput" placeholder="Punto de rescate (ej: Cantabria)" />
             <input type="text" id="necesidadContactInput" placeholder="Contacto en el punto (opcional)" />
+            <!-- Items detectados (para promoción desde backlog) -->
+            <details id="necesidadItemsDetected" class="items-detected" style="display:none;">
+              <summary>📋 Items detectados en el mensaje <span id="necesidadItemsCount">(0)</span></summary>
+              <div id="necesidadItemsList" class="items-list"></div>
+              <button type="button" class="item-add-btn" id="necesidadAddItemBtn">+ Añadir item</button>
+            </details>
             <button type="submit">🆘 Reportar</button>
           </form>
         </div>
@@ -6396,6 +6981,12 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
             <input type="text" id="logisticaOriginInput" placeholder="Origen" />
             <input type="text" id="logisticaDestInput" placeholder="Destino" />
             <input type="text" id="logisticaContactInput" placeholder="Contacto (opcional)" />
+            <!-- Items detectados (para promoción desde backlog) -->
+            <details id="logisticaItemsDetected" class="items-detected" style="display:none;">
+              <summary>📋 Items detectados en el mensaje <span id="logisticaItemsCount">(0)</span></summary>
+              <div id="logisticaItemsList" class="items-list"></div>
+              <button type="button" class="item-add-btn" id="logisticaAddItemBtn">+ Añadir item</button>
+            </details>
             <button type="submit">🚚 Crear tarea</button>
           </form>
         </div>
@@ -6499,17 +7090,18 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
   </div>
   <div id="driver" style="">
     <div class="driver-inner">
-      <div id="searchBar" class="search-row">
-        <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
+      <!-- Sub-tabs de colaboradores (entre búsqueda y menú principal) -->
+      <div id="colabSubTabs" class="sub-tabs"
+        style="background:rgba(0,127,127,0.23);display:none;height:auto;border-bottom:none;border-top:1px solid rgba(var(--surface),0.62);align-items:center;justify-content:center;">
+        <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="tab-label">Donaciones</span><span class="n">0</span></button>
+        <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="tab-label">Necesidades</span><span class="n">0</span></button>
+        <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="tab-label">Logística</span><span class="n">0</span></button>
+        <button class="sub-tab-btn" data-subtab="voluntarios">🤝<span class="tab-label">Voluntarios</span><span class="n">0</span></button>
+        <button class="sub-tab-btn" data-subtab="backlog" style="margin-left:10px;">🤖<span
+            class="tab-label">Triage</span></button>
+        <button class="sub-tab-btn active" data-subtab="chat">💬<span class=" tab-label">Chat</span></button>
       </div>
       <div class="tabs">
-        <button id="crear" style="
-            border: 2px solid palegoldenrod;
-            background: teal;
-            color: palegoldenrod;
-          ">
-          <b>NUEVO</b>
-        </button>
         <button class="tab-btn active" id="tabPersonasBtn">
           🫂 <span class="tab-label">Personas</span><span class="n">0</span>
         </button>
@@ -6523,13 +7115,27 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
           📣 <span class="tab-label">Anuncios</span><span class="n">0</span>
         </button>
         <button class="tab-btn" id="tabColabBtn">
-          🤝 <span class="tab-label">Voluntad</span><span class="n">0</span>
+          🤝 <span class="tab-label">Voluntad</span>
         </button>
         <button class="tab-btn" id="tabMapBtn">🗺️ <span class="tab-label">Mapa</span></button>
         <button class="tab-btn" id="tabSismosBtn">📊 <span class="tab-label">Sismos</span></button>
         <button class="tab-btn" id="wikiBtn">📚 <span class="tab-label">WIKI</span></button>
       </div>
+      <div id="searchBar" class="search-row">
+        <input type="search" id="searchInput" placeholder="🔍 Buscar por nombre, ubicación o ciudad..." />
+      </div>
     </div>
+    <!-- NUEVO buttons live outside .driver-inner so its overflow:hidden does
+         not clip them; they float above the driver via absolute positioning. -->
+    <button id="crear" style="
+        border: 2px solid palegoldenrod;
+        background: teal;
+        color: palegoldenrod;
+      ">
+      <b>NUEVO</b>
+    </button>
+    <button id="subCrearBtn" class="crear-btn">🎁
+      NUEVO</button>
   </div>
   <!-- ===== MODAL PRIVACIDAD ===== -->
   <div id="privacyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="privacyModalTitle">
@@ -6569,18 +7175,19 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
           style="flex:1;overflow-y:auto;padding:0 10px;overflow-anchor:none;overscroll-behavior:contain;">
           <div id="chatTopSpacer" style="flex: 0 0 auto; height: 0;"></div>
           <div id="chatContentWrapper" style="display:flex;flex-direction:column;gap:8px;padding:10px 0;">
-            <!-- Virtualizer will inject messages here -->
+            <div id="chatLoading" style="padding:20px;color:#999;text-align:center;font-size:0.85rem;">Cargando
+              mensajes…</div>
           </div>
           <div id="chatBottomSpacer" style="flex: 0 0 auto; height: 0;"></div>
         </div>
         <!-- Barra de respuesta (se muestra cuando se responde a un mensaje) -->
         <div id="chatReplyBar"
-          style="display:none;padding:6px 8px;background:rgba(120,120,120,0.15);border-top:1px solid rgba(120,120,120,0.2);flex:0 0 auto;">
-          <div style="display:flex;align-items:center;gap:8px;">
+          style="display:flex;flex:0 0 auto;padding:6px 8px;border-top:1px solid rgba(120,120,120,0.2);background:rgba(120,120,120,0.15);">
+          <div style="width:100%;display:flex;align-items:center;gap:8px;">
             <span style="font-size:0.7rem;color:#888;">Respondiendo a</span>
             <div id="chatReplyPreview" style="flex:1;min-width:0;"></div>
             <button id="chatReplyCancel" type="button"
-              style="flex:0 0 auto;padding:2px 8px;font-size:0.75rem;">✕</button>
+              style="margin-left:auto;flex:0 0 auto;padding:2px 8px;font-size:0.75rem;">✕</button>
           </div>
         </div>
         <div
@@ -6588,13 +7195,15 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
           <div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto;">
             <button id="chatAttachBtn" type="button" title="Adjuntar imagen o video" style="flex:0 0 auto;">📎</button>
             <button id="chatCameraBtn" type="button" title="Tomar foto con la cámara" style="flex:0 0 auto;">📷</button>
-            <button id="chatMicBtn" type="button" title="Grabar mensaje de voz" style="flex:0 0 auto;">🎤</button>
           </div>
           <input type="file" id="chatFileInput" accept="image/*,video/*" multiple style="display:none;" />
           <input type="file" id="chatCameraInput" accept="image/*" capture="environment" style="display:none;" />
           <textarea id="chatInput" rows="1" placeholder="Escribe un mensaje..."
             style="flex:1 1 auto; resize:none; min-height:100%; max-height:300px; font-family:inherit; min-width:0; width:100%; box-sizing:border-box;"></textarea>
-          <button id="chatSendBtn" style="flex:0 0 auto;">Enviar</button>
+          <div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto;">
+            <button id="chatMicBtn" type="button" title="Grabar mensaje de voz" style="flex:0 0 auto;">🎤</button>
+            <button id="chatSendBtn" style="flex:0 0 auto;">Enviar</button>
+          </div>
         </div>
         <!-- Contenido alternativo del modal (listas de sub-tabs) -->
         <div id="chatModalSubPanels" style="flex:1;min-height:0;display:none;flex-direction:column;overflow:hidden;">
@@ -6620,11 +7229,12 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
           style="flex:0 0 auto;height:auto;border-top:1px solid rgba(120,120,120,0.3);border-bottom:none;">
           <button class="sub-tab-btn active" data-subtab="chat" style="margin-right: auto;">💬<span
               class="tab-label">Chat</span></button>
-          <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="tab-label">Donaciones</span></button>
-          <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="tab-label">Necesidades</span></button>
-          <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="tab-label">Logística</span></button>
-          <button class="sub-tab-btn" data-subtab="voluntarios">🤝<span class="tab-label">Voluntarios</span></button>
-          <button class="sub-tab-btn" data-subtab="backlog">🧠<span class="tab-label">Triage</span></button>
+          <button class="sub-tab-btn" data-subtab="backlog" style="margin-right:10px;">🤖<span
+              class="tab-label">Triage</span></button>
+          <button class="sub-tab-btn" data-subtab="donaciones">🎁<span class="tab-label">Donaciones</span><span class="n">0</span></button>
+          <button class="sub-tab-btn" data-subtab="necesidades">🆘<span class="tab-label">Necesidades</span><span class="n">0</span></button>
+          <button class="sub-tab-btn" data-subtab="logistica">🚚<span class="tab-label">Logística</span><span class="n">0</span></button>
+          <button class="sub-tab-btn" data-subtab="voluntarios">🤝<span class="tab-label">Voluntarios</span><span class="n">0</span></button>
         </div>
       </div>
     </div>
@@ -6657,9 +7267,11 @@ npx browser-sync start --server --files "index.html, index.js, map.js, modal.js,
         <button id="lightboxPrev" class="lightbox-nav lightbox-prev" aria-label="Anterior">‹</button>
         <div id="lightboxStage"
           style="display:flex;align-items:center;justify-content:center;flex:1;min-height:0;max-height:100%;width:100%;position:relative;overflow:hidden;">
-          <!-- <div id="lightboxStage" -->
-          <!--   style="max-width:100%;max-height:100%;display:flex;align-items:center;justify-content:center;flex:1;min-height:100%;;overflow:hidden;"> -->
-          <!-- </div> -->
+          <!-- Media (image/video) is injected here, kept separate from the
+               OCR overlay so it isn't wiped out by innerHTML updates. -->
+          <div id="lightboxMedia"
+            style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;position:relative;">
+          </div>
           <div id="lightboxOcr" style="display:none;width:100%;max-width:800px;margin:0 auto;padding:0 12px 12px;">
           </div>
           <!-- OCR Overlay (semi-transparent, full screen over the image) -->
@@ -7146,6 +7758,23 @@ export class VirtualList {
   }
 }
 //===== public/style.css =====
+/* ===== CHAT HIGHLIGHT STROBE ===== */
+@keyframes chat-highlight-strobe {
+  0%,
+  100% {
+    outline: 2px solid #3fa34d;
+  }
+  25%,
+  75% {
+    outline: 2px solid transparent;
+  }
+  50% {
+    outline: 2px solid #3fa34d;
+  }
+}
+.chat-highlight-strobe {
+  animation: chat-highlight-strobe 0.6s ease-in-out 3;
+}
 /* ===== RESET Y BASE ===== */
 /* Leaflet.markercluster custom colors matching app palette */
 .marker-cluster-small {
@@ -7223,6 +7852,7 @@ body {
   flex-direction: column;
   overflow-x: hidden;
   overflow-y: scroll;
+  overscroll-behavior: contain;
   /* scrollbar-gutter: stable ; */
   margin: 0;
   font-family:
@@ -7503,6 +8133,17 @@ h1 {
 .crear-btn:hover {
   filter: brightness(1.1);
 }
+/* NUEVO buttons float above the driver instead of sitting inline with the
+   tab buttons. #driver is position:sticky, so it is the containing block for
+   these absolutely-positioned buttons. bottom:100% = the driver's top edge;
+   +5px lifts the button just above it. */
+#crear,
+#subCrearBtn {
+  position: absolute;
+  right: 10px;
+  bottom: calc(100% + 5px);
+  z-index: 1001;
+}
 /* ===== FILTER ROW (inside .tool-bar) ===== */
 .filter-row {
   display: flex;
@@ -7686,6 +8327,98 @@ h1 {
 #crearModal .crear-form-wrap form .gps-btn:hover {
   background: #444;
 }
+/* Items detectados section (for backlog promotion) */
+.items-detected {
+  width: 100%;
+  margin-top: 8px;
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #1a1d24;
+}
+.items-detected summary {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #ccc;
+}
+.items-detected summary:hover {
+  color: #fff;
+}
+.items-list {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.item-row {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid #2a2d36;
+  font-size: 0.85rem;
+}
+.item-row:last-child {
+  border-bottom: none;
+}
+.item-key {
+  font-weight: 600;
+  color: #888;
+  min-width: 100px;
+}
+.item-value {
+  color: #eaeaea;
+  flex: 1;
+  word-break: break-word;
+}
+/* Editable items list */
+.item-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid #2a2d36;
+}
+.item-row:last-child {
+  border-bottom: none;
+}
+.item-key-input,
+.item-value-input {
+  flex: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #333;
+  background: #1a1d24;
+  color: #eaeaea;
+  font-size: 0.85rem;
+}
+.item-key-input {
+  max-width: 120px;
+}
+.item-value-input {
+  min-width: 150px;
+}
+.item-remove-btn,
+.item-add-btn {
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: #2a2d36;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.item-remove-btn:hover {
+  background: #444;
+  color: #fff;
+}
+.item-add-btn {
+  margin-top: 8px;
+  width: 100%;
+  background: #333;
+}
+.item-add-btn:hover {
+  background: #444;
+}
 .crear form {
   display: flex;
   flex-wrap: wrap;
@@ -7810,6 +8543,7 @@ button {
     rgba(60, 60, 60, 0.8) 0px 3px 0px;
   /* outside, below */
   transition: background 0.15s;
+  transform: translateY(-3px);
 }
 input,
 textarea {
@@ -7822,18 +8556,26 @@ textarea {
   /* font-size: 0.95rem; */
 }
 .tab-btn {
+  opacity: 0.8;
   position: relative;
 }
-.tab-btn.active {
+.tab-btn.active,
+.sub-tab-btn.active {
+  opacity: 1;
   background: rgba(0, 128, 128, 0.62);
   color: white;
+  box-shadow:
+    rgba(0, 0, 0, 0.4) 0px 2px 4px,
+    rgba(0, 0, 0, 0.3) 0px 7px 13px -3px,
+    rgba(60, 60, 60, 0.8) 0px 0px 0px;
+  transform: translateY(0px);
 }
 /* live count badge on category tabs */
 .tab-btn .n,
 .sub-tab-btn .n {
   position: absolute;
-  top: -10px;
-  right: 2px;
+  top: -8px;
+  right: -4px;
   min-width: 16px;
   height: 16px;
   font-family: ui-monospace, monospace;
@@ -7849,7 +8591,8 @@ textarea {
   vertical-align: middle;
   box-shadow: 0 0 0 1px rgba(100, 100, 100, 0.8);
 }
-.tab-btn.active .n {
+.tab-btn.active .n,
+.sub-tab-btn.active .n {
   background: rgba(0, 128, 128, 0.38);
   /* color: blue; */
   box-shadow: 0 0 0 1px rgba(0, 160, 160, 0.8);
@@ -8486,24 +9229,26 @@ textarea {
   /* flex-direction: column; */
   gap: 4px;
   padding: 5px;
+  padding-top: 10px;
   overflow-x: auto;
   border-bottom: 1px solid rgba(var(--surface), 0.62);
   /* background: rgba(var(--surface), 0.23); */
   flex-shrink: 0;
-  height: 100%;
-  border-radius: 10px;
+  height: auto;
 }
-.sub-tab-btn {}
+.sub-tab-btn {
+  opacity: 0.8;
+}
 .sub-tab-btn:hover {
   background: rgba(255, 255, 255, 0.06);
   color: #ccc;
 }
-.sub-tab-btn.active {
-  background: rgba(0, 128, 128, 0.62);
-  color: white;
-  /* background: rgba(69, 214, 214, 0.15); */
-  /* color: #45d6d6; */
-}
+/* .sub-tab-btn.active { */
+/* background: rgba(0, 128, 128, 0.62); */
+/* color: white; */
+/* background: rgba(69, 214, 214, 0.15); */
+/* color: #45d6d6; */
+/* } */
 /* Botones de acción (DONAR/REPORTAR/CREAR/COLABORAR) dentro de la barra de sub-tabs */
 .sub-tabs .crear-btn {
   margin-right: 0;
@@ -8525,10 +9270,40 @@ textarea {
 #chatModalSubPanels .sub-tab-panel {
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
 }
 #chatModalSubPanels .sub-tab-panel .list {
   padding-bottom: 40px;
   overflow-y: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+/* Main collaborator tab panels - prevent overscroll bounce */
+#tabColab.active {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+#colabPrivateWrapper .sub-tab-panel {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+#colabPrivateWrapper .sub-tab-panel .list {
+  overflow-y: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+/* The voluntarios panel wraps its list in #colabListWrapper; make it
+   fill the panel and constrain height so the inner list can scroll. */
+#colabListWrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+#colabListWrapper .list {
+  flex: 1;
   min-height: 0;
 }
 /* ============================================================
@@ -8630,15 +9405,15 @@ textarea {
   overflow: hidden;
   background: #12151c;
 }
-/* Single-image groups shouldn't be forced square — let it breathe like
-   a normal photo message. */
+/* Single-image groups: item fills the grid (grid aspect-ratio is the
+   source of truth), so the bubble size is fixed before the image loads. */
 .chat-media-grid[data-count="1"] .chat-media-item {
   aspect-ratio: auto;
-  max-height: 320px;
+  height: 100%;
 }
 .chat-media-grid[data-count="1"] .chat-media-item img,
 .chat-media-grid[data-count="1"] .chat-media-item video {
-  object-fit: contain !important;
+  object-fit: cover !important;
 }
 .chat-media-more {
   position: absolute;
@@ -8709,8 +9484,13 @@ textarea {
   animation: pulse-rec 1s ease-in-out infinite;
 }
 @keyframes pulse-rec {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 //===== public/sismos.js =====
 // ================================================================
@@ -10385,6 +11165,13 @@ try {
 try {
   db.exec("ALTER TABLE pets ADD COLUMN image TEXT");
 } catch (e) { }
+// --- Migration: add items JSON column to donaciones and necesidades ---
+try {
+  db.exec("ALTER TABLE donaciones ADD COLUMN items TEXT");
+} catch (e) { }
+try {
+  db.exec("ALTER TABLE necesidades ADD COLUMN items TEXT");
+} catch (e) { }
 try {
   db.exec("ALTER TABLE disappeared ADD COLUMN photo_url TEXT");
 } catch (e) { }
@@ -11195,21 +11982,48 @@ app.get("/api/donaciones", requireAuth, (req, res) => {
       FROM donaciones d ORDER BY d.created_at DESC
     `)
     .all();
-  res.json(rows);
+  // Parse items JSON for each row.
+  const parsed = rows.map((r) => ({
+    ...r,
+    items: r.items ? JSON.parse(r.items) : null,
+  }));
+  res.json(parsed);
 });
 app.post("/api/donaciones", requireAuth, (req, res) => {
-  const { item_type, quantity, description, status, location, lat, lng, contact } = req.body || {};
-  if (!item_type || !item_type.trim()) return res.status(400).json({ error: "item_type is required" });
-  if (!description || !description.trim()) return res.status(400).json({ error: "description is required" });
+  const { items, item_type, quantity, description, status, location, lat, lng, contact } = req.body || {};
+  // Support both new items[] array and legacy flat fields.
+  // If items[] provided, use it; otherwise fall back to legacy single-item fields.
+  let itemsToStore = null;
+  if (Array.isArray(items) && items.length > 0) {
+    // Validate each item has at least name or type.
+    const validItems = items.filter((it) => it && (it.name || it.type));
+    if (validItems.length === 0) {
+      return res.status(400).json({ error: "At least one item with name or type is required" });
+    }
+    itemsToStore = JSON.stringify(validItems);
+  } else {
+    // Legacy single-item mode: require item_type and description.
+    if (!item_type || !item_type.trim()) return res.status(400).json({ error: "item_type is required" });
+    if (!description || !description.trim()) return res.status(400).json({ error: "description is required" });
+    itemsToStore = JSON.stringify([{
+      name: description.trim(),
+      type: item_type.trim(),
+      quantity: quantity && quantity.trim() ? quantity.trim() : null,
+      unit: null,
+      description: null,
+      location: location && location.trim() ? location.trim() : null,
+      contact: contact && contact.trim() ? contact.trim() : null,
+    }]);
+  }
   const finalId = crypto.randomUUID();
   const createdAt = new Date().toISOString();
   db.prepare(
-    "INSERT INTO donaciones (id, item_type, quantity, description, status, location, lat, lng, contact, donor_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO donaciones (id, item_type, quantity, description, status, location, lat, lng, contact, donor_id, created_at, items) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
   ).run(
     finalId,
-    item_type.trim(),
+    item_type && item_type.trim() ? item_type.trim() : (Array.isArray(items) && items[0]?.type) || null,
     quantity && quantity.trim() ? quantity.trim() : null,
-    description.trim(),
+    description && description.trim() ? description.trim() : (Array.isArray(items) ? items.map(i => i.name).filter(Boolean).join(", ") : null),
     status || "disponible",
     location && location.trim() ? location.trim() : null,
     lat ?? null,
@@ -11217,11 +12031,12 @@ app.post("/api/donaciones", requireAuth, (req, res) => {
     contact && contact.trim() ? contact.trim() : null,
     req.userId,
     createdAt,
+    itemsToStore,
   );
   res.status(201).json({ id: finalId, created_at: createdAt });
 });
 app.patch("/api/donaciones/:id", requireAuth, (req, res) => {
-  const { status, quantity, description, location } = req.body || {};
+  const { status, quantity, description, location, items } = req.body || {};
   const existing = db.prepare("SELECT id FROM donaciones WHERE id = ?").get(req.params.id);
   if (!existing) return res.status(404).json({ error: "not found" });
   const fields = [];
@@ -11230,6 +12045,14 @@ app.patch("/api/donaciones/:id", requireAuth, (req, res) => {
   if (quantity !== undefined) { fields.push("quantity = ?"); values.push(quantity); }
   if (description !== undefined) { fields.push("description = ?"); values.push(description); }
   if (location !== undefined) { fields.push("location = ?"); values.push(location); }
+  if (Array.isArray(items)) {
+    const validItems = items.filter((it) => it && (it.name || it.type));
+    if (validItems.length === 0) {
+      return res.status(400).json({ error: "At least one item with name or type is required" });
+    }
+    fields.push("items = ?");
+    values.push(JSON.stringify(validItems));
+  }
   if (fields.length === 0) return res.status(400).json({ error: "no fields to update" });
   values.push(req.params.id);
   db.prepare(`UPDATE donaciones SET ${fields.join(", ")} WHERE id = ?`).run(...values);
@@ -11250,21 +12073,45 @@ app.get("/api/necesidades", requireAuth, (req, res) => {
       FROM necesidades n ORDER BY n.created_at DESC
     `)
     .all();
-  res.json(rows);
+  // Parse items JSON for each row.
+  const parsed = rows.map((r) => ({
+    ...r,
+    items: r.items ? JSON.parse(r.items) : null,
+  }));
+  res.json(parsed);
 });
 app.post("/api/necesidades", requireAuth, (req, res) => {
-  const { item_type, quantity, description, urgency, status, point_name, location, lat, lng, contact } = req.body || {};
-  if (!item_type || !item_type.trim()) return res.status(400).json({ error: "item_type is required" });
-  if (!description || !description.trim()) return res.status(400).json({ error: "description is required" });
+  const { items, item_type, quantity, description, urgency, status, point_name, location, lat, lng, contact } = req.body || {};
+  // Support both new items[] array and legacy flat fields.
+  let itemsToStore = null;
+  if (Array.isArray(items) && items.length > 0) {
+    const validItems = items.filter((it) => it && (it.name || it.type));
+    if (validItems.length === 0) {
+      return res.status(400).json({ error: "At least one item with name or type is required" });
+    }
+    itemsToStore = JSON.stringify(validItems);
+  } else {
+    if (!item_type || !item_type.trim()) return res.status(400).json({ error: "item_type is required" });
+    if (!description || !description.trim()) return res.status(400).json({ error: "description is required" });
+    itemsToStore = JSON.stringify([{
+      name: description.trim(),
+      type: item_type.trim(),
+      quantity: quantity && quantity.trim() ? quantity.trim() : null,
+      unit: null,
+      description: null,
+      location: location && location.trim() ? location.trim() : null,
+      contact: contact && contact.trim() ? contact.trim() : null,
+    }]);
+  }
   const finalId = crypto.randomUUID();
   const createdAt = new Date().toISOString();
   db.prepare(
-    "INSERT INTO necesidades (id, item_type, quantity, description, urgency, status, point_name, location, lat, lng, contact, reporter_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO necesidades (id, item_type, quantity, description, urgency, status, point_name, location, lat, lng, contact, reporter_id, created_at, items) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
   ).run(
     finalId,
-    item_type.trim(),
+    item_type && item_type.trim() ? item_type.trim() : (Array.isArray(items) && items[0]?.type) || null,
     quantity && quantity.trim() ? quantity.trim() : null,
-    description.trim(),
+    description && description.trim() ? description.trim() : (Array.isArray(items) ? items.map(i => i.name).filter(Boolean).join(", ") : null),
     urgency || "media",
     status || "abierta",
     point_name && point_name.trim() ? point_name.trim() : null,
@@ -11274,11 +12121,12 @@ app.post("/api/necesidades", requireAuth, (req, res) => {
     contact && contact.trim() ? contact.trim() : null,
     req.userId,
     createdAt,
+    itemsToStore,
   );
   res.status(201).json({ id: finalId, created_at: createdAt });
 });
 app.patch("/api/necesidades/:id", requireAuth, (req, res) => {
-  const { status, urgency, quantity, description } = req.body || {};
+  const { status, urgency, quantity, description, items } = req.body || {};
   const existing = db.prepare("SELECT id FROM necesidades WHERE id = ?").get(req.params.id);
   if (!existing) return res.status(404).json({ error: "not found" });
   const fields = [];
@@ -11287,6 +12135,14 @@ app.patch("/api/necesidades/:id", requireAuth, (req, res) => {
   if (urgency !== undefined) { fields.push("urgency = ?"); values.push(urgency); }
   if (quantity !== undefined) { fields.push("quantity = ?"); values.push(quantity); }
   if (description !== undefined) { fields.push("description = ?"); values.push(description); }
+  if (Array.isArray(items)) {
+    const validItems = items.filter((it) => it && (it.name || it.type));
+    if (validItems.length === 0) {
+      return res.status(400).json({ error: "At least one item with name or type is required" });
+    }
+    fields.push("items = ?");
+    values.push(JSON.stringify(validItems));
+  }
   if (fields.length === 0) return res.status(400).json({ error: "no fields to update" });
   values.push(req.params.id);
   db.prepare(`UPDATE necesidades SET ${fields.join(", ")} WHERE id = ?`).run(...values);
@@ -11532,7 +12388,9 @@ let targetRoomId = null;
 let nextBatch = null;
 let jobErrors = 0;
 const MAX_JOB_ERRORS = 50;
-const BUFFER_TIMEOUT_MS = 8000;
+// Widened from 8s -> 30s so multi-image + text bursts land in the same
+// window and can be semantically grouped instead of split by a timer.
+const BUFFER_TIMEOUT_MS = 30000;
 const userBuffers = new Map();
 const processLimit = pLimit(3);
 // ================================================================
@@ -11551,18 +12409,27 @@ async function authenticateWithApi() {
 }
 async function safeApiCall(url, options) {
   if (!apiToken) {
-    try { await authenticateWithApi(); }
-    catch (e) { throw new Error(`Cannot make API call: auth failed - ${e.message}`); }
+    try {
+      await authenticateWithApi();
+    } catch (e) {
+      throw new Error(`Cannot make API call: auth failed - ${e.message}`);
+    }
   }
   const opts = {
     ...options,
-    headers: { ...(options.headers || {}), Authorization: `Bearer ${apiToken}` }
+    headers: {
+      ...(options.headers || {}),
+      Authorization: `Bearer ${apiToken}`,
+    },
   };
   let res = await fetch(url, opts);
   if (res.status === 401) {
     console.warn("[bot] API 401. Re-authenticating...");
-    try { await authenticateWithApi(); }
-    catch (e) { throw new Error(`Re-auth failed: ${e.message}`); }
+    try {
+      await authenticateWithApi();
+    } catch (e) {
+      throw new Error(`Re-auth failed: ${e.message}`);
+    }
     opts.headers.Authorization = `Bearer ${apiToken}`;
     res = await fetch(url, opts);
   }
@@ -11573,7 +12440,7 @@ async function safeApiCall(url, options) {
 // ================================================================
 async function matrixGet(path) {
   const res = await fetch(`${ENV.HS}${path}`, {
-    headers: { Authorization: `Bearer ${ENV.ACCESS_TOKEN}` }
+    headers: { Authorization: `Bearer ${ENV.ACCESS_TOKEN}` },
   });
   if (!res.ok) throw new Error(`Matrix GET ${path}: ${res.status}`);
   return res.json();
@@ -11583,9 +12450,9 @@ async function matrixPost(path, body) {
     method: "POST",
     headers: {
       Authorization: `Bearer ${ENV.ACCESS_TOKEN}`,
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`Matrix POST ${path}: ${res.status}`);
   return res.json();
@@ -11594,16 +12461,23 @@ async function downloadMatrixMedia(mxcUrl) {
   const match = mxcUrl.match(/^mxc:\/\/([^/]+)\/(.+)$/);
   if (!match) throw new Error(`Invalid mxc URL: ${mxcUrl}`);
   const [, serverName, mediaId] = match;
-  const res = await fetch(`${ENV.HS}/_matrix/media/v3/download/${serverName}/${mediaId}`, {
-    headers: { Authorization: `Bearer ${ENV.ACCESS_TOKEN}` }
-  });
+  const res = await fetch(
+    `${ENV.HS}/_matrix/media/v3/download/${serverName}/${mediaId}`,
+    {
+      headers: { Authorization: `Bearer ${ENV.ACCESS_TOKEN}` },
+    },
+  );
   if (!res.ok) throw new Error(`Media download failed: ${res.status}`);
-  const contentType = res.headers.get("content-type") || "application/octet-stream";
+  const contentType =
+    res.headers.get("content-type") || "application/octet-stream";
   const buffer = Buffer.from(await res.arrayBuffer());
   return { buffer, contentType };
 }
 // ================================================================
 //  CONVERSATION BUFFER SYSTEM
+//  Collects a 30s window per user. Media no longer flushes instantly —
+//  it joins the same window as surrounding text so the grouping step
+//  (see groupMessagesWithNIM) can decide what belongs together.
 // ================================================================
 class UserBuffer {
   constructor(userId) {
@@ -11623,9 +12497,12 @@ class UserBuffer {
     if (this.messages.length === 0) return;
     const batch = [...this.messages];
     this.messages = [];
-    this.timer = null;
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
     userBuffers.delete(this.userId);
-    processLimit(() => processMessageBatch(this.userId, batch)).catch(err => {
+    processLimit(() => processMessageBatch(this.userId, batch)).catch((err) => {
       jobErrors++;
       console.error(`[bot] Batch error #${jobErrors}:`, err);
       if (jobErrors > MAX_JOB_ERRORS) process.exit(1);
@@ -11637,15 +12514,17 @@ function getBuffer(userId) {
   return userBuffers.get(userId);
 }
 const SHOUT_PATTERN = /(AUXILIO|URGENTE|SOCORRO|EMERGENCIA|AYUDA|PELIGRO)/i;
-const LOSS_PATTERN = /(se\s+va(n)?\s+(a\s+)?perder|ayudaa+|ya\s+no\s+hay|sin\s+nada)/i;
+const LOSS_PATTERN =
+  /(se\s+va(n)?\s+(a\s+)?perder|ayudaa+|ya\s+no\s+hay|sin\s+nada)/i;
+// Media no longer triggers an immediate flush — it now waits in the window
+// with everything else so grouping can link it to nearby text. Only
+// genuinely urgent signals (shouts, @room, stale replies) still cut the
+// window short.
 function shouldFlushImmediately(msg, buffer) {
   const text = msg.text || "";
   if (text.includes("@room")) return true;
-  // Media (image/audio) is a self-contained unit: flush any pending text first,
-  // then process the media alone. This prevents OCR from multiple images (or
-  // an image + unrelated text) being merged into one spurious batch.
-  if (msg.imageUrl || msg.audioUrl) return true;
-  const isShortShout = text.length < 30 && text === text.toUpperCase() && SHOUT_PATTERN.test(text);
+  const isShortShout =
+    text.length < 30 && text === text.toUpperCase() && SHOUT_PATTERN.test(text);
   const isLossPhrase = LOSS_PATTERN.test(text);
   if (isShortShout || isLossPhrase) return true;
   if (msg.replyTo && buffer.messages.length > 0) {
@@ -11657,7 +12536,8 @@ function shouldFlushImmediately(msg, buffer) {
 // ================================================================
 //  PAYMENT-INFO DETECTION (fraud vector flagging)
 // ================================================================
-const PAYMENT_CONTEXT = /(cuenta|nequi|bancolombia|llave|transfier|consignar|ahorros|corriente)/i;
+const PAYMENT_CONTEXT =
+  /(cuenta|nequi|bancolombia|llave|transfier|consignar|ahorros|corriente)/i;
 const ACCOUNT_NUMBER = /\b\d{8,14}\b/;
 const NEQUI_HANDLE = /@\w{4,}(?!\.(jpg|png|jpeg|webp|mp4|opus))/i;
 function detectPaymentInfo(text) {
@@ -11671,7 +12551,7 @@ async function resolveReplyContext(roomId, eventId) {
   if (!eventId) return null;
   try {
     const event = await matrixGet(
-      `/_matrix/client/v3/rooms/${encodeURIComponent(roomId)}/event/${encodeURIComponent(eventId)}`
+      `/_matrix/client/v3/rooms/${encodeURIComponent(roomId)}/event/${encodeURIComponent(eventId)}`,
     );
     return {
       eventId: event.event_id,
@@ -11690,38 +12570,57 @@ async function resolveReplyContext(roomId, eventId) {
 //  OCR (NVIDIA VISION)
 // ================================================================
 async function extractTextFromImage(mxcUrl) {
-  if (!ENV.NVIDIA_API_KEY) { console.log("[bot] ⚠️ No NVIDIA_API_KEY"); return ""; }
+  if (!ENV.NVIDIA_API_KEY) {
+    console.log("[bot] ⚠️ No NVIDIA_API_KEY");
+    return "";
+  }
   try {
     const { buffer, contentType } = await downloadMatrixMedia(mxcUrl);
-    if (buffer.length > 10 * 1024 * 1024) { console.warn("[bot] ⚠️ Image >10MB"); return ""; }
+    if (buffer.length > 10 * 1024 * 1024) {
+      console.warn("[bot] ⚠️ Image >10MB");
+      return "";
+    }
     const base64Image = buffer.toString("base64");
     const mimeType = contentType || "image/jpeg";
-    const nvidiaRes = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${ENV.NVIDIA_API_KEY}`,
-        "Content-Type": "application/json"
+    const nvidiaRes = await fetch(
+      "https://integrate.api.nvidia.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${ENV.NVIDIA_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "meta/llama-3.2-11b-vision-instruct",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a precise OCR engine. Output only raw extracted text, never markdown or explanations.",
+            },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Extract all text from this image. Output only the raw extracted text, nothing else.",
+                },
+                {
+                  type: "image_url",
+                  image_url: { url: `data:${mimeType};base64,${base64Image}` },
+                },
+              ],
+            },
+          ],
+          max_tokens: 4096,
+          temperature: 0,
+        }),
       },
-      body: JSON.stringify({
-        model: "meta/llama-3.2-11b-vision-instruct",
-        messages: [
-          {
-            role: "system",
-            content: "You are a precise OCR engine. Output only raw extracted text, never markdown or explanations."
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Extract all text from this image. Output only the raw extracted text, nothing else." },
-              { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Image}` } }
-            ]
-          }
-        ],
-        max_tokens: 4096,
-        temperature: 0
-      })
-    });
-    if (!nvidiaRes.ok) { console.error(`[bot] ❌ NVIDIA ${nvidiaRes.status}`); return ""; }
+    );
+    if (!nvidiaRes.ok) {
+      console.error(`[bot] ❌ NVIDIA ${nvidiaRes.status}`);
+      return "";
+    }
     const data = await nvidiaRes.json();
     return data.choices?.[0]?.message?.content?.trim() || "";
   } catch (e) {
@@ -11730,25 +12629,146 @@ async function extractTextFromImage(mxcUrl) {
   }
 }
 // ================================================================
+//  NIM MESSAGE GROUPING (hybrid: reply-hints + semantic segmentation)
+//
+//  Takes the flat list of items in a user's 30s window (each already
+//  carrying its own OCR'd text if it was an image) and asks a cheap
+//  8B model to segment them into logical items. Reply metadata is
+//  passed in as a hint — the model treats it as a prior, not a rule,
+//  so it can override a reply that points at the wrong message and
+//  can also resolve bare deictic references ("esto", "el de la foto")
+//  that have no reply attached at all.
+//
+//  Returns an array of groups, each group a list of 0-based indices
+//  into `events`. On any failure, returns null so the caller can fall
+//  back to "each event is its own item" (the safe default — see
+//  decision #3: never silently merge unrelated items).
+// ================================================================
+async function groupMessagesWithNIM(events) {
+  if (!ENV.NVIDIA_API_KEY) return null;
+  if (events.length <= 1) return events.map((_, i) => [i]);
+  const numbered = events
+    .map((e, i) => {
+      const kind =
+        e.type === "image" ? "IMAGEN" : e.type === "audio" ? "AUDIO" : "TEXTO";
+      const body = (e.text || "(sin texto)").replace(/\s+/g, " ").trim();
+      const replyHint =
+        e.replyToIndex != null
+          ? ` (responde al mensaje #${e.replyToIndex + 1})`
+          : "";
+      return `${i + 1}. [${kind}]${replyHint} ${body}`;
+    })
+    .join("\n");
+  const body = {
+    model: "meta/llama-3.1-8b-instruct",
+    messages: [
+      {
+        role: "system",
+        content: `Agrupas mensajes de un chat de respuesta a emergencias en Colombia (donaciones, necesidades, personas desaparecidas, edificios). Cada grupo debe representar UN solo ítem autocontenido (una oferta, una necesidad, un reporte).
+Reglas:
+- Un mensaje de TEXTO que responde a una IMAGEN (indicado como "responde al mensaje #N") casi siempre pertenece a ese mismo grupo que la imagen.
+- Un texto SIN respuesta explícita puede referirse a un mensaje anterior mediante expresiones como "esto", "eso", "el de la foto", "la de arriba", "lo que envié", "uno de estos" — usa el significado del texto y el orden de los mensajes para decidir si pertenece con una imagen anterior.
+- Las IMÁGENES son casi siempre ítems separados entre sí, a menos que el texto las conecte explícitamente (por ejemplo "las dos fotos son de lo mismo").
+- Si tienes dudas razonables, prefiere separar en grupos distintos antes que fusionar cosas que podrían ser diferentes.
+- No inventes mensajes ni ignores ninguno: cada índice del 1 al ${events.length} debe aparecer en exactamente un grupo.
+Responde ÚNICAMENTE con un objeto JSON, sin markdown ni explicación, con esta forma exacta:
+{"groups": [[1], [2, 3]]}
+donde cada array interno contiene los números (1-based) de los mensajes que pertenecen juntos.`,
+      },
+      { role: "user", content: numbered },
+    ],
+    temperature: 0,
+    max_tokens: 512,
+  };
+  try {
+    const res = await fetch(
+      "https://integrate.api.nvidia.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${ENV.NVIDIA_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      console.error(`[bot] ⚠️ Grouping NIM call failed: ${res.status}`);
+      return null;
+    }
+    const data = await res.json();
+    const raw = data.choices?.[0]?.message?.content?.trim() || "";
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error(
+        "[bot] ⚠️ Grouping: no JSON in NIM output:",
+        raw.slice(0, 200),
+      );
+      return null;
+    }
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(parsed.groups)) {
+      console.error("[bot] ⚠️ Grouping: malformed groups field:", parsed);
+      return null;
+    }
+    // Validate: every index 1..N appears exactly once across all groups.
+    // Any deviation (missing index, duplicate, out-of-range) is treated
+    // as an untrustworthy grouping — fall back rather than silently drop
+    // or double-count a message.
+    const seen = new Set();
+    const groups = [];
+    for (const g of parsed.groups) {
+      if (!Array.isArray(g) || !g.length) continue;
+      const idxGroup = [];
+      for (const n of g) {
+        const idx = Number(n) - 1;
+        if (!Number.isInteger(idx) || idx < 0 || idx >= events.length) {
+          console.error(`[bot] ⚠️ Grouping: out-of-range index ${n}`);
+          return null;
+        }
+        if (seen.has(idx)) {
+          console.error(`[bot] ⚠️ Grouping: duplicate index ${n}`);
+          return null;
+        }
+        seen.add(idx);
+        idxGroup.push(idx);
+      }
+      if (idxGroup.length) groups.push(idxGroup);
+    }
+    if (seen.size !== events.length) {
+      console.error(
+        `[bot] ⚠️ Grouping: covered ${seen.size}/${events.length} indices, missing some`,
+      );
+      return null;
+    }
+    return groups;
+  } catch (e) {
+    console.error("[bot] ⚠️ Grouping NIM error:", e.message);
+    return null;
+  }
+}
+// ================================================================
 //  NIM STRUCTURED EXTRACTION (SLOW PATH)
 // ================================================================
 async function structureWithNIM(rawText) {
-  const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${ENV.NVIDIA_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "meta/llama-3.1-8b-instruct",
-      messages: [
-        {
-          role: "system",
-          content: `You are a precise data extraction engine for disaster response.
+  const res = await fetch(
+    "https://integrate.api.nvidia.com/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${ENV.NVIDIA_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "meta/llama-3.1-8b-instruct",
+        messages: [
+          {
+            role: "system",
+            content: `You are a precise data extraction engine for disaster response.
 Respond with ONLY a valid JSON object. Do not include markdown formatting (like \`\`\`json), prose, or explanations.
 The JSON must strictly follow this schema:
 {
-  "intent": "donate_offer" | "request_help" | "report_need" | "report_emergency" | "find_supplier" | "volunteer_recruitment" | "request_item" | "mental_health" | "unknown",
+  "intent": "donate_offer" | "request_help" | "report_need" | "report_emergency" | "find_supplier" | "volunteer_recruitment" | "request_item" | "mental_health" | "fraud_warning" | "unknown",
   "items": [{"name": "string", "quantity": number, "unit": "string"}],
   "location": "string",
   "urgency": "low" | "medium" | "high" | "critical",
@@ -11762,22 +12782,24 @@ CRITICAL RULES — extract ONLY what is explicitly stated in the text:
 - If a location is not stated, set "location" to null (do NOT use the first word of the sentence).
 - If no items are mentioned, use [].
 - Use "unknown" for intent if unclear.
-- Extract quantities as numbers, not strings.`
-        },
-        { role: "user", content: rawText }
-      ],
-      temperature: 0,
-      max_tokens: 1024
-    })
-  });
+- Extract quantities as numbers, not strings.`,
+          },
+          { role: "user", content: rawText },
+        ],
+        temperature: 0,
+        max_tokens: 1024,
+      }),
+    },
+  );
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`NIM API failed: ${res.status} ${errText.substring(0, 200)}`);
+    throw new Error(
+      `NIM API failed: ${res.status} ${errText.substring(0, 200)}`,
+    );
   }
   const data = await res.json();
   const raw = data.choices?.[0]?.message?.content?.trim() || "";
   if (!raw) throw new Error("NIM returned empty content");
-  // Robust JSON extraction: find the first { ... } block to ignore markdown or prose
   const jsonMatch = raw.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     console.error("[bot] ❌ NIM raw output (no JSON found):", raw);
@@ -11787,120 +12809,74 @@ CRITICAL RULES — extract ONLY what is explicitly stated in the text:
   try {
     parsed = JSON.parse(jsonMatch[0]);
   } catch (e) {
-    console.error("[bot] ❌ NIM JSON parse error:", e.message, "| Raw snippet:", jsonMatch[0].substring(0, 150));
+    console.error(
+      "[bot] ❌ NIM JSON parse error:",
+      e.message,
+      "| Raw snippet:",
+      jsonMatch[0].substring(0, 150),
+    );
     throw new Error("Malformed JSON in NIM output");
   }
-  // Basic schema validation
   if (!parsed.intent || !Array.isArray(parsed.items)) {
     console.error("[bot] ❌ NIM schema validation failed:", parsed);
-    throw new Error("Malformed NIM output schema: missing intent or items array.");
+    throw new Error(
+      "Malformed NIM output schema: missing intent or items array.",
+    );
   }
   return parsed;
 }
-// Flatten NIM structured output into { entity, value } entries the frontend renders.
-// Each item becomes an "item" entity; quantity/unit/location/urgency become their own entries.
 function nimEntitiesToFlat(structured) {
   const out = [];
   for (const i of structured.items || []) {
     if (i.name) out.push({ entity: "item", value: i.name });
-    if (i.quantity != null) out.push({ entity: "quantity", value: String(i.quantity) });
+    if (i.quantity != null)
+      out.push({ entity: "quantity", value: String(i.quantity) });
     if (i.unit) out.push({ entity: "unit", value: i.unit });
   }
-  if (structured.location && structured.location !== "desconocido" && structured.location !== "desconocida") {
+  if (
+    structured.location &&
+    structured.location !== "desconocido" &&
+    structured.location !== "desconocida"
+  ) {
     out.push({ entity: "location", value: structured.location });
   }
-  if (structured.urgency) out.push({ entity: "urgency", value: structured.urgency });
+  if (structured.urgency)
+    out.push({ entity: "urgency", value: structured.urgency });
   return out;
 }
 // ================================================================
-//  BATCH PROCESSOR
+//  PER-GROUP EXTRACTION + SAVE
+//  This is the old processMessageBatch body, now scoped to a single
+//  logical group (one item) instead of the whole raw buffer. Runs the
+//  existing Rasa fast-path / NIM slow-path pipeline unchanged.
 // ================================================================
-async function processMessageBatch(userId, messages) {
-  if (userId === myUserId) return;
-  const parentMap = new Map();
-  for (const msg of messages) {
-    if (msg.replyTo && (!msg.text || msg.text.length < 15)) {
-      const parent = await resolveReplyContext(targetRoomId, msg.replyTo);
-      if (parent) parentMap.set(msg.replyTo, parent);
-    }
-  }
-  let primaryEventId = messages[0].eventId;
-  let primaryIsImage = false;
-  for (const msg of messages) {
-    if (msg.imageUrl) { primaryEventId = msg.eventId; primaryIsImage = true; break; }
-  }
-  if (!primaryIsImage) {
-    for (const msg of messages) {
-      if (msg.replyTo && parentMap.get(msg.replyTo)?.isImage) {
-        primaryEventId = msg.replyTo; primaryIsImage = true; break;
-      }
-    }
-  }
+async function processGroup(userId, groupEvents) {
   const textParts = [];
-  const imageUrls = [];
-  const audioUrls = [];
-  const seenUrls = new Set();
-  for (const [eventId, parent] of parentMap) {
-    if (parent.isImage && parent.content?.url && !seenUrls.has(parent.content.url)) {
-      seenUrls.add(parent.content.url);
-      imageUrls.push({ url: parent.content.url, source: "parent", eventId });
-    } else if (parent.isAudio && parent.content?.url) {
-      audioUrls.push({ url: parent.content.url, source: "parent", eventId });
-    } else if (parent.isText && parent.content?.body) {
-      textParts.push(`[Contexto anterior: ${parent.content.body}]`);
-    }
+  for (const e of groupEvents) {
+    if (e.contextNote) textParts.push(e.contextNote);
+    if (e.text) textParts.push(e.text);
+    if (e.ocrText) textParts.push(e.ocrText);
   }
-  for (const msg of messages) {
-    if (msg.text) textParts.push(msg.text);
-    if (msg.imageUrl && !seenUrls.has(msg.imageUrl)) {
-      seenUrls.add(msg.imageUrl);
-      imageUrls.push({ url: msg.imageUrl, source: "direct", eventId: msg.eventId });
-    }
-    if (msg.audioUrl) {
-      audioUrls.push({ url: msg.audioUrl, source: "direct", eventId: msg.eventId });
-    }
-  }
-  // Log audio (transcription TBD)
-  for (const { url, source, eventId } of audioUrls) {
-    console.log(`[bot] 🎤 Audio ${source} (${eventId}): ${url}`);
-  }
-  const ocrParts = [];
-  for (const { url, source, eventId } of imageUrls) {
-    console.log(`[bot] 🔍 OCR ${source} image (${eventId})...`);
-    const ocrText = await extractTextFromImage(url);
-    if (ocrText) {
-      ocrParts.push(ocrText);
-      // Persist immediately, keyed by this image's own event ID — independent
-      // of whatever Rasa/NIM/whitelist decide about the batch downstream.
-      try {
-        await safeApiCall(`${ENV.API_BASE}/api/media-text`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ source_event_id: eventId, raw_text: ocrText })
-        });
-        console.log(`[bot] ✅ Persisted OCR for ${eventId}`);
-      } catch (e) {
-        console.error(`[bot] ⚠️ Failed to persist OCR for ${eventId}:`, e.message);
-      }
-    }
-  }
-  let combinedText = textParts.join('\n');
-  if (ocrParts.length > 0) {
-    const ocrBlock = ocrParts.join('\n');
-    combinedText = combinedText ? `${combinedText}\n${ocrBlock}` : ocrBlock;
-  }
-  if (!combinedText?.trim() || combinedText.trim().length < 3) {
-    console.log("[bot] ⏭️ Empty combined text after buffer flush");
+  const combinedText = textParts.join("\n").trim();
+  if (!combinedText || combinedText.length < 3) {
+    console.log("[bot] ⏭️ Empty group text, skipping");
     return;
   }
-  console.log(`[bot] 📦 Batch from ${userId}: "${combinedText.substring(0, 150)}..."`);
+  // Representative event id for this group: prefer an image, else the
+  // first event in the group.
+  const primaryEvent =
+    groupEvents.find((e) => e.type === "image") || groupEvents[0];
+  const primaryEventId = primaryEvent.eventId;
+  console.log(
+    `[bot] 📦 Group from ${userId} (${groupEvents.length} item(s)): "${combinedText.substring(0, 150)}..."`,
+  );
   const paymentFlag = detectPaymentInfo(combinedText);
   let rasaRes;
   try {
     const res = await fetch(ENV.RASA_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: combinedText.trim() })
+      body: JSON.stringify({ text: combinedText }),
     });
     if (!res.ok) throw new Error(`Rasa HTTP ${res.status}`);
     rasaRes = await res.json();
@@ -11910,18 +12886,21 @@ async function processMessageBatch(userId, messages) {
   }
   const intent = rasaRes?.intent;
   const entities = rasaRes.entities || [];
-  if (!intent) { console.log("[bot] ⚠️ No intent from Rasa"); return; }
+  if (!intent) {
+    console.log("[bot] ⚠️ No intent from Rasa");
+    return;
+  }
   console.log(`[bot] 🧠 Rasa: ${intent.name} (${intent.confidence})`);
-  // Blacklist: block known-noise intents (unless payment info is present)
   if (ENV.BLACKLIST.includes(intent.name) && !paymentFlag) {
     console.log(`[bot] ⏭️ '${intent.name}' blacklisted`);
     return;
   }
   let finalIntent = intent.name;
-  // Normalize Rasa entities to { entity, value } shape the frontend renders
-  let finalEntities = entities.map((e) => ({ entity: e.entity, value: e.value }));
+  let finalEntities = entities.map((e) => ({
+    entity: e.entity,
+    value: e.value,
+  }));
   let enrichedData = null;
-  // Low confidence OR explicit fallback: always route through NIM for enrichment before saving
   if (intent.name === "nlu_fallback" || intent.confidence < ENV.THRESHOLD) {
     console.log("[bot] 🐢 Low confidence / Fallback, NIM structuring");
     try {
@@ -11932,9 +12911,8 @@ async function processMessageBatch(userId, messages) {
       console.log(`[bot] ✅ NIM: ${finalIntent}`);
     } catch (e) {
       console.error("[bot] ⚠️ NIM failed, saving with Rasa raw:", e.message);
-      // fall through — save with Rasa's intent even if low confidence
     }
-  } else if (intent.confidence > 0.90 && entities.length >= 2) {
+  } else if (intent.confidence > 0.9 && entities.length >= 2) {
     console.log("[bot] ⚡ Fast path");
   } else {
     console.log("[bot] 🐢 Slow path: NIM structuring");
@@ -11954,7 +12932,7 @@ async function processMessageBatch(userId, messages) {
   }
   if (paymentFlag) {
     finalEntities.push({ entity: "payment_info_detected", value: "true" });
-    console.log(`[bot] 🚩 Payment info detected in batch from ${userId}`);
+    console.log(`[bot] 🚩 Payment info detected in group from ${userId}`);
   }
   try {
     const res = await safeApiCall(`${ENV.API_BASE}/api/backlog`, {
@@ -11965,22 +12943,198 @@ async function processMessageBatch(userId, messages) {
         creator_matrix_id: userId,
         intent: finalIntent,
         extracted_data: finalEntities,
-        raw_text: combinedText.trim(),
-        raw_json: JSON.stringify({ matrix_events: messages, rasa_response: rasaRes }, null, 2),
+        raw_text: combinedText,
+        raw_json: JSON.stringify(
+          { group_events: groupEvents, rasa_response: rasaRes },
+          null,
+          2,
+        ),
         enriched_data: enrichedData ? JSON.stringify(enrichedData) : null,
-        message_count: messages.length
-      })
+        message_count: groupEvents.length,
+      }),
     });
-    if (res.status === 409) console.log(`[bot] ⏩ Duplicate: ${primaryEventId}`);
-    else if (res.ok) console.log(`[bot] ✅ Backlog: ${primaryEventId} (${messages.length} msg(s))`);
+    if (res.status === 409)
+      console.log(`[bot] ⏩ Duplicate: ${primaryEventId}`);
+    else if (res.ok)
+      console.log(
+        `[bot] ✅ Backlog: ${primaryEventId} (${groupEvents.length} msg(s))`,
+      );
     else {
       const errText = await res.text().catch(() => "No body");
-      console.error(`[bot] ❌ Backlog ${res.status}: ${errText.substring(0, 200)}`);
+      console.error(
+        `[bot] ❌ Backlog ${res.status}: ${errText.substring(0, 200)}`,
+      );
     }
   } catch (e) {
     console.error(`[bot] ❌ Backlog error:`, e.message);
     jobErrors++;
-    if (jobErrors > MAX_JOB_ERRORS) { console.error("[bot] 🚨 Max errors. Exiting."); process.exit(1); }
+    if (jobErrors > MAX_JOB_ERRORS) {
+      console.error("[bot] 🚨 Max errors. Exiting.");
+      process.exit(1);
+    }
+  }
+}
+// ================================================================
+//  BATCH PROCESSOR
+//  Now a two-phase pipeline:
+//    1. Build a flat `events` list for the whole window (resolving reply
+//       parents, OCR'ing every image, persisting OCR to media_text as
+//       before — independent of grouping/triage outcomes).
+//    2. Ask groupMessagesWithNIM to segment `events` into logical items;
+//       fall back to "each event = own item" on any failure.
+//    3. Run the existing extraction pipeline (processGroup) per item.
+// ================================================================
+async function processMessageBatch(userId, messages) {
+  if (userId === myUserId) return;
+  // Resolve reply parents for EVERY reply in the window, not just short
+  // ones — the grouping step needs the reply hint regardless of the
+  // child's text length (the old `< 15` gate was tuned for the
+  // now-separate context-note feature below, not for grouping).
+  const parentMap = new Map();
+  for (const msg of messages) {
+    if (msg.replyTo && !parentMap.has(msg.replyTo)) {
+      const parent = await resolveReplyContext(targetRoomId, msg.replyTo);
+      if (parent) parentMap.set(msg.replyTo, parent);
+    }
+  }
+  // Build the flat, ordered event list for this window. Each event keeps
+  // enough metadata for both grouping (type, replyToIndex) and extraction
+  // (text, ocrText, contextNote).
+  const events = [];
+  const eventIndexByMatrixId = new Map();
+  const seenImageUrls = new Set();
+  // Image/audio parents become real standalone events (inserted first if
+  // not already part of this window) so grouping can link a reply to the
+  // actual media it's referring to, and so that media gets OCR'd/logged.
+  //
+  // Text parents are handled differently: they're NOT added as standalone
+  // events. Instead their body is attached to the replying child as a
+  // labeled context note (restored below) — this mirrors the pre-grouping
+  // behavior, where a reply to a text message always got the parent's
+  // text injected regardless of any grouping outcome, and avoids the
+  // parent's text appearing twice if grouping happens to also place it
+  // in the same item as the child.
+  const textParentBodyByChildReplyTo = new Map();
+  for (const [parentEventId, parent] of parentMap) {
+    if (parent.isText) {
+      if (parent.content?.body) {
+        textParentBodyByChildReplyTo.set(parentEventId, parent.content.body);
+      }
+      continue;
+    }
+    if (eventIndexByMatrixId.has(parentEventId)) continue;
+    let type = "text";
+    let imageUrl = null;
+    if (parent.isImage) {
+      type = "image";
+      imageUrl = parent.content?.url || null;
+    } else if (parent.isAudio) {
+      type = "audio";
+    }
+    events.push({
+      eventId: parentEventId,
+      type,
+      text: null,
+      imageUrl,
+      ocrText: null,
+      replyToIndex: null,
+      contextNote: null,
+    });
+    eventIndexByMatrixId.set(parentEventId, events.length - 1);
+  }
+  for (const msg of messages) {
+    let type = "text";
+    if (msg.imageUrl) type = "image";
+    else if (msg.audioUrl) type = "audio";
+    const replyToIndex =
+      msg.replyTo && eventIndexByMatrixId.has(msg.replyTo)
+        ? eventIndexByMatrixId.get(msg.replyTo)
+        : null;
+    const textParentBody = msg.replyTo
+      ? textParentBodyByChildReplyTo.get(msg.replyTo)
+      : null;
+    const contextNote = textParentBody
+      ? `[Contexto anterior: ${textParentBody}]`
+      : null;
+    events.push({
+      eventId: msg.eventId,
+      type,
+      text: msg.text || null,
+      imageUrl: msg.imageUrl || null,
+      ocrText: null,
+      replyToIndex,
+      contextNote,
+    });
+    eventIndexByMatrixId.set(msg.eventId, events.length - 1);
+  }
+  // OCR every image event exactly once, persist immediately to media_text
+  // (independent of what grouping/triage later decide — same as before).
+  for (const ev of events) {
+    if (ev.type !== "image" || !ev.imageUrl) continue;
+    if (seenImageUrls.has(ev.imageUrl)) continue;
+    seenImageUrls.add(ev.imageUrl);
+    console.log(`[bot] 🔍 OCR image (${ev.eventId})...`);
+    const ocrText = await extractTextFromImage(ev.imageUrl);
+    if (ocrText) {
+      ev.ocrText = ocrText;
+      try {
+        await safeApiCall(`${ENV.API_BASE}/api/media-text`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            source_event_id: ev.eventId,
+            raw_text: ocrText,
+          }),
+        });
+        console.log(`[bot] ✅ Persisted OCR for ${ev.eventId}`);
+      } catch (e) {
+        console.error(
+          `[bot] ⚠️ Failed to persist OCR for ${ev.eventId}:`,
+          e.message,
+        );
+      }
+    }
+  }
+  // Audio: logged only for now (transcription TBD), same as before.
+  for (const ev of events) {
+    if (ev.type === "audio") console.log(`[bot] 🎤 Audio (${ev.eventId})`);
+  }
+  // Grouping input text: for images, use OCR text (the model needs to
+  // "read" the image to decide what it's about); for text events, the
+  // message body. A text event that replies to a TEXT parent has no
+  // replyToIndex (that parent was never inserted as a standalone event —
+  // see contextNote above), so without help the grouping model can't
+  // tell it's a reply at all. Prepend the contextNote here so the model
+  // still sees "[Contexto anterior: ...]" ahead of the child's own text
+  // when deciding groups. This is grouping-input only — ev.text itself
+  // stays untouched, so processGroup's own contextNote + text handling
+  // (used for the actual extraction pass) is unaffected and doesn't
+  // double up.
+  const groupingInput = events.map((ev) => {
+    const baseText = ev.type === "image" ? ev.ocrText : ev.text;
+    const text = ev.contextNote
+      ? [ev.contextNote, baseText].filter(Boolean).join(" ")
+      : baseText;
+    return {
+      type: ev.type,
+      text,
+      replyToIndex: ev.replyToIndex,
+    };
+  });
+  let groups = await groupMessagesWithNIM(groupingInput);
+  if (!groups) {
+    console.log(
+      "[bot] ⚠️ Grouping failed/unavailable — falling back to one item per message",
+    );
+    groups = events.map((_, i) => [i]);
+  } else {
+    console.log(
+      `[bot] 🧩 Grouped ${events.length} message(s) into ${groups.length} item(s)`,
+    );
+  }
+  for (const idxGroup of groups) {
+    const groupEvents = idxGroup.sort((a, b) => a - b).map((i) => events[i]);
+    await processGroup(userId, groupEvents);
   }
 }
 // ================================================================
@@ -11989,12 +13143,15 @@ async function processMessageBatch(userId, messages) {
 async function doSync() {
   const params = new URLSearchParams({ timeout: "30000" });
   if (nextBatch) params.set("since", nextBatch);
-  params.set("filter", JSON.stringify({
-    room: {
-      rooms: [targetRoomId],
-      timeline: { limit: 100, types: ["m.room.message"] }
-    }
-  }));
+  params.set(
+    "filter",
+    JSON.stringify({
+      room: {
+        rooms: [targetRoomId],
+        timeline: { limit: 100, types: ["m.room.message"] },
+      },
+    }),
+  );
   const data = await matrixGet(`/_matrix/client/v3/sync?${params.toString()}`);
   const roomData = data.rooms?.join?.[targetRoomId];
   if (!roomData) {
@@ -12013,7 +13170,7 @@ async function doSync() {
     let text = content.body || "";
     const isReply = content["m.relates_to"]?.["m.in_reply_to"]?.event_id;
     if (isReply) {
-      text = text.replace(/^>(?:>|\s).*?\n\n/, '').trim() || text;
+      text = text.replace(/^>(?:>|\s).*?\n\n/, "").trim() || text;
     }
     const msg = {
       eventId: event.event_id,
@@ -12024,23 +13181,19 @@ async function doSync() {
       timestamp: event.origin_server_ts,
     };
     const buffer = getBuffer(event.sender);
-    const isMedia = !!(msg.imageUrl || msg.audioUrl);
-    if (isMedia) {
-      // Flush any pending text first (as its own batch), then process the
-      // media alone so its OCR is never merged with other messages.
-      if (buffer.messages.length > 0) await buffer.flush();
-      buffer.add(msg);
+    // Media now joins the window like any other message — grouping
+    // decides what belongs together, not arrival order.
+    buffer.add(msg);
+    if (shouldFlushImmediately(msg, buffer)) {
       await buffer.flush();
-    } else if (shouldFlushImmediately(msg, buffer)) {
-      buffer.add(msg);
-      await buffer.flush();
-    } else {
-      buffer.add(msg);
     }
   }
   // Persist the sync token ONLY after events are safely handed to buffers.
-  // This narrows the data-loss window from the full 8s buffer timeout to the
-  // synchronous event loop above (milliseconds).
+  // Note this doesn't make the buffer window itself crash-safe (a message
+  // can still sit in a 30s UserBuffer timer when the process dies) — we
+  // decided that risk is acceptable for this project: those messages
+  // aren't lost, they just don't get auto-triaged, since Matrix still
+  // holds them and a human can act on them from the chat directly.
   nextBatch = data.next_batch;
   fs.writeFileSync(STORAGE_FILE, JSON.stringify({ next_batch: nextBatch }));
 }
@@ -12054,12 +13207,15 @@ async function boot() {
   myUserId = whoami.user_id;
   console.log(`[bot] Logged in as: ${myUserId}`);
   const roomResolve = await matrixGet(
-    `/_matrix/client/v3/directory/room/${encodeURIComponent(ENV.ROOM_ALIAS)}`
+    `/_matrix/client/v3/directory/room/${encodeURIComponent(ENV.ROOM_ALIAS)}`,
   );
   targetRoomId = roomResolve.room_id;
   console.log(`[bot] Target room: ${targetRoomId}`);
   try {
-    await matrixPost(`/_matrix/client/v3/rooms/${encodeURIComponent(targetRoomId)}/join`, {});
+    await matrixPost(
+      `/_matrix/client/v3/rooms/${encodeURIComponent(targetRoomId)}/join`,
+      {},
+    );
     console.log("[bot] Joined room");
   } catch (e) {
     console.log("[bot] Room join:", e.message);
@@ -12069,13 +13225,13 @@ async function boot() {
       const saved = JSON.parse(fs.readFileSync(STORAGE_FILE, "utf8"));
       nextBatch = saved.next_batch;
       console.log("[bot] Resumed sync");
-    } catch { }
+    } catch {}
   }
   console.log("[bot] 🚀 Operational.");
   setInterval(() => console.log("[bot] ❤️ Heartbeat"), 10 * 60 * 1000);
   process.on("SIGTERM", async () => {
     console.log("[bot] 🛑 SIGTERM. Draining buffers...");
-    const flushes = Array.from(userBuffers.values()).map(b => b.flush());
+    const flushes = Array.from(userBuffers.values()).map((b) => b.flush());
     await Promise.allSettled(flushes);
     process.exit(0);
   });
@@ -12084,11 +13240,11 @@ async function boot() {
       await doSync();
     } catch (e) {
       console.error("[bot] Sync error:", e.message);
-      await new Promise(r => setTimeout(r, 5000));
+      await new Promise((r) => setTimeout(r, 5000));
     }
   }
 }
-boot().catch(e => {
+boot().catch((e) => {
   console.error("[bot] Fatal boot error:", e);
   process.exit(1);
 });
