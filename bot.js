@@ -446,8 +446,7 @@ Respond with ONLY a valid JSON object. Do not include markdown formatting (like 
 The JSON must strictly follow this schema:
 {
   "intent": "donate_offer" | "request_help" | "report_need" | "report_emergency" | "find_supplier" | "volunteer_recruitment" | "request_item" | "mental_health" | "fraud_warning" | "unknown",
-  "items": [{"name": "string", "quantity": number, "unit": "string", "type": "string", "location": "string"}],
-  "location": "string",
+  "items": [{"name": "string", "quantity": number, "unit": "string", "type": "string", "location": "string", "location_role": "source" | "destination" | "unclear"}],
   "urgency": "low" | "medium" | "high" | "critical",
   "contact": "string",
   "notes": "string"
@@ -456,11 +455,16 @@ CRITICAL RULES — extract ONLY what is explicitly stated in the text:
 - NEVER invent quantities, units, locations, or contacts that are not present.
 - If a quantity is not stated, set "quantity" to null (do NOT guess a number).
 - If a unit is not stated, set "unit" to null (do NOT use articles like "unas"/"unos" as units).
-- If a location is not stated, set "location" to null (do NOT use the first word of the sentence).
 - If no items are mentioned, use [].
 - Use "unknown" for intent if unclear.
 - Extract quantities as numbers, not strings.
-- PER-ITEM LOCATION: when a message lists multiple items each with its own destination (e.g. "100 latas para Calima y 200 perros para La Flora"), put the location on EACH item's "location" field, not just the top-level "location".
+- PER-ITEM LOCATION: every item carries its own "location" and "location_role". There is NO top-level location field.
+- GLOBAL LOCATION: if a single location applies to ALL items (e.g. "tengo 100 latas y 200 jugos para Calima"), COPY that location onto EACH item's "location" field.
+- LOCATION ROLE: infer whether the location is where items are COLLECTED FROM ("source"), DELIVERED TO ("destination"), or ambiguous ("unclear").
+  - "recoger en X" / "recoger en X llevar a Y" → X is source, Y is destination.
+  - "para X" / "llevar a X" / "entregar en X" → X is destination.
+  - "de X" / "desde X" / "ubicados en X" (when describing where the donor is) → X is source.
+  - If you cannot tell, use "unclear".
 - PER-ITEM TYPE: infer each item's "type" from its name (e.g. "latas de atun" → "comida", "cobijas" → "ropa", "medicinas" → "medicinas"). Use one of: comida, bebida, ropa, insumos, medicinas, refugio, transporte, aseo, otro.`,
           },
           { role: "user", content: rawText },
@@ -516,13 +520,8 @@ function nimEntitiesToFlat(structured) {
     if (i.unit) out.push({ entity: "unit", value: i.unit });
     if (i.type) out.push({ entity: "item_type", value: i.type });
     if (i.location) out.push({ entity: "location", value: i.location });
-  }
-  if (
-    structured.location &&
-    structured.location !== "desconocido" &&
-    structured.location !== "desconocida"
-  ) {
-    out.push({ entity: "location", value: structured.location });
+    if (i.location_role)
+      out.push({ entity: "location_role", value: i.location_role });
   }
   if (structured.urgency)
     out.push({ entity: "urgency", value: structured.urgency });
