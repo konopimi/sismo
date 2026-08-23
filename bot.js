@@ -445,7 +445,7 @@ async function structureWithNIM(rawText) {
 Respond with ONLY a valid JSON object. Do not include markdown formatting (like \`\`\`json), prose, or explanations.
 The JSON must strictly follow this schema:
 {
-  "intent": "donate_offer" | "request_help" | "report_need" | "report_emergency" | "find_supplier" | "volunteer_recruitment" | "request_item" | "mental_health" | "fraud_warning" | "unknown",
+  "intent": "donate_offer" | "request_help" | "report_need" | "report_emergency" | "find_supplier" | "volunteer_recruitment" | "request_item" | "mental_health" | "fraud_warning" | "ambiguous" | "unknown",
   "items": [{"name": "string", "quantity": number, "unit": "string", "type": "string", "from": "string", "to": "string"}],
   "urgency": "low" | "medium" | "high" | "critical",
   "contact": "string",
@@ -457,6 +457,7 @@ CRITICAL RULES — extract ONLY what is explicitly stated in the text:
 - If a unit is not stated, set "unit" to null (do NOT use articles like "unas"/"unos" as units).
 - If no items are mentioned, use [].
 - Use "unknown" for intent if unclear.
+- INTENT AMBIGUITY: if the message mentions items but gives NO signal whether they are being OFFERED (donation) or REQUESTED (need) — no verb like "tengo"/"ofrezco"/"dono" vs "necesito"/"busco"/"requiero" — set intent to "ambiguous" (NOT donate_offer or report_need). Do NOT guess.
 - Extract quantities as numbers, not strings.
 - PER-ITEM LOCATION: every item carries its own "from" and "to" fields. There is NO top-level location field.
 - "from" = where the item is COLLECTED FROM / the donor's location / pickup point.

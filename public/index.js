@@ -3396,6 +3396,7 @@ const BACKLOG_INTENT_EMOJI = {
   offer_transport: "🚗", request_confirmation: "✅", gratitude: "🙏", welcome_member: "👋",
   request_supplies: "📦", report_issue: "⚠️", share_info: "ℹ️",
   find_supplier: "🔍", volunteer_recruitment: "🤝", request_item: "📦", mental_health: "🧠", fraud_warning: "🚫",
+  ambiguous: "❓", unknown: "❓",
 };
 let _backlogPromise = null;
 async function loadListBacklog() {
@@ -3519,6 +3520,20 @@ async function deleteBacklog(id) {
 function openPromoteModal(id) {
   const item = backlogData.find((b) => String(b.id) === String(id));
   if (!item) return;
+  // Ambiguous intent: let the human pick donation vs need first.
+  if (item.intent === "ambiguous" || item.intent === "unknown") {
+    const choice = confirm(
+      "No está claro si este mensaje es una donación o una necesidad.\n\n" +
+      "Aceptar = Donación (alguien ofrece)\nCancelar = Necesidad (alguien pide)"
+    );
+    const type = choice ? "donacion" : "necesidad";
+    openCrearModal(type);
+    prefillCrearForm(type, item);
+    const formId = "addForm" + capitalizeFirst(type);
+    const form = document.getElementById(formId);
+    if (form) form.dataset.promoteBacklogId = id;
+    return;
+  }
   const type = intentToCrearType(item.intent);
   if (!type) {
     alert("Este tipo de mensaje no se puede promover directamente.");
