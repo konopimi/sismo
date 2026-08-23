@@ -3088,9 +3088,9 @@ function donacionCardHtml(item) {
     itemsHtml = item.items.map((it) => {
       const itEmoji = DONACION_EMOJI[it.type] || "📦";
       const qty = it.quantity ? ` × ${escapeHtml(String(it.quantity))}` : "";
-      const role = it.location_role === "source" ? "📥" : it.location_role === "destination" ? "📤" : "📍";
-      const loc = it.location ? ` → ${role} ${escapeHtml(it.location)}` : "";
-      return `<span class="meta">${itEmoji} ${escapeHtml(it.name || it.type || "?")}${qty}${loc}</span>`;
+      const from = it.from ? ` 📥 ${escapeHtml(it.from)}` : "";
+      const to = it.to ? ` 📤 ${escapeHtml(it.to)}` : "";
+      return `<span class="meta">${itEmoji} ${escapeHtml(it.name || it.type || "?")}${qty}${from}${to}</span>`;
     }).join("");
   } else {
     itemsHtml = `<span class="meta">${escapeHtml(item.description)}</span>`;
@@ -3202,9 +3202,9 @@ function necesidadCardHtml(item) {
     itemsHtml = item.items.map((it) => {
       const itEmoji = NECESIDAD_EMOJI[it.type] || "📦";
       const qty = it.quantity ? ` × ${escapeHtml(String(it.quantity))}` : "";
-      const role = it.location_role === "source" ? "📥" : it.location_role === "destination" ? "📤" : "📍";
-      const loc = it.location ? ` → ${role} ${escapeHtml(it.location)}` : "";
-      return `<span class="meta">${itEmoji} ${escapeHtml(it.name || it.type || "?")}${qty}${loc}</span>`;
+      const from = it.from ? ` 📥 ${escapeHtml(it.from)}` : "";
+      const to = it.to ? ` 📤 ${escapeHtml(it.to)}` : "";
+      return `<span class="meta">${itEmoji} ${escapeHtml(it.name || it.type || "?")}${qty}${from}${to}</span>`;
     }).join("");
   } else {
     itemsHtml = `<span class="meta">${escapeHtml(item.description)}</span>`;
@@ -3437,9 +3437,9 @@ function backlogCardHtml(item) {
     entities = enriched.items.map((it) => {
       const name = it.item || it.name || it.tipo || it.type || "?";
       const qty = it.quantity != null ? ` × ${it.quantity}` : "";
-      const role = it.location_role === "source" ? "📥" : it.location_role === "destination" ? "📤" : "📍";
-      const loc = it.location ? ` → ${role} ${escapeHtml(it.location)}` : "";
-      return `<span class="meta">📦 ${escapeHtml(name)}${escapeHtml(String(qty))}${loc}</span>`;
+      const from = it.from ? ` 📥 ${escapeHtml(it.from)}` : "";
+      const to = it.to ? ` 📤 ${escapeHtml(it.to)}` : "";
+      return `<span class="meta">📦 ${escapeHtml(name)}${escapeHtml(String(qty))}${from}${to}</span>`;
     }).join("");
   } else {
     entities = Array.isArray(item.extracted_data) && item.extracted_data.length
@@ -3505,9 +3505,9 @@ function openBacklogModal(item) {
     entities = enriched.items.map((it) => {
       const name = it.item || it.name || it.tipo || it.type || "?";
       const qty = it.quantity != null ? ` × ${it.quantity}` : "";
-      const role = it.location_role === "source" ? "📥" : it.location_role === "destination" ? "📤" : "📍";
-      const loc = it.location ? ` → ${role} ${escapeHtml(it.location)}` : "";
-      return `<span class="meta">📦 ${escapeHtml(name)}${escapeHtml(String(qty))}${loc}</span>`;
+      const from = it.from ? ` 📥 ${escapeHtml(it.from)}` : "";
+      const to = it.to ? ` 📤 ${escapeHtml(it.to)}` : "";
+      return `<span class="meta">📦 ${escapeHtml(name)}${escapeHtml(String(qty))}${from}${to}</span>`;
     }).join("");
   } else {
     entities = Array.isArray(item.extracted_data) && item.extracted_data.length
@@ -3637,12 +3637,8 @@ function setupEditableItemsList(listId, countId, detectedId, addBtnId) {
             <option value="aseo">🧼 Aseo</option>
             <option value="otro">📦 Otro</option>
           </select>
-          <input type="text" class="item-loc-input" placeholder="Ubicación" />
-          <select class="item-role-input">
-            <option value="unclear">📍 Ubicación</option>
-            <option value="source">📥 Origen</option>
-            <option value="destination">📤 Destino</option>
-          </select>
+          <input type="text" class="item-from-input" placeholder="Desde" />
+          <input type="text" class="item-to-input" placeholder="Hasta" />
           <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
         `;
         list.appendChild(row);
@@ -3678,17 +3674,17 @@ function collectItemsFromList(listId) {
     const nameInput = row.querySelector(".item-name-input");
     const qtyInput = row.querySelector(".item-qty-input");
     const typeInput = row.querySelector(".item-type-input");
-    const locInput = row.querySelector(".item-loc-input");
-    const roleInput = row.querySelector(".item-role-input");
+    const fromInput = row.querySelector(".item-from-input");
+    const toInput = row.querySelector(".item-to-input");
     const name = nameInput?.value?.trim() || "";
     const qty = qtyInput?.value?.trim() || "";
     const type = typeInput?.value?.trim() || "";
-    const loc = locInput?.value?.trim() || "";
-    const role = roleInput?.value || "unclear";
-    if (!name && !qty && !type && !loc) return; // Skip empty rows.
+    const from = fromInput?.value?.trim() || "";
+    const to = toInput?.value?.trim() || "";
+    if (!name && !qty && !type && !from && !to) return; // Skip empty rows.
     // Only add if has at least a name.
     if (!name) return;
-    items.push({ name, quantity: qty, type, location: loc, location_role: role });
+    items.push({ name, quantity: qty, type, from, to });
   });
   return items;
 }
@@ -3713,20 +3709,12 @@ function prefillCrearForm(type, item) {
     return e ? e.value : "";
   };
   // Build editable rows: prefer grouped items[], fall back to flat entities.
-  // Each row carries per-item name, quantity, type (selector), location, and location role.
+  // Each row carries per-item name, quantity, type (selector), from, and to.
   const typeOptions = (selected) => {
     const opts = [
       ["", "Tipo"], ["comida", "🍽️ Comida"], ["bebida", "🥤 Bebida"], ["ropa", "👕 Ropa"],
       ["insumos", "🧰 Insumos"], ["medicinas", "💊 Medicinas"], ["refugio", "⛺ Refugio"],
       ["transporte", "🚗 Transporte"], ["aseo", "🧼 Aseo"], ["otro", "📦 Otro"],
-    ];
-    return opts.map(([v, label]) =>
-      `<option value="${v}"${v === selected ? " selected" : ""}>${label}</option>`
-    ).join("");
-  };
-  const roleOptions = (selected) => {
-    const opts = [
-      ["unclear", "📍 Ubicación"], ["source", "📥 Origen"], ["destination", "📤 Destino"],
     ];
     return opts.map(([v, label]) =>
       `<option value="${v}"${v === selected ? " selected" : ""}>${label}</option>`
@@ -3738,14 +3726,14 @@ function prefillCrearForm(type, item) {
         const name = it.item || it.name || it.tipo || it.type || "";
         const qty = it.quantity != null ? it.quantity : "";
         const type = it.type || "";
-        const loc = it.location || "";
-        const role = it.location_role || "unclear";
+        const from = it.from || "";
+        const to = it.to || "";
         return `<div class="item-row" data-idx="${i}">
           <input type="text" class="item-name-input" value="${escapeHtml(name)}" placeholder="Item" />
           <input type="text" class="item-qty-input" value="${escapeHtml(String(qty))}" placeholder="Cant." />
           <select class="item-type-input">${typeOptions(type)}</select>
-          <input type="text" class="item-loc-input" value="${escapeHtml(loc)}" placeholder="Ubicación" />
-          <select class="item-role-input">${roleOptions(role)}</select>
+          <input type="text" class="item-from-input" value="${escapeHtml(from)}" placeholder="Desde" />
+          <input type="text" class="item-to-input" value="${escapeHtml(to)}" placeholder="Hasta" />
           <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
         </div>`;
       }).join("");
@@ -3755,8 +3743,8 @@ function prefillCrearForm(type, item) {
         <input type="text" class="item-name-input" value="${escapeHtml(e.entity || "")}" placeholder="Item" />
         <input type="text" class="item-qty-input" value="${escapeHtml(e.value || "")}" placeholder="Cant." />
         <select class="item-type-input">${typeOptions("")}</select>
-        <input type="text" class="item-loc-input" value="" placeholder="Ubicación" />
-        <select class="item-role-input">${roleOptions("unclear")}</select>
+        <input type="text" class="item-from-input" value="" placeholder="Desde" />
+        <input type="text" class="item-to-input" value="" placeholder="Hasta" />
         <button type="button" class="item-remove-btn" title="Eliminar">✕</button>
       </div>`
     ).join("");

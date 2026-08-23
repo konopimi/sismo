@@ -747,8 +747,8 @@ h1 {
 .item-name-input,
 .item-qty-input,
 .item-type-input,
-.item-loc-input,
-.item-role-input {
+.item-from-input,
+.item-to-input {
   flex: 1;
   padding: 4px 8px;
   border-radius: 4px;
@@ -767,11 +767,9 @@ h1 {
 .item-type-input {
   max-width: 110px;
 }
-.item-loc-input {
-  flex: 1.5;
-}
-.item-role-input {
-  max-width: 110px;
+.item-from-input,
+.item-to-input {
+  flex: 1.2;
 }
 .item-remove-btn,
 .item-add-btn {

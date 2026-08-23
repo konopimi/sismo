@@ -446,7 +446,7 @@ Respond with ONLY a valid JSON object. Do not include markdown formatting (like 
 The JSON must strictly follow this schema:
 {
   "intent": "donate_offer" | "request_help" | "report_need" | "report_emergency" | "find_supplier" | "volunteer_recruitment" | "request_item" | "mental_health" | "fraud_warning" | "unknown",
-  "items": [{"name": "string", "quantity": number, "unit": "string", "type": "string", "location": "string", "location_role": "source" | "destination" | "unclear"}],
+  "items": [{"name": "string", "quantity": number, "unit": "string", "type": "string", "from": "string", "to": "string"}],
   "urgency": "low" | "medium" | "high" | "critical",
   "contact": "string",
   "notes": "string"
@@ -458,13 +458,14 @@ CRITICAL RULES — extract ONLY what is explicitly stated in the text:
 - If no items are mentioned, use [].
 - Use "unknown" for intent if unclear.
 - Extract quantities as numbers, not strings.
-- PER-ITEM LOCATION: every item carries its own "location" and "location_role". There is NO top-level location field.
-- GLOBAL LOCATION: if a single location applies to ALL items (e.g. "tengo 100 latas y 200 jugos para Calima"), COPY that location onto EACH item's "location" field.
-- LOCATION ROLE: infer whether the location is where items are COLLECTED FROM ("source"), DELIVERED TO ("destination"), or ambiguous ("unclear").
-  - "recoger en X" / "recoger en X llevar a Y" → X is source, Y is destination.
-  - "para X" / "llevar a X" / "entregar en X" → X is destination.
-  - "de X" / "desde X" / "ubicados en X" (when describing where the donor is) → X is source.
-  - If you cannot tell, use "unclear".
+- PER-ITEM LOCATION: every item carries its own "from" and "to" fields. There is NO top-level location field.
+- "from" = where the item is COLLECTED FROM / the donor's location / pickup point.
+- "to" = where the item is DELIVERED TO / the destination / drop-off point.
+- "recoger en X llevar a Y" → from = X, to = Y.
+- "para X" / "llevar a X" / "entregar en X" → to = X (from = null).
+- "de X" / "desde X" / "ubicados en X" (donor's location) → from = X (to = null).
+- If a location is ambiguous and you cannot tell if it is from or to, put it in "to" (the more common case for donations/needs).
+- GLOBAL LOCATION: if a single location applies to ALL items (e.g. "tengo 100 latas y 200 jugos para Calima"), COPY that location onto EACH item's "to" field.
 - PER-ITEM TYPE: infer each item's "type" from its name (e.g. "latas de atun" → "comida", "cobijas" → "ropa", "medicinas" → "medicinas"). Use one of: comida, bebida, ropa, insumos, medicinas, refugio, transporte, aseo, otro.`,
           },
           { role: "user", content: rawText },
@@ -519,9 +520,8 @@ function nimEntitiesToFlat(structured) {
       out.push({ entity: "quantity", value: String(i.quantity) });
     if (i.unit) out.push({ entity: "unit", value: i.unit });
     if (i.type) out.push({ entity: "item_type", value: i.type });
-    if (i.location) out.push({ entity: "location", value: i.location });
-    if (i.location_role)
-      out.push({ entity: "location_role", value: i.location_role });
+    if (i.from) out.push({ entity: "from", value: i.from });
+    if (i.to) out.push({ entity: "to", value: i.to });
   }
   if (structured.urgency)
     out.push({ entity: "urgency", value: structured.urgency });
